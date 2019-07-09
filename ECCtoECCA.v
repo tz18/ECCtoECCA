@@ -1,8 +1,9 @@
 From Coq Require Import Strings.String.
 From Coq Require Import Strings.Ascii.
 
-
 (* Module ECC. *)
+
+(* -=ECC Definition=- *)
 
 Inductive ECCuni: Type :=
   | uProp
@@ -13,25 +14,105 @@ Inductive ECCexp: Type :=
   | eId (x: string)
   | eUni (U: ECCuni)
   | ePi (x: string) (A B: ECCexp)
-  | eAbs (x: string) (A B: ECCexp)
+  | eAbs (x: string) (A e: ECCexp)
   | eApp  (e1 e2: ECCexp)
   | eLet (x: string) (e1 e2: ECCexp)
-(*
-  |ECCSig (x: string) (A B: ECCexp)
-  |ECCPair (e1 e2 A B: ECCexp)
-  |ECCFst (e: ECCexp)
-  |ECCSnd (e: ECCexp)
-*)
+  | eSig (x: string) (A B: ECCexp)
+  | ePair (e1 e2 A: ECCexp)
+  | eFst (e: ECCexp)
+  | eSnd (e: ECCexp)
+  | eTru
+  | eFls
+  | eBool
+  | eUndef
 .
 
 Inductive ECCenv: Type :=
-  | gDot
-  | gTypeDec (x: string) (A: ECCexp)
-  | gAssign (x: string) (e: ECCexp)
+  | gEmpty
+  | gTypeDec (g: ECCenv) (x: string) (A: ECCexp)
+  | gAssign (g: ECCenv) (x: string) (e: ECCexp)
 .
 
+(* -=ECC Evaluation=- *)
 
+(* -Lookup- *)
 Local Open Scope string_scope.
+
+(*
+Fixpoint ECC_Lookup (g: ECCenv) (x: string): ECCexp :=
+match g with
+  | gEmpty => eUndef
+  | gTypeDec g' x' A => (if (x =? x') then A else (ECC_Lookup g' x))
+  | gAssign g' x' e => (if (x =? x') then e else (ECC_Lookup g' x))
+end.
+*)
+
+Inductive ECC_LookupR : ECCenv -> string -> ECCexp -> Prop:=
+  | L_gTypeDecFirst (g': ECCenv) (x: string) (A: ECCexp):
+    ECC_LookupR (gTypeDec g' x A) x A
+  | L_gAssignFirst (g': ECCenv) (x: string) (e: ECCexp):
+    ECC_LookupR (gAssign g' x e) x e
+  | L_gTypeDecRest (g': ECCenv) (x x': string) (A a': ECCexp): 
+    ECC_LookupR g' x A -> 
+    (x =? x') = false ->
+    ECC_LookupR (gTypeDec g' x' a') x A 
+  | L_gAssignRest (g': ECCenv) (x x': string) (e e': ECCexp): 
+    ECC_LookupR g' x e -> 
+    (x =? x') = false ->
+    ECC_LookupR (gAssign g' x' e') x e
+.
+
+(* what if looking up a type and get a value first, or vice versa? *)
+
+
+Example ECC_LookupFirstExample:
+ECC_LookupR (gTypeDec gEmpty "x" eTru) "x" eTru.
+Proof.
+  apply L_gTypeDecFirst.
+Qed.
+
+Example ECC_LookupRestExample:
+ECC_LookupR (gTypeDec (gTypeDec gEmpty "x" eTru) "y" eFls) "x" eTru.
+Proof.
+  apply L_gTypeDecRest. apply L_gTypeDecFirst. reflexivity.
+Qed.
+
+(* -Step- *)
+
+Inductive ECC_RedR : ECCenv -> ECCexp -> ECCenv -> ECCexp -> Prop :=
+  | R_ID (g: ECCenv) (x: string) (e': ECCexp) :
+    ECC_LookupR g x e' -> ECC_RedR g (eId x) g e'
+  | R_App (g: ECCenv) (x: string) (A body arg: ECCexp) :
+    ECC_RedR g (eApp (eAbs x A body) arg) (gAssign g x arg) arg
+  | R_Fst (g: ECCenv) (e1 e2 A: ECCexp) : 
+    ECC_RedR g (eFst (ePair e1 e2 A)) g e1
+  | R_Snd (g: ECCenv) (e1 e2 A: ECCexp) : 
+    ECC_RedR g (eSnd (ePair e1 e2 A)) g e2
+  | R_Let (g: ECCenv) (x: string) (e1 e2: ECCexp) :
+    ECC_RedR g (eLet x e1 e2) (gAssign g x e1) e2
+.
+
+Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCenv -> ECCexp -> Prop :=
+  | R_RedR (g g': ECCenv) (e e': ECCexp):
+      ECC_RedR g e g' e' ->
+      ECC_RedClosR g e g' e'
+  | R_Refl (g: ECCenv) (e: ECCexp):
+      ECC_RedClosR g e g e
+  | R_Trans (g g' g'': ECCenv) (e e' e'': ECCexp) :
+      ECC_RedR g e g' e' -> (* should be clos?*)
+      ECC_RedClosR g' e' g'' e'' ->
+      ECC_RedClosR g e g'' e''
+  | R_CongLet (g g': ECCenv) (e e1 e2: ECCexp) (x: string) : 
+      ECC_RedClosR (gAssign g x e) e1 g' e2 -> (* exists g' ?*) 
+      ECC_RedClosR g (eLet x e e1) g (eLet x e e2) (* should be just e2? *)
+  | R_CongLam1 (g g': ECCenv) (A A' M: ECCexp) (x: string) :
+      ECC_RedClosR g A g' A' -> (* should be g?*)
+      ECC_RedClosR g (eAbs x A M) g (eAbs x A' M)
+(*...*)
+.
+
+(* ECC Notation *)
+
 Bind Scope ECC_scope with ECCexp.
 Bind Scope ECC_scope with ECCuni.
 Bind Scope ECC_scope with ECCenv.
@@ -59,21 +140,23 @@ Notation "'P' x : A '->' B" := (ePi x A B) (at level 50, x at level 9, A at leve
 Definition example_Pi := (P "x" : "f" -> "b")%ECC : ECCexp.
 Notation "'\'  x : A  '->'  B" := (eAbs x A B) (at level 50, x at level 9, A at level 9) : ECC_scope.
 Definition example_Abs := (\ "x" : "a" -> "b")%ECC : ECCexp.
-
-
-
+Notation "'M' x : A '..' B" := (eSig x A B) (at level 50, x at level 1, A at level 1): ECC_scope.
+Definition example_Sig := (M "x" : "A" .. "B")%ECC : ECCexp.
+Notation "< e1 , e2 > 'as' A" := (ePair e1 e2 A) (at level 50, e1 at level 5, e2 at level 5, A at level 5): ECC_scope.
+Definition example_Pair := (< "x", "y" > as (M "x" : "A" .. "B"))%ECC : ECCexp.
+Notation "'fst' e" := (eFst e) (at level 50, e at level 5): ECC_scope.
+Notation "'snd' e" := (eSnd e) (at level 50, e at level 5): ECC_scope.
 
 Definition example_ycombinator := (\F:(type 3) -> ({(\X:(type 2) -> ({F {X X}})) (\X:(type 2) -> ({F {X X}}))}))%ECC. 
 Print example_ycombinator.
 
+
+
+
 (* End ECC.
 Module ECCA. *)
 
-(*
-Inductive ECCAuni : Type :=
-  | auProp
-  | auType (i: nat)
-.*)
+(* -=ECCA Definition=- *)
 
 Inductive ECCAsym: Type:=
   | asymStr (x: string)
@@ -85,14 +168,22 @@ Inductive ECCAval: Type :=
   | avUni (U: ECCuni)
   | avPi (x: ECCAsym) (A B: ECCAconf)
   | avAbs (x: ECCAsym) (A B: ECCAconf)
+  | avSig (x: ECCAsym) (A B: ECCAconf)
+  | avPair (v1 v2: ECCAval) (A: ECCAconf)
+  | avTru
+  | avFls
+  | avBool
+  | avUndef
 with
 ECCAconf: Type :=
   | acfComp (e: ECCAcomp)
   | acfLet (x: ECCAsym) (A: ECCAcomp) (B: ECCAconf)
 with 
 ECCAcomp: Type :=
-  | acpApp (e1 e2: ECCAval)
-  | acpVal (e: ECCAval)
+  | acpApp (v1 v2: ECCAval)
+  | acpVal (v: ECCAval)
+  | acpFst (v: ECCAval)
+  | acpSnd (v: ECCAval)
 .
 
 Inductive ECCAcont: Type :=
@@ -100,6 +191,7 @@ Inductive ECCAcont: Type :=
   | actLetHole (x: ECCAsym) (B: ECCAconf)
 .
 
+(* -=ECCA Notation=- *)
 
 Bind Scope ECCA_scope with ECCAsym.
 Bind Scope ECCA_scope with ECCAval.
@@ -138,6 +230,10 @@ Definition example_aLetHole := (LET "x" := [] in "x")%ECCA.
 Print example_aLetHole.
 (* End ECCA. *)
 
+
+(* ===ECC to ECCA translation== *)
+
+
 Fixpoint fill_hole (e: ECCAcomp) (K: ECCAcont): ECCAconf :=
   match K with
     | actHole => acfComp e
@@ -148,17 +244,41 @@ end.
 Fixpoint trans  (ns: nat) (e: ECCexp) (K: ECCAcont) : ECCAconf :=
   match e with
     | eId x => (fill_hole (acpVal (avId (asymStr x))) K)
-    | eUni u => (fill_hole (acpVal (avUni u)) K)
     | ePi x A B => (fill_hole (acpVal (avPi (asymStr x) (trans ns A actHole) (trans ns B actHole))) K)
-    | eAbs x A B => (fill_hole (acpVal (avAbs (asymStr x) (trans ns A actHole) (trans ns B actHole))) K)
+    | eAbs x A e => (fill_hole (acpVal (avAbs (asymStr x) (trans ns A actHole) (trans ns e actHole))) K)
     | eApp e1 e2 => 
         (trans (S ns) e1 (actLetHole (asymNum (S ns)) 
             (trans (S (S ns)) e2 (actLetHole (asymNum (S (S ns))) 
                 (fill_hole (acpApp (avId (asymNum (S ns))) (avId (asymNum (S (S ns))))) K)))))
-    | eLet x e1 e2 => (trans (S ns) e1 (actLetHole (asymNum (S ns)) 
-                          (trans (S ns) e2 K)))
+    | eLet x e1 e2 => (trans ns e1 (actLetHole (asymStr x) 
+                          (trans (ns) e2 K)))
+    | eSig x A B => (fill_hole (acpVal (avSig (asymStr x) (trans ns A actHole) (trans ns B actHole))) K)
+    | ePair e1 e2 A => (trans (S ns) e1 (actLetHole (asymNum (S ns)) 
+            (trans (S (S ns)) e2 (actLetHole (asymNum (S (S ns)))
+               (trans (S (S (S ns))) A (actLetHole (asymNum (S (S (S ns)))) 
+                (fill_hole (avPair (avId (asymNum (S ns))) (avId (asymNum (S (S ns)))) (avId (asymNum (S (S (S ns)))))) K)))))))
+    | eFst e => (trans (S ns) e (actLetHole (asymNum (S ns))
+                   (fill_hole (acpFst (asymNum (S ns))) K)))
+    | eSnd e => (trans (S ns) e (actLetHole (asymNum (S ns))
+                   (fill_hole (acpSnd (asymNum (S ns))) K)))
+    | eTru => (fill_hole (acpVal avTru) K)
+    | eFls => (fill_hole (acpVal avFls) K)
+    | eBool=> (fill_hole (acpVal avBool) K)
+    | eUndef => (fill_hole (acpVal avUndef) K)
+    | eUni u => (fill_hole (acpVal (avUni u)) K)
 end.
 
 Check eAbs "f" (eUni (uType 1)) (eApp (eAbs "x" (eUni (uType 1)) (eApp (eId "f") (eApp (eId "x") (eId "x")))) (eAbs "x" (eUni (uType 1)) (eApp (eId "f") (eApp (eId "x") (eId "x"))))).
 
 Compute trans 0 (eAbs "f" (eUni (uType 1)) (eApp (eAbs "x" (eUni (uType 1)) (eApp (eId "f") (eApp (eId "x") (eId "x")))) (eAbs "x" (eUni (uType 1)) (eApp (eId "f") (eApp (eId "x") (eId "x")))))) actHole.
+
+Check (eAbs "f" (eUni (uType 1)) (eApp (eLet "lx" (eApp (eId "f") (eId "ix")) (eApp (eId "f") (eId "lx"))) (eId "f"))).
+Compute trans 0 (eAbs "f" (eUni (uType 1)) (eApp (eLet "lx" (eApp (eId "f") (eId "ix")) (eApp (eId "f") (eId "lx"))) (eId "f"))) actHole.
+
+Check {({({({"a" "b"}) "c"}) "d"}) ({({({"a" "b"}) "c"}) "d"})}%ECC.
+Compute trans 0 ({({({({"a" "b"}) {"e" "c"}}) "d"}) ({({({"d" "c"}) "b"}) "a"})})%ECC actHole.
+
+Check eSig "s" (eUni (uType 1)) (eUni (uType 2)).
+Compute trans 0 (eFst (ePair "e1" "e2" (eSig "s" (eUni (uType 1)) ("s"))))%ECC actHole.
+
+
