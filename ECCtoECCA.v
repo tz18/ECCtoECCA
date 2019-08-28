@@ -160,6 +160,9 @@ Abort.
 
 *)
 
+
+(* This is obviously a terrible way to generate fresh names, 
+and will be replaced with something from the UPenn meta *)
 Definition genName (prefix: string) (FVInArg FVInBody: (set string)):=
 prefix ++ (concat "" FVInArg) ++ (concat "" FVInBody).
 
@@ -188,7 +191,7 @@ Abort.*)
    of the term being substituted in. *)
 
 (*Cannot guess decreasing argument of fix :( *)
-(*
+
 Fixpoint trickySubst (x: string) (arg body: ECCexp) (FVInArg: (set string)) :=
 let set_mem := set_mem string_dec in
 match body with
@@ -235,7 +238,7 @@ match body with
   | eFls => eFls
   | eBool => eBool
 end.
-*)
+
 
 Definition subst (x: string) (arg body: ECCexp) :=
 match (FV arg) with
@@ -404,6 +407,13 @@ Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
   (ECC_sub_type g A B) ->
   (ECC_has_type g e B)
 .
+
+Hint Constructors ECC_has_type.
+
+Goal ECC_has_type gEmpty (eUni uProp) (eUni (uType 0)).
+Proof. 
+intuition.
+Qed.
 
 (* ECC Notation *)
 
