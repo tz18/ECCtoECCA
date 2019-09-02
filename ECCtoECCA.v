@@ -160,6 +160,9 @@ Abort.
 
 *)
 
+
+(* This is obviously a terrible way to generate fresh names,
+and will be replaced with something from the UPenn meta *)
 Definition genName (prefix: string) (FVInArg FVInBody: (set string)):=
 prefix ++ (concat "" FVInArg) ++ (concat "" FVInBody).
 
@@ -188,7 +191,7 @@ Abort.*)
    of the term being substituted in. *)
 
 (*Cannot guess decreasing argument of fix :( *)
-(*
+
 Fixpoint trickySubst (x: string) (arg body: ECCexp) (FVInArg: (set string)) :=
 let set_mem := set_mem string_dec in
 match body with
@@ -235,7 +238,7 @@ match body with
   | eFls => eFls
   | eBool => eBool
 end.
-*)
+
 
 Definition subst (x: string) (arg body: ECCexp) :=
 match (FV arg) with
@@ -405,23 +408,12 @@ Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
   (ECC_has_type g e B)
 .
 
-Inductive ECC_CongConv: ECCenv -> ECCexp -> ECCexp -> Prop :=
-  | C_Cong (g: ECCenv) (e e1 e2: ECCexp) :
-      ECC_RedClosR g e1 e ->
-      ECC_RedClosR g e2 e ->
-      ECC_CongConv g e1 e2
-  | C_CongIta1 (g: ECCenv) (e1 A e e2 e2': ECCexp) (x: string) :
-      ECC_RedClosR g e1 (eAbs x A e) ->
-      ECC_RedClosR g e2 e2' ->
-      ECC_CongConv (gTypeDec g x A) e (eApp e2' (eId x)) ->
-      ECC_CongConv g e1 e2
-  | C_CongIta2 (g: ECCenv) (e e1 e1' e2 A : ECCexp) (x: string) :
-      ECC_RedClosR g e1 e1' ->
-      ECC_RedClosR g e2 (eAbs x A e) ->
-      ECC_CongConv (gTypeDec g x A) (eApp e1' (eId x)) e ->
-      ECC_CongConv g e1 e2
-.
+Hint Constructors ECC_has_type.
 
+Goal ECC_has_type gEmpty (eUni uProp) (eUni (uType 0)).
+Proof.
+intuition.
+Qed.
 
 (* ECC Notation *)
 
