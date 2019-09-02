@@ -1,6 +1,8 @@
 From Coq Require Import Strings.String.
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Lists.ListSet.
+From Coq Require Import Init.Datatypes.
+
 
 (* Module ECC. *)
 
@@ -19,7 +21,7 @@ Inductive ECCexp: Type :=
   | eApp  (e1 e2: ECCexp)
   | eLet (x: string) (e1 e2: ECCexp)
   | eSig (x: string) (A B: ECCexp)
-  | ePair (e1 e2 A: ECCexp)
+  | ePair (e1 e2 A: ECCexp) (*why does ePair not have A as the type and instead has an eSig built in? *)
   | eFst (e: ECCexp)
   | eSnd (e: ECCexp)
   | eIf (e e1 e2: ECCexp)
@@ -39,34 +41,33 @@ Inductive ECCenv: Type :=
 (* -Lookup- *)
 Local Open Scope string_scope.
 
-(*
-Fixpoint ECC_Lookup (g: ECCenv) (x: string): ECCexp :=
+
+(*replace with partial map? How to handle definitions and assumptions? Two maps?
+Or _two different types of lookup_ *)
+Fixpoint ECC_Lookup (g: ECCenv) (x: string): (option ECCexp) :=
 match g with
-  | gEmpty => eUndef
-  | gTypeDec g' x' A => (if (x =? x') then A else (ECC_Lookup g' x))
-  | gAssign g' x' e => (if (x =? x') then e else (ECC_Lookup g' x))
+  | gEmpty => None
+  | gTypeDec g' x' A => (if (x =? x') then Some A else (ECC_Lookup g' x))
+  | gAssign g' x' e => (if (x =? x') then Some e else (ECC_Lookup g' x))
 end.
-*)
+
 
 Inductive ECC_LookupR : ECCenv -> string -> ECCexp -> Prop:=
   | L_gTypeDecFirst (g': ECCenv) (x: string) (A: ECCexp):
     ECC_LookupR (gTypeDec g' x A) x A
   | L_gAssignFirst (g': ECCenv) (x: string) (e: ECCexp):
     ECC_LookupR (gAssign g' x e) x e
-  | L_gTypeDecRest (g': ECCenv) (x x': string) (A a': ECCexp): 
-    ECC_LookupR g' x A -> 
+  | L_gTypeDecRest (g': ECCenv) (x x': string) (A a': ECCexp):
+    ECC_LookupR g' x A ->
     (x =? x') = false ->
-    ECC_LookupR (gTypeDec g' x' a') x A 
-  | L_gAssignRest (g': ECCenv) (x x': string) (e e': ECCexp): 
-    ECC_LookupR g' x e -> 
+    ECC_LookupR (gTypeDec g' x' a') x A
+  | L_gAssignRest (g': ECCenv) (x x': string) (e e': ECCexp):
+    ECC_LookupR g' x e ->
     (x =? x') = false -> (* should we have this condition? *)
     ECC_LookupR (gAssign g' x' e') x e
 .
 
-(* Q: what if looking up a type and get a value first, or vice versa? 
-
-*)
-
+(* Q: what if looking up a type and get a value first, or vice versa? *)
 
 Example ECC_LookupFirstExample:
 ECC_LookupR (gTypeDec gEmpty "x" eTru) "x" eTru.
@@ -82,51 +83,60 @@ Qed.
 
 Print string.
 
-Fixpoint freeVars (e: ECCexp) : (set string) :=
+(* Substitution *)
+
+
+Fixpoint FV (e: ECCexp) : (set string) :=
+let set_add := set_add string_dec in (* there has to be a better way to do this*)
+let set_remove := set_remove string_dec in
+let set_union := set_union string_dec in
 match e with
-  | eId x => (set_add string_dec x (empty_set string))
+  | eId x => (set_add x (empty_set string))
   | eUni U => (empty_set string)
-  | ePi x A B =>  (set_union string_dec (freeVars A) (set_remove string_dec x (freeVars B)))
-  | eAbs x A e => (set_union string_dec (freeVars A) (set_remove string_dec x (freeVars e)))
-  | eApp  e1 e2 => (set_union string_dec (freeVars e1) (freeVars e2))
-  | eLet x e1 e2 => (set_union string_dec (freeVars e1) (freeVars e2))
-  | eSig x A B => (set_union string_dec (freeVars A) (set_remove string_dec x (freeVars B)))
-  | ePair e1 e2 A => (set_union string_dec (set_union string_dec (freeVars e1) (freeVars e2)) (freeVars A))
-  | eFst e => (freeVars e)
-  | eSnd e => (freeVars e)
-  | eIf e e1 e2 => (set_union string_dec (set_union string_dec (freeVars e) (freeVars e1)) (freeVars e2))
+  | ePi x A B =>  (set_union (FV A) (set_remove x (FV B)))
+  | eAbs x A e => (set_union (FV A) (set_remove  x (FV e)))
+  | eApp  e1 e2 => (set_union (FV e1) (FV e2))
+  | eLet x e1 e2 => (set_union (FV e1) (FV e2))
+  | eSig x A B => (set_union (FV A) (set_remove  x (FV B)))
+  | ePair e1 e2 A => (set_union (set_union  (FV e1) (FV e2)) (FV A))
+  | eFst e => (FV e)
+  | eSnd e => (FV e)
+  | eIf e e1 e2 => (set_union (set_union  (FV e) (FV e1)) (FV e2))
   | eTru => (empty_set string)
   | eFls => (empty_set string)
   | eBool => (empty_set string)
 end.
 
-Compute (freeVars (eId "x")).
-Compute (freeVars (eApp (eId "x") (eId "x"))).
-Compute (freeVars (eApp (eId "x") (eId "y"))).
-Compute (freeVars (eAbs "x" (eId "a") (eId "b"))).
-Compute (freeVars (eAbs "x" (eId "x") (eId "b"))).
-Compute (freeVars (eAbs "x" (eId "a") (eId "x"))).
-Compute (freeVars (eAbs "x" (eId "x") (eId "x"))).
+Compute (FV (eId "x")).
+Compute (FV (eApp (eId "x") (eId "x"))).
+Compute (FV (eApp (eId "x") (eId "y"))).
+Compute (FV (eAbs "x" (eId "a") (eId "b"))).
+Compute (FV (eAbs "x" (eId "x") (eId "b"))).
+Compute (FV (eAbs "x" (eId "a") (eId "x"))).
+Compute (FV (eAbs "x" (eId "x") (eId "x"))).
+
+(* If there are no free variables in the substitute,
+   then substitution is simple.  *)
 
 Fixpoint graft (x: string) (arg body: ECCexp) :=
 match body with
   | eId x' => if (x =? x') then arg else body
   | eAbs x' A e =>
-      if (x =? x') 
-        then (eAbs x' (graft x arg A) e) 
+      if (x =? x')
+        then (eAbs x' (graft x arg A) e)
         else (eAbs x' (graft x arg A) (graft x arg e))
-  | ePi x' A B => 
-      if (x =? x') 
-        then (eAbs x' (graft x arg A) B) 
-        else (eAbs x' (graft x arg A) (graft x arg B))
+  | ePi x' A B =>
+      if (x =? x')
+        then (ePi x' (graft x arg A) B)
+        else (ePi x' (graft x arg A) (graft x arg B))
   | eLet x' e1 e2 =>
-      if (x =? x') 
-        then (eAbs x' (graft x arg e1) e2) 
-        else (eAbs x' (graft x arg e1) (graft x arg e2))
+      if (x =? x')
+        then (eLet x' (graft x arg e1) e2)
+        else (eLet x' (graft x arg e1) (graft x arg e2))
   | eSig x' A B =>
-      if (x =? x') 
-        then (eAbs x' (graft x arg A) B) 
-        else (eAbs x' (graft x arg A) (graft x arg B))
+      if (x =? x')
+        then (eSig x' (graft x arg A) B)
+        else (eSig x' (graft x arg A) (graft x arg B))
   | eApp e1 e2 => (eApp (graft x arg e1) (graft x arg e2))
   | eUni U => body
   | ePair e1 e2 A => (ePair (graft x arg e1) (graft x arg e2) (graft x arg A))
@@ -138,53 +148,113 @@ match body with
   | eBool => eBool
 end.
 
-(*Fixpoint trickySubst (x: string) (arg body: ECCexp) (freeVarsInArg: (set string)) :=
+(*
+Lemma fresh_name_exists: forall (fA fB: (set string)),
+exists p: string, not (or (set_In p fB) (set_In p fA)).
+Proof.
+intros fA fB. assert (exists p', not (set_In p' (set_union string_dec fA fB))).
+  - assert (forall (G: (set string)), exists s: string, not (set_In s G)).
+    + intros. assert (forall (F G: (set string)), (length F) > (length G) -> exists s, (and (set_In s F) (not (set_In s G)))).
+      *  intros.
+Abort.
+
+*)
+
+Definition genName (prefix: string) (FVInArg FVInBody: (set string)):=
+prefix ++ (concat "" FVInArg) ++ (concat "" FVInBody).
+
+ Compute genName "x_" (set_add string_dec "a" (set_add string_dec "b" (empty_set string)))
+                     (set_add string_dec "c" (set_add string_dec "d" (empty_set string))).
+
+(*
+Lemma longer_string_is_not_equal: forall (s1 s2: string),
+length s1 > length s2 -> s1 <> s2.
+Proof.
+intros.
+Abort.
+
+Lemma genName_is_fresh_enough: forall (p: string) (fA fB: (set string)),
+not (or (set_In (genName p fA fB) fB) (set_In (genName p fA fB) fA)).
+Proof.
+unfold not. intros. destruct H.
+- unfold genName in H. unfold set_In in H.
+Abort.*)
+
+
+(* If there are free variables in the substitute,
+   and if the term being substituted in binds one of them,
+   then we need to perform an alpha conversion of the term being substituted in
+   that avoids capturing any free variables in the substitute or in the body
+   of the term being substituted in. *)
+
+(*Cannot guess decreasing argument of fix :( *)
+(*
+Fixpoint trickySubst (x: string) (arg body: ECCexp) (FVInArg: (set string)) :=
+let set_mem := set_mem string_dec in
 match body with
   | eId x' => if (x =? x') then arg else body
   | eAbs x' A e =>
-      if (x =? x') 
-        then (eAbs x' (graft x arg A) e) 
-        else (eAbs x' (graft x arg A) (graft x arg e))
-  | ePi x' A B => 
-      if (x =? x') 
-        then (eAbs x' (graft x arg A) B) 
-        else (eAbs x' (graft x arg A) (graft x arg B))
-  | eLet x' e1 e2 =>
-      if (x =? x') 
-        then (eAbs x' (graft x arg e1) e2) 
-        else (eAbs x' (graft x arg e1) (graft x arg e2))
+      if (x =? x')
+        then (eAbs x' (trickySubst x arg A FVInArg) e)
+        else if (set_mem x' FVInArg)
+             then (let xnew := (genName (x ++ "_") FVInArg (FV e)) in
+                    (eAbs xnew (trickySubst x arg A FVInArg) (trickySubst x arg (trickySubst x' (eId xnew) e FVInArg) FVInArg)))
+             else
+              (eAbs x' (trickySubst x arg A FVInArg) (trickySubst x arg e FVInArg))
+  | ePi x' A B =>
+      if (x =? x')
+        then (ePi x' (trickySubst x arg A FVInArg) B)
+        else if (set_mem x' FVInArg)
+             then let xnew := (genName (x ++ "_") FVInArg (FV B)) in
+                (ePi xnew (trickySubst x arg A FVInArg) (trickySubst x arg (trickySubst x' (eId xnew) B FVInArg) FVInArg))
+             else
+              (ePi x' (trickySubst x arg A FVInArg) (trickySubst x arg B FVInArg))
+  | eLet x' A B =>
+      if (x =? x')
+        then (eLet x' (trickySubst x arg A FVInArg) B)
+        else if (set_mem x' FVInArg)
+             then let xnew := (genName (x ++ "_") FVInArg (FV B)) in
+                (eLet xnew (trickySubst x arg A FVInArg) (trickySubst x arg (trickySubst x' (eId xnew) B FVInArg) FVInArg))
+             else
+              (eLet x' (trickySubst x arg A FVInArg) (trickySubst x arg B FVInArg))
   | eSig x' A B =>
-      if (x =? x') 
-        then (eAbs x' (graft x arg A) B) 
-        else (eAbs x' (graft x arg A) (graft x arg B))
-  | eApp e1 e2 => (eApp (graft x arg e1) (graft x arg e2))
+      if (x =? x')
+        then (eSig x' (trickySubst x arg A FVInArg) B)
+        else if (set_mem x' FVInArg)
+             then let xnew := (genName (x ++ "_") FVInArg (FV B)) in
+                (eSig xnew (trickySubst x arg A FVInArg) (trickySubst x arg (trickySubst x' (eId xnew) B FVInArg) FVInArg))
+             else
+              (eSig x' (trickySubst x arg A FVInArg) (trickySubst x arg B FVInArg))
+  | eApp e1 e2 => (eApp (trickySubst x arg e1 FVInArg) (trickySubst x arg e2 FVInArg))
   | eUni U => body
-  | ePair e1 e2 A => (ePair (graft x arg e1) (graft x arg e2) (graft x arg A))
-  | eFst e => (eFst (graft x arg e))
-  | eSnd e => (eSnd (graft x arg e))
-  | eIf e e1 e2 => (eIf (graft x arg e) (graft x arg e1) (graft x arg e2))
+  | ePair e1 e2 A => (ePair (trickySubst x arg e1 FVInArg) (trickySubst x arg e2 FVInArg) (trickySubst x arg A FVInArg))
+  | eFst e => (eFst (trickySubst x arg e FVInArg))
+  | eSnd e => (eSnd (trickySubst x arg e FVInArg))
+  | eIf e e1 e2 => (eIf (trickySubst x arg e FVInArg) (trickySubst x arg e1 FVInArg) (trickySubst x arg e2 FVInArg))
   | eTru => eTru
   | eFls => eFls
   | eBool => eBool
-end.*)
+end.
+*)
 
 Definition subst (x: string) (arg body: ECCexp) :=
-match (freeVars arg) with
+match (FV arg) with
   | nil => (graft x arg body)
-  | frees => (eId "NOT IMPLEMENTED") (*(trickysubst x arg body frees)*)
+  | frees => (eId "broken stuff") (* (trickysubst x arg body frees) *)
 end.
 
+Compute subst ("x") (eTru) (eAbs "x" (eId "x") (eId "x")).
+Compute subst ("x") (eTru) (eAbs "y" (eBool) (eId "x")).
 
 (* -Step- *)
-
 Inductive ECC_RedR : ECCenv -> ECCexp -> ECCexp -> Prop :=
   | R_ID (g: ECCenv) (x: string) (e': ECCexp) :
     ECC_LookupR g x e' -> ECC_RedR g (eId x) e'
   | R_App (g: ECCenv) (x: string) (A body arg: ECCexp) :
     ECC_RedR g (eApp (eAbs x A body) arg) (subst x arg body) (*do anything with env here?*)
-  | R_Fst (g: ECCenv) (e1 e2 A: ECCexp) : 
+  | R_Fst (g: ECCenv) (e1 e2 A: ECCexp) :
     ECC_RedR g (eFst (ePair e1 e2 A)) e1
-  | R_Snd (g: ECCenv) (e1 e2 A: ECCexp) : 
+  | R_Snd (g: ECCenv) (e1 e2 A: ECCexp) :
     ECC_RedR g (eSnd (ePair e1 e2 A)) e2
   | R_Let (g: ECCenv) (x: string) (e1 e2: ECCexp) :
     ECC_RedR g (eLet x e1 e2) (subst x e1 e2)  (*or here?*)
@@ -194,6 +264,7 @@ Inductive ECC_RedR : ECCenv -> ECCexp -> ECCexp -> Prop :=
     ECC_RedR g (eIf eFls e1 e2) e2
 .
 
+(* Reflective Transitive Closure of step*)
 Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCexp -> Prop :=
   (*| R_RedR (g g': ECCenv) (e e': ECCexp): (* maybe don't need this one? it follows from refl + trans*)
       ECC_RedR g e g' e' ->
@@ -204,8 +275,8 @@ Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCexp -> Prop :=
       ECC_RedR g e e' ->
       ECC_RedClosR g e' e'' ->
       ECC_RedClosR g e e''
-  | R_CongLet (g: ECCenv) (e e1 e2: ECCexp) (x: string) : 
-      ECC_RedClosR (gAssign g x e) e1 e2 ->  
+  | R_CongLet (g: ECCenv) (e e1 e2: ECCexp) (x: string) :
+      ECC_RedClosR (gAssign g x e) e1 e2 ->
       ECC_RedClosR g (eLet x e e1) (eLet x e e2)
   | R_CongLam1 (g: ECCenv) (A A' e e': ECCexp) (x: string) :
       ECC_RedClosR g A A' ->
@@ -219,7 +290,7 @@ Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCexp -> Prop :=
       ECC_RedClosR g A A' ->
       ECC_RedClosR (gTypeDec g x A) B B' ->
       ECC_RedClosR g (eSig x A B) (eSig x A' B')
-  | R_CongPair (g: ECCenv) (e1 e1' e2 e2' A A': ECCexp) : 
+  | R_CongPair (g: ECCenv) (e1 e1' e2 e2' A A': ECCexp) :
       ECC_RedClosR g e1 e1' ->
       ECC_RedClosR g e2 e2' ->
       ECC_RedClosR g A A'   ->
@@ -239,6 +310,99 @@ Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCexp -> Prop :=
       ECC_RedClosR g e1 e1' ->
       ECC_RedClosR g e2 e2' ->
       ECC_RedClosR g (eIf e e1 e2) (eIf e' e1' e2')
+.
+
+(* Congruence conversion?*)
+
+Inductive ECC_CongConv: ECCenv -> ECCexp -> ECCexp -> Prop :=
+  | C_Cong (g: ECCenv) (e e1 e2: ECCexp) :
+      ECC_RedClosR g e1 e ->
+      ECC_RedClosR g e2 e ->
+      ECC_CongConv g e1 e2
+  | C_CongIta1 (g: ECCenv) (e1 A e e2 e2': ECCexp) (x: string) :
+      ECC_RedClosR g e1 (eAbs x A e) ->
+      ECC_RedClosR g e2 e2' ->
+      ECC_CongConv (gTypeDec g x A) e (eApp e2' (eId x)) ->
+      ECC_CongConv g e1 e2
+  | C_CongIta2 (g: ECCenv) (e e1 e1' e2 A : ECCexp) (x: string) :
+      ECC_RedClosR g e1 e1' ->
+      ECC_RedClosR g e2 (eAbs x A e) ->
+      ECC_CongConv (gTypeDec g x A) (eApp e1' (eId x)) e ->
+      ECC_CongConv g e1 e2
+.
+
+(* Typing *)
+
+Inductive ECC_sub_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
+| ST_Cong (g: ECCenv) (A B: ECCexp) :
+  ECC_CongConv g A B ->
+  ECC_sub_type g A B
+| ST_Cum (g: ECCenv) (i: nat) :
+  ECC_sub_type g (eUni (uType i)) (eUni (uType (S i)))
+| ST_Pi (g: ECCenv) (A1 A2 B1 B2: ECCexp) (x1 x2: string) :
+  (ECC_CongConv g A1 A2) ->
+  (ECC_sub_type (gTypeDec g x1 A2) B1 (subst x2 (eId x1) B2)) -> (* eId x1 ?*)
+  (ECC_sub_type g (ePi x1 A1 B1) (ePi x2 A2 B2))
+.
+
+Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
+| T_Ax_Prop (g: ECCenv) :
+  (ECC_has_type g (eUni uProp) (eUni (uType 0)))
+| T_Ax_Type (g: ECCenv) (i: nat) :
+  (ECC_has_type g (eUni (uType i)) (eUni (uType (S i))))
+| T_Var (g: ECCenv) (x: string) (A: ECCexp) :
+  (ECC_LookupR g x A) -> (* this needs adjustment *)
+  (ECC_has_type g (eId x) A)
+| T_Let (g: ECCenv) (e e' A B: ECCexp) (x: string):
+  (ECC_has_type g e A) ->
+  (ECC_has_type (gAssign (gTypeDec g x A) x e) e' B) ->
+  (ECC_has_type g (eLet x e e') (subst x e B))
+| T_Prod_Prop (g: ECCenv) (x: string) (A B: ECCexp) (i: nat):
+  (ECC_has_type g A (eUni (uType i))) ->
+  (ECC_has_type (gTypeDec g x A) B (eUni (uProp))) ->
+  (ECC_has_type g (ePi x A B) (eUni (uProp)))
+| T_Prod_Type (g: ECCenv) (x: string) (A B: ECCexp) (i: nat):
+  (ECC_has_type g A (eUni (uType i))) ->
+  (ECC_has_type (gTypeDec g x A) B (eUni (uType i))) ->
+  (ECC_has_type g (ePi x A B) (eUni (uType i)))
+| T_Lam (g: ECCenv) (x: string) (A e B: ECCexp) :
+  (ECC_has_type (gAssign g x A) e B) ->
+  (ECC_has_type g (eAbs x A e) (ePi x A B))
+| T_App (g: ECCenv) (x: string) (e e' A' B: ECCexp) :
+  (ECC_has_type g e (ePi x A' B)) ->
+  (ECC_has_type g e' A') ->
+  (ECC_has_type g (eApp e e') (subst x e B))
+| T_Sig (g: ECCenv) (x: string) (A B: ECCexp) (i: nat) :
+  (ECC_has_type g A (eUni (uType i))) ->
+  (ECC_has_type (gTypeDec g x A) B (eUni (uType i))) -> (* should these be the same i*)
+  (ECC_has_type g (eSig x A B) (eUni (uType i)))
+| T_Pair (g: ECCenv) (e1 e2 A B: ECCexp) (x: string) :
+  (ECC_has_type g e1 A) ->
+  (ECC_has_type g e2 (subst x e1 B)) ->
+  (ECC_has_type g (ePair e1 e2 (eSig x A B)) (eSig x A B))
+| T_Fst (g: ECCenv) (e A B: ECCexp) (x: string) :
+  (ECC_has_type g e (eSig x A B)) ->
+  (ECC_has_type g (eFst e) A)
+| T_Snd (g: ECCenv) (e A B: ECCexp) (x: string) :
+  (ECC_has_type g e (eSig x A B)) ->
+  (ECC_has_type g (eSnd e) (subst x (eFst e) B))
+| T_Bool (g: ECCenv):
+  (ECC_has_type g (eBool) (eUni (uType 0)))
+| T_True (g: ECCenv):
+  (ECC_has_type g (eTru) (eBool))
+| T_False (g: ECCenv):
+  (ECC_has_type g (eFls) (eBool))
+| T_If (g: ECCenv) (B U e e1 e2: ECCexp) (x: string):
+  (ECC_has_type (gTypeDec g x (eBool)) B U) ->
+  (ECC_has_type g e (eBool)) ->
+  (ECC_has_type g e1 (subst x (eTru) B)) ->
+  (ECC_has_type g e2 (subst x (eFls) B)) ->
+  (ECC_has_type g (eIf e e1 e2) (subst x e B))
+| T_Conv (g: ECCenv) (e A B U: ECCexp) :
+  (ECC_has_type g e A) ->
+  (ECC_has_type g B U) ->
+  (ECC_sub_type g A B) ->
+  (ECC_has_type g e B)
 .
 
 Inductive ECC_CongConv: ECCenv -> ECCexp -> ECCexp -> Prop :=
@@ -295,14 +459,14 @@ Definition example_Pair := (< "x", "y" > as (M "x" : "A" .. "B"))%ECC : ECCexp.
 Notation "'fst' e" := (eFst e) (at level 50, e at level 5): ECC_scope.
 Notation "'snd' e" := (eSnd e) (at level 50, e at level 5): ECC_scope.
 
-Definition example_ycombinator := (\F:(type 3) -> ({(\X:(type 2) -> ({F {X X}})) (\X:(type 2) -> ({F {X X}}))}))%ECC. 
+Definition example_ycombinator := (\F:(type 3) -> ({(\X:(type 2) -> ({F {X X}})) (\X:(type 2) -> ({F {X X}}))}))%ECC.
 Print example_ycombinator.
 
 
+(* End ECC.*)
 
 
-(* End ECC.
-Module ECCA. *)
+(* Module ECCA. *)
 
 (* -=ECCA Definition=- *)
 
@@ -326,7 +490,7 @@ with
 ECCAconf: Type :=
   | acfComp (e: ECCAcomp)
   | acfLet (x: ECCAsym) (A: ECCAcomp) (B: ECCAconf)
-with 
+with
 ECCAcomp: Type :=
   | acpApp (v1 v2: ECCAval)
   | acpVal (v: ECCAval)
@@ -394,16 +558,16 @@ Fixpoint trans  (ns: nat) (e: ECCexp) (K: ECCAcont) : ECCAconf :=
     | eId x => (fill_hole (acpVal (avId (asymStr x))) K)
     | ePi x A B => (fill_hole (acpVal (avPi (asymStr x) (trans ns A actHole) (trans ns B actHole))) K)
     | eAbs x A e => (fill_hole (acpVal (avAbs (asymStr x) (trans ns A actHole) (trans ns e actHole))) K)
-    | eApp e1 e2 => 
-        (trans (S ns) e1 (actLetHole (asymNum (S ns)) 
-            (trans (S (S ns)) e2 (actLetHole (asymNum (S (S ns))) 
+    | eApp e1 e2 =>
+        (trans (S ns) e1 (actLetHole (asymNum (S ns))
+            (trans (S (S ns)) e2 (actLetHole (asymNum (S (S ns)))
                 (fill_hole (acpApp (avId (asymNum (S ns))) (avId (asymNum (S (S ns))))) K)))))
-    | eLet x e1 e2 => (trans ns e1 (actLetHole (asymStr x) 
+    | eLet x e1 e2 => (trans ns e1 (actLetHole (asymStr x)
                           (trans (ns) e2 K)))
     | eSig x A B => (fill_hole (acpVal (avSig (asymStr x) (trans ns A actHole) (trans ns B actHole))) K)
-    | ePair e1 e2 A => (trans (S ns) e1 (actLetHole (asymNum (S ns)) 
+    | ePair e1 e2 A => (trans (S ns) e1 (actLetHole (asymNum (S ns))
             (trans (S (S ns)) e2 (actLetHole (asymNum (S (S ns)))
-               (trans (S (S (S ns))) A (actLetHole (asymNum (S (S (S ns)))) 
+               (trans (S (S (S ns))) A (actLetHole (asymNum (S (S (S ns))))
                 (fill_hole (avPair (avId (asymNum (S ns))) (avId (asymNum (S (S ns)))) (avId (asymNum (S (S (S ns)))))) K)))))))
     | eFst e => (trans (S ns) e (actLetHole (asymNum (S ns))
                    (fill_hole (acpFst (asymNum (S ns))) K)))
@@ -427,5 +591,3 @@ Compute trans 0 ({({({({"a" "b"}) {"e" "c"}}) "d"}) ({({({"d" "c"}) "b"}) "a"})}
 
 Check eSig "s" (eUni (uType 1)) (eUni (uType 2)).
 Compute trans 0 (eFst (ePair "e1" "e2" (eSig "s" (eUni (uType 1)) ("s"))))%ECC actHole.
-
-
