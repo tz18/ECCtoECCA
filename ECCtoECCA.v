@@ -1,7 +1,8 @@
-From Coq Require Import Strings.String.
+(*From Coq Require Import Strings.String.
 From Coq Require Import Strings.Ascii.
-From Coq Require Import Lists.ListSet.
-From Coq Require Import Init.Datatypes.
+From Coq Require Import Init.Datatypes.*)
+Require Import Metalib.Metatheory.
+Require Import Omega.
 
 
 (* Module ECC. *)
@@ -14,14 +15,14 @@ Inductive ECCuni: Type :=
 .
 
 Inductive ECCexp: Type :=
-  | eId (x: string)
+  | eId (x: atom)
   | eUni (U: ECCuni)
-  | ePi (x: string) (A B: ECCexp)
-  | eAbs (x: string) (A e: ECCexp)
+  | ePi (x: atom) (A B: ECCexp)
+  | eAbs (x: atom) (A e: ECCexp)
   | eApp  (e1 e2: ECCexp)
-  | eLet (x: string) (e1 e2: ECCexp)
-  | eSig (x: string) (A B: ECCexp)
-  | ePair (e1 e2 A: ECCexp) (*why does ePair not have A as the type and instead has an eSig built in? *)
+  | eLet (x: atom) (e1 e2: ECCexp)
+  | eSig (x: atom) (A B: ECCexp)
+  | ePair (e1 e2 A: ECCexp)
   | eFst (e: ECCexp)
   | eSnd (e: ECCexp)
   | eIf (e e1 e2: ECCexp)
@@ -32,109 +33,158 @@ Inductive ECCexp: Type :=
 
 Inductive ECCenv: Type :=
   | gEmpty
-  | gTypeDec (g: ECCenv) (x: string) (A: ECCexp)
-  | gAssign (g: ECCenv) (x: string) (e: ECCexp)
+  | gTypeDec (g: ECCenv) (x: atom) (A: ECCexp)
+  | gAssign (g: ECCenv) (x: atom) (e: ECCexp)
 .
+
+Fixpoint ECCsize (e: ECCexp) : nat :=
+  match e with
+  | eId _ => 1
+  | eUni _ => 1
+  | ePi _ A B => 1 + (ECCsize A) + (ECCsize B)
+  | eAbs _ A e => 1 + (ECCsize A) + (ECCsize e)
+  | eApp e1 e2 => 1 + (ECCsize e1) + (ECCsize e2)
+  | eLet _ e1 e2 => 1 + (ECCsize e1) + (ECCsize e2)
+  | eSig _ A B => 1 + (ECCsize A) + (ECCsize B)
+  | ePair e1 e2 A => 1 + (ECCsize e1) + (ECCsize e2) + (ECCsize A)
+  | eFst e => 1 + (ECCsize e)
+  | eSnd e => 1 + (ECCsize e)
+  | eIf e e1 e2 => 1 + (ECCsize e) + (ECCsize e1) + (ECCsize e2)
+  | eTru => 1
+  | eFls => 1
+  | eBool => 1
+end.
+
+Hint Constructors ECCuni.
+Hint Constructors ECCexp.
+Hint Constructors ECCenv.
+
+Lemma ECCsize_non_zero : forall e, 0 < ECCsize e.
+Proof.
+  induction e; simpl; omega.
+Qed.
 
 (* -=ECC Evaluation=- *)
 
 (* -Lookup- *)
-Local Open Scope string_scope.
-
 
 (*replace with partial map? How to handle definitions and assumptions? Two maps?
 Or _two different types of lookup_ *)
-Fixpoint ECC_Lookup (g: ECCenv) (x: string): (option ECCexp) :=
+Fixpoint ECC_Lookup (g: ECCenv) (x: atom): (option ECCexp) :=
 match g with
   | gEmpty => None
-  | gTypeDec g' x' A => (if (x =? x') then Some A else (ECC_Lookup g' x))
-  | gAssign g' x' e => (if (x =? x') then Some e else (ECC_Lookup g' x))
+  | gTypeDec g' x' A => (if (x == x') then Some A else (ECC_Lookup g' x))
+  | gAssign g' x' e => (if (x == x') then Some e else (ECC_Lookup g' x))
 end.
 
 
-Inductive ECC_LookupR : ECCenv -> string -> ECCexp -> Prop:=
-  | L_gTypeDecFirst (g': ECCenv) (x: string) (A: ECCexp):
+Inductive ECC_LookupR : ECCenv -> atom -> ECCexp -> Prop:=
+  | L_gTypeDecFirst (g': ECCenv) (x: atom) (A: ECCexp):
     ECC_LookupR (gTypeDec g' x A) x A
-  | L_gAssignFirst (g': ECCenv) (x: string) (e: ECCexp):
+  | L_gAssignFirst (g': ECCenv) (x: atom) (e: ECCexp):
     ECC_LookupR (gAssign g' x e) x e
-  | L_gTypeDecRest (g': ECCenv) (x x': string) (A a': ECCexp):
+  | L_gTypeDecRest (g': ECCenv) (x x': atom) (A a': ECCexp):
     ECC_LookupR g' x A ->
-    (x =? x') = false ->
+    (x <> x') ->
     ECC_LookupR (gTypeDec g' x' a') x A
-  | L_gAssignRest (g': ECCenv) (x x': string) (e e': ECCexp):
+  | L_gAssignRest (g': ECCenv) (x x': atom) (e e': ECCexp):
     ECC_LookupR g' x e ->
-    (x =? x') = false -> (* should we have this condition? *)
+    (x <> x') -> (* should we have this condition? *)
     ECC_LookupR (gAssign g' x' e') x e
 .
 
 (* Q: what if looking up a type and get a value first, or vice versa? *)
 
+Hint Constructors ECC_LookupR.
+
+Definition X: atom := (fresh nil).
+Definition Y: atom := (fresh [ X ]).
+Definition Z: atom := (fresh (X :: Y :: nil)).
+
 Example ECC_LookupFirstExample:
-ECC_LookupR (gTypeDec gEmpty "x" eTru) "x" eTru.
+ECC_LookupR (gTypeDec gEmpty X eTru) X eTru.
 Proof.
-  apply L_gTypeDecFirst.
+  auto.
 Qed.
 
 Example ECC_LookupRestExample:
-ECC_LookupR (gTypeDec (gTypeDec gEmpty "x" eTru) "y" eFls) "x" eTru.
+X <> Y -> ECC_LookupR (gTypeDec (gTypeDec gEmpty X eTru) Y eFls) X eTru.
 Proof.
-  apply L_gTypeDecRest. apply L_gTypeDecFirst. reflexivity.
+  auto.  (* WOW!*)
 Qed.
 
-Print string.
+
 
 (* Substitution *)
 
 
-Fixpoint FV (e: ECCexp) : (set string) :=
-let set_add := set_add string_dec in (* there has to be a better way to do this*)
-let set_remove := set_remove string_dec in
-let set_union := set_union string_dec in
+Fixpoint FV (e: ECCexp) : atoms :=
 match e with
-  | eId x => (set_add x (empty_set string))
-  | eUni U => (empty_set string)
-  | ePi x A B =>  (set_union (FV A) (set_remove x (FV B)))
-  | eAbs x A e => (set_union (FV A) (set_remove  x (FV e)))
-  | eApp  e1 e2 => (set_union (FV e1) (FV e2))
-  | eLet x e1 e2 => (set_union (FV e1) (FV e2))
-  | eSig x A B => (set_union (FV A) (set_remove  x (FV B)))
-  | ePair e1 e2 A => (set_union (set_union  (FV e1) (FV e2)) (FV A))
+  | eId x => singleton x
+  | eUni U => empty
+  | ePi x A B =>  FV A `union` (remove x (FV B))
+  | eAbs x A e => FV A `union` (remove  x (FV e))
+  | eApp  e1 e2 => (union (FV e1) (FV e2))
+  | eLet x e1 e2 => (union (FV e1) (FV e2))
+  | eSig x A B => (union (FV A) (remove  x (FV B)))
+  | ePair e1 e2 A => (union (union  (FV e1) (FV e2)) (FV A))
   | eFst e => (FV e)
   | eSnd e => (FV e)
-  | eIf e e1 e2 => (set_union (set_union  (FV e) (FV e1)) (FV e2))
-  | eTru => (empty_set string)
-  | eFls => (empty_set string)
-  | eBool => (empty_set string)
+  | eIf e e1 e2 => (union (union  (FV e) (FV e1)) (FV e2))
+  | eTru => empty
+  | eFls => empty
+  | eBool => empty
 end.
 
-Compute (FV (eId "x")).
-Compute (FV (eApp (eId "x") (eId "x"))).
-Compute (FV (eApp (eId "x") (eId "y"))).
-Compute (FV (eAbs "x" (eId "a") (eId "b"))).
-Compute (FV (eAbs "x" (eId "x") (eId "b"))).
-Compute (FV (eAbs "x" (eId "a") (eId "x"))).
-Compute (FV (eAbs "x" (eId "x") (eId "x"))).
+Fixpoint V (e: ECCexp) : atoms :=
+match e with
+  | eId x => singleton x
+  | eUni U => empty
+  | ePi x A B =>  (add x (V A `union` V B))
+  | eAbs x A e => (add x (V A `union` V e))
+  | eApp  e1 e2 => (union (V e1) (V e2))
+  | eLet x e1 e2 => (add x (union (V e1) (V e2)))
+  | eSig x A B => (add x (V A `union` V B))
+  | ePair e1 e2 A => (union (union  (V e1) (V e2)) (V A))
+  | eFst e => (V e)
+  | eSnd e => (V e)
+  | eIf e e1 e2 => (union (union  (V e) (V e1)) (V e2))
+  | eTru => empty
+  | eFls => empty
+  | eBool => empty
+end.
+
+Compute (FV (eId X)).
+Compute (FV (eApp (eId X) (eId X))).
+Compute (FV (eApp (eId X) (eId Y))).
+Compute (FV (eAbs X (eId Y) (eId Z))).
+Example freshie := atom_fresh ((FV (eApp (eId X) (eId Y))) `union` (V (eAbs X (eId Y) (eId Z)))).
+Compute freshie.
+Compute (V (eAbs X (eId Y) (eId Z))).
+Compute (FV (eAbs X (eId X) (eId Z))).
+Compute (FV (eAbs X (eId Z) (eId X))).
+Compute (FV (eAbs X (eId X) (eId X))).
 
 (* If there are no free variables in the substitute,
    then substitution is simple.  *)
 
-Fixpoint graft (x: string) (arg body: ECCexp) :=
+Fixpoint graft (x: atom) (arg body: ECCexp) :=
 match body with
-  | eId x' => if (x =? x') then arg else body
+  | eId x' => if (x == x') then arg else body
   | eAbs x' A e =>
-      if (x =? x')
+      if (x == x')
         then (eAbs x' (graft x arg A) e)
         else (eAbs x' (graft x arg A) (graft x arg e))
   | ePi x' A B =>
-      if (x =? x')
+      if (x == x')
         then (ePi x' (graft x arg A) B)
         else (ePi x' (graft x arg A) (graft x arg B))
   | eLet x' e1 e2 =>
-      if (x =? x')
+      if (x == x')
         then (eLet x' (graft x arg e1) e2)
         else (eLet x' (graft x arg e1) (graft x arg e2))
   | eSig x' A B =>
-      if (x =? x')
+      if (x == x')
         then (eSig x' (graft x arg A) B)
         else (eSig x' (graft x arg A) (graft x arg B))
   | eApp e1 e2 => (eApp (graft x arg e1) (graft x arg e2))
@@ -148,40 +198,6 @@ match body with
   | eBool => eBool
 end.
 
-(*
-Lemma fresh_name_exists: forall (fA fB: (set string)),
-exists p: string, not (or (set_In p fB) (set_In p fA)).
-Proof.
-intros fA fB. assert (exists p', not (set_In p' (set_union string_dec fA fB))).
-  - assert (forall (G: (set string)), exists s: string, not (set_In s G)).
-    + intros. assert (forall (F G: (set string)), (length F) > (length G) -> exists s, (and (set_In s F) (not (set_In s G)))).
-      *  intros.
-Abort.
-
-*)
-
-
-(* This is obviously a terrible way to generate fresh names,
-and will be replaced with something from the UPenn meta *)
-Definition genName (prefix: string) (FVInArg FVInBody: (set string)):=
-prefix ++ (concat "" FVInArg) ++ (concat "" FVInBody).
-
- Compute genName "x_" (set_add string_dec "a" (set_add string_dec "b" (empty_set string)))
-                     (set_add string_dec "c" (set_add string_dec "d" (empty_set string))).
-
-(*
-Lemma longer_string_is_not_equal: forall (s1 s2: string),
-length s1 > length s2 -> s1 <> s2.
-Proof.
-intros.
-Abort.
-
-Lemma genName_is_fresh_enough: forall (p: string) (fA fB: (set string)),
-not (or (set_In (genName p fA fB) fB) (set_In (genName p fA fB) fA)).
-Proof.
-unfold not. intros. destruct H.
-- unfold genName in H. unfold set_In in H.
-Abort.*)
 
 
 (* If there are free variables in the substitute,
@@ -190,44 +206,35 @@ Abort.*)
    that avoids capturing any free variables in the substitute or in the body
    of the term being substituted in. *)
 
-(*Cannot guess decreasing argument of fix :( *)
+(* Cannot guess decreasing argument of fix :( *)
 
-Fixpoint trickySubst (x: string) (arg body: ECCexp) (FVInArg: (set string)) :=
-let set_mem := set_mem string_dec in
+Lemma graft_id_size_preserving : forall xnew x' e, (ECCsize (graft x' (eId xnew) e)) = ECCsize e.
+  intros. induction e; simpl; try case (x' =? x0); eauto; destruct (x' == x); auto; simpl; omega.
+Qed.
+
+Program Fixpoint trickySubst (x: atom) (arg body: ECCexp) (FVInArg: atoms) {measure (ECCsize body)}:=
 match body with
-  | eId x' => if (x =? x') then arg else body
+  | eId x' => if (x == x') then arg else body
   | eAbs x' A e =>
-      if (x =? x')
+      if (x == x')
         then (eAbs x' (trickySubst x arg A FVInArg) e)
-        else if (set_mem x' FVInArg)
-             then (let xnew := (genName (x ++ "_") FVInArg (FV e)) in
-                    (eAbs xnew (trickySubst x arg A FVInArg) (trickySubst x arg (trickySubst x' (eId xnew) e FVInArg) FVInArg)))
-             else
-              (eAbs x' (trickySubst x arg A FVInArg) (trickySubst x arg e FVInArg))
+        else let (xnew, _) := atom_fresh (FVInArg `union` (V e)) in
+                    (eAbs xnew (trickySubst x arg A FVInArg) (trickySubst x arg (graft x' (eId xnew) e) FVInArg))
   | ePi x' A B =>
-      if (x =? x')
+      if (x == x')
         then (ePi x' (trickySubst x arg A FVInArg) B)
-        else if (set_mem x' FVInArg)
-             then let xnew := (genName (x ++ "_") FVInArg (FV B)) in
-                (ePi xnew (trickySubst x arg A FVInArg) (trickySubst x arg (trickySubst x' (eId xnew) B FVInArg) FVInArg))
-             else
-              (ePi x' (trickySubst x arg A FVInArg) (trickySubst x arg B FVInArg))
+        else let (xnew, _) := atom_fresh (FVInArg `union` (V B)) in
+                (ePi xnew (trickySubst x arg A FVInArg) (trickySubst x arg (graft x' (eId xnew) B) FVInArg))
   | eLet x' A B =>
-      if (x =? x')
+      if (x == x')
         then (eLet x' (trickySubst x arg A FVInArg) B)
-        else if (set_mem x' FVInArg)
-             then let xnew := (genName (x ++ "_") FVInArg (FV B)) in
-                (eLet xnew (trickySubst x arg A FVInArg) (trickySubst x arg (trickySubst x' (eId xnew) B FVInArg) FVInArg))
-             else
-              (eLet x' (trickySubst x arg A FVInArg) (trickySubst x arg B FVInArg))
+        else let (xnew, _) := atom_fresh (FVInArg `union` (V B)) in
+                (eLet xnew (trickySubst x arg A FVInArg) (trickySubst x arg (graft x' (eId xnew) B) FVInArg))
   | eSig x' A B =>
-      if (x =? x')
+      if (x == x')
         then (eSig x' (trickySubst x arg A FVInArg) B)
-        else if (set_mem x' FVInArg)
-             then let xnew := (genName (x ++ "_") FVInArg (FV B)) in
-                (eSig xnew (trickySubst x arg A FVInArg) (trickySubst x arg (trickySubst x' (eId xnew) B FVInArg) FVInArg))
-             else
-              (eSig x' (trickySubst x arg A FVInArg) (trickySubst x arg B FVInArg))
+        else let (xnew, _) := atom_fresh (FVInArg `union` (V B)) in
+                (eSig xnew (trickySubst x arg A FVInArg) (trickySubst x arg (graft x' (eId xnew) B) FVInArg))
   | eApp e1 e2 => (eApp (trickySubst x arg e1 FVInArg) (trickySubst x arg e2 FVInArg))
   | eUni U => body
   | ePair e1 e2 A => (ePair (trickySubst x arg e1 FVInArg) (trickySubst x arg e2 FVInArg) (trickySubst x arg A FVInArg))
@@ -238,16 +245,14 @@ match body with
   | eFls => eFls
   | eBool => eBool
 end.
+Solve Obligations with (Tactics.program_simpl;intros; simpl; omega; auto).
+Solve Obligations with (Tactics.program_simpl; simpl; rewrite -> graft_id_size_preserving; omega).
 
+Print trickySubst.
 
-Definition subst (x: string) (arg body: ECCexp) :=
-match (FV arg) with
-  | nil => (graft x arg body)
-  | frees => (eId "broken stuff") (* (trickysubst x arg body frees) *)
-end.
-
-Compute subst ("x") (eTru) (eAbs "x" (eId "x") (eId "x")).
-Compute subst ("x") (eTru) (eAbs "y" (eBool) (eId "x")).
+Timeout 30 Compute trickySubst X (eTru) (eId X) (FV eTru). 
+Timeout 30 Compute trickySubst X (eTru) (eAbs Y (eBool) (eId X)) (FV eTru).
+Compute subst x (eTru) (eAbs x (eId x) (eId x)).
 
 (* -Step- *)
 Inductive ECC_RedR : ECCenv -> ECCexp -> ECCexp -> Prop :=
@@ -453,6 +458,8 @@ Notation "'snd' e" := (eSnd e) (at level 50, e at level 5): ECC_scope.
 
 Definition example_ycombinator := (\F:(type 3) -> ({(\X:(type 2) -> ({F {X X}})) (\X:(type 2) -> ({F {X X}}))}))%ECC.
 Print example_ycombinator.
+
+Print (size example_ycombinator).
 
 
 (* End ECC.*)
