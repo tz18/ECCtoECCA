@@ -3,61 +3,28 @@ From Coq Require Import Strings.Ascii.
 From Coq Require Import Init.Datatypes.*)
 Require Import Metalib.Metatheory.
 Require Import Omega.
-Require Import Metalib.LibLNgen.
+
 
 (* Module ECC. *)
 
 (* -=ECC Definition=- *)
 
-Inductive ECCuni: Type :=
-  | uProp
-  | uType (i: nat)
-.
-
 Inductive ECCexp: Type :=
   | eId (x: atom)
-  | eUni (U: ECCuni)
-  | ePi (x: atom) (A B: ECCexp)
+  | eUni
   | eAbs (x: atom) (A e: ECCexp)
   | eApp  (e1 e2: ECCexp)
-  | eLet (x: atom) (e1 e2: ECCexp)
-  | eSig (x: atom) (A B: ECCexp)
-  | ePair (e1 e2 A: ECCexp)
-  | eFst (e: ECCexp)
-  | eSnd (e: ECCexp)
-  | eIf (e e1 e2: ECCexp)
-  | eTru
-  | eFls
-  | eBool
-.
-
-Inductive ECCenv: Type :=
-  | gEmpty
-  | gTypeDec (g: ECCenv) (x: atom) (A: ECCexp)
-  | gAssign (g: ECCenv) (x: atom) (e: ECCexp)
 .
 
 Fixpoint ECCsize (e: ECCexp) : nat :=
   match e with
   | eId _ => 1
-  | eUni _ => 1
-  | ePi _ A B => 1 + (ECCsize A) + (ECCsize B)
+  | eUni => 1
   | eAbs _ A e => 1 + (ECCsize A) + (ECCsize e)
   | eApp e1 e2 => 1 + (ECCsize e1) + (ECCsize e2)
-  | eLet _ e1 e2 => 1 + (ECCsize e1) + (ECCsize e2)
-  | eSig _ A B => 1 + (ECCsize A) + (ECCsize B)
-  | ePair e1 e2 A => 1 + (ECCsize e1) + (ECCsize e2) + (ECCsize A)
-  | eFst e => 1 + (ECCsize e)
-  | eSnd e => 1 + (ECCsize e)
-  | eIf e e1 e2 => 1 + (ECCsize e) + (ECCsize e1) + (ECCsize e2)
-  | eTru => 1
-  | eFls => 1
-  | eBool => 1
 end.
 
-Hint Constructors ECCuni.
 Hint Constructors ECCexp.
-Hint Constructors ECCenv.
 
 Lemma ECCsize_non_zero : forall e, 0 < ECCsize e.
 Proof.
@@ -66,80 +33,34 @@ Qed.
 
 (* -=ECC Evaluation=- *)
 
-(* -Lookup- *)
-
-(*replace with partial map? How to handle definitions and assumptions? Two maps?
-Or _two different types of lookup_ *)
-Fixpoint ECC_Lookup (g: ECCenv) (x: atom): (option ECCexp) :=
-match g with
-  | gEmpty => None
-  | gTypeDec g' x' A => (if (x == x') then Some A else (ECC_Lookup g' x))
-  | gAssign g' x' e => (if (x == x') then Some e else (ECC_Lookup g' x))
-end.
-
-
-Inductive ECC_LookupR : ECCenv -> atom -> ECCexp -> Prop:=
-  | L_gTypeDecFirst (g': ECCenv) (x: atom) (A: ECCexp):
-    ECC_LookupR (gTypeDec g' x A) x A
-  | L_gAssignFirst (g': ECCenv) (x: atom) (e: ECCexp):
-    ECC_LookupR (gAssign g' x e) x e
-  | L_gTypeDecRest (g': ECCenv) (x x': atom) (A a': ECCexp):
-    ECC_LookupR g' x A ->
-    (x <> x') ->
-    ECC_LookupR (gTypeDec g' x' a') x A
-  | L_gAssignRest (g': ECCenv) (x x': atom) (e e': ECCexp):
-    ECC_LookupR g' x e ->
-    (x <> x') -> (* should we have this condition? *)
-    ECC_LookupR (gAssign g' x' e') x e
-.
-
-(* Q: what if looking up a type and get a value first, or vice versa? *)
-
-Hint Constructors ECC_LookupR.
-
-Definition X: atom := (fresh nil).
-Definition Y: atom := (fresh (X :: nil)).
-Definition Z: atom := (fresh (X :: Y :: nil)).
-
-Example ECC_LookupFirstExample:
-ECC_LookupR (gTypeDec gEmpty X eTru) X eTru.
-Proof.
-  auto.
-Qed.
-
-Example ECC_LookupRestExample:
-X <> Y -> ECC_LookupR (gTypeDec (gTypeDec gEmpty X eTru) Y eFls) X eTru.
-Proof.
-  auto.  (* WOW!*)
-Qed.
-
-
+Definition X:= (fresh nil).
+Definition Y := (fresh [ X ]).
+Definition Z := (fresh (X :: Y :: nil)).
 
 (* Substitution *)
-
-
 Fixpoint FV (e: ECCexp) : atoms :=
 match e with
   | eId x => singleton x
-  | eUni U => empty
-  | ePi x A B =>  FV A `union` (remove x (FV B))
+  | eUni => empty
   | eAbs x A e => FV A `union` (remove  x (FV e))
   | eApp  e1 e2 => (union (FV e1) (FV e2))
-  | eLet x e1 e2 => (union (FV e1) (FV e2))
-  | eSig x A B => (union (FV A) (remove  x (FV B)))
-  | ePair e1 e2 A => (union (union  (FV e1) (FV e2)) (FV A))
-  | eFst e => (FV e)
-  | eSnd e => (FV e)
-  | eIf e e1 e2 => (union (union  (FV e) (FV e1)) (FV e2))
-  | eTru => empty
-  | eFls => empty
-  | eBool => empty
+end.
+
+Fixpoint V (e: ECCexp) : atoms :=
+match e with
+  | eId x => singleton x
+  | eUni => empty
+  | eAbs x A e => (add x (V A `union` V e))
+  | eApp  e1 e2 => (union (V e1) (V e2))
 end.
 
 Compute (FV (eId X)).
 Compute (FV (eApp (eId X) (eId X))).
 Compute (FV (eApp (eId X) (eId Y))).
 Compute (FV (eAbs X (eId Y) (eId Z))).
+Example freshie := atom_fresh ((FV (eApp (eId X) (eId Y))) `union` (V (eAbs X (eId Y) (eId Z)))).
+Compute freshie.
+Compute (V (eAbs X (eId Y) (eId Z))).
 Compute (FV (eAbs X (eId X) (eId Z))).
 Compute (FV (eAbs X (eId Z) (eId X))).
 Compute (FV (eAbs X (eId X) (eId X))).
@@ -147,7 +68,6 @@ Compute (FV (eAbs X (eId X) (eId X))).
 (* If there are no free variables in the substitute,
    then substitution is simple.  *)
 
-(*
 Fixpoint graft (x: atom) (arg body: ECCexp) :=
 match body with
   | eId x' => if (x == x') then arg else body
@@ -155,61 +75,9 @@ match body with
       if (x == x')
         then (eAbs x' (graft x arg A) e)
         else (eAbs x' (graft x arg A) (graft x arg e))
-  | ePi x' A B =>
-      if (x == x')
-        then (ePi x' (graft x arg A) B)
-        else (ePi x' (graft x arg A) (graft x arg B))
-  | eLet x' e1 e2 =>
-      if (x == x')
-        then (eLet x' (graft x arg e1) e2)
-        else (eLet x' (graft x arg e1) (graft x arg e2))
-  | eSig x' A B =>
-      if (x == x')
-        then (eSig x' (graft x arg A) B)
-        else (eSig x' (graft x arg A) (graft x arg B))
   | eApp e1 e2 => (eApp (graft x arg e1) (graft x arg e2))
-  | eUni U => body
-  | ePair e1 e2 A => (ePair (graft x arg e1) (graft x arg e2) (graft x arg A))
-  | eFst e => (eFst (graft x arg e))
-  | eSnd e => (eSnd (graft x arg e))
-  | eIf e e1 e2 => (eIf (graft x arg e) (graft x arg e1) (graft x arg e2))
-  | eTru => eTru
-  | eFls => eFls
-  | eBool => eBool
+  | eUni => body
 end.
-
-Lemma graft_id_size_preserving : forall xnew x' e, (ECCsize (graft x' (eId xnew) e)) = ECCsize e.
-  intros. induction e; simpl; try case (x' =? x0); eauto; destruct (x' == x); auto; simpl; omega.
-Qed.
-*)
-
-
-(*Let's get nominal!*)
-
-Definition swap_var (x:atom) (y:atom) (z:atom) :=
-  if (z == x) then y else if (z == y) then x else z.
-
-Fixpoint swap (x:atom) (y:atom) (t:ECCexp) : ECCexp :=
-  match t with
-  | eId z     => eId (swap_var x y z)
-  | eAbs z A t1  => eAbs (swap_var x y z) (swap x y A) (swap x y t1)
-  | eApp t1 t2 => eApp (swap x y t1) (swap x y t2)
-  | ePi x' A B => ePi (swap_var x y x') (swap x y A) (swap x y B)
-  | eLet x' e1 e2 => eLet (swap_var x y x') (swap x y e1) (swap x y e2)
-  | eSig x' A B => eSig (swap_var x y x') (swap x y A) (swap x y B)
-  | ePair e1 e2 A => ePair (swap x y e1) (swap x y e2) (swap x y A)
-  | eFst e => (eFst (swap x y e))
-  | eSnd e => (eSnd (swap x y e))
-  | eIf e e1 e2 => (eIf (swap x y e) (swap x y e1) (swap x y e2))
-  | _ => t
-  end.
-
-Lemma swap_size_eq : forall x y t,
-    ECCsize (swap x y t) = ECCsize t.
-Proof.
-  induction t; simpl; auto.
-Qed.
-
 
 (* If there are free variables in the substitute,
    and if the term being substituted in binds one of them,
@@ -219,7 +87,32 @@ Qed.
 
 (* Cannot guess decreasing argument of fix :( *)
 
+Lemma graft_id_size_preserving : forall xnew x' e, (ECCsize (graft x' (eId xnew) e)) = ECCsize e.
+  intros. induction e. 
+    - simpl. destruct (x' == x); auto.
+    - auto.
+    - simpl. destruct (x' == x).
+      + cbn. rewrite -> IHe1. reflexivity.
+      + cbn. rewrite -> IHe1. rewrite -> IHe2. reflexivity.
+    - cbn. rewrite -> IHe1. rewrite -> IHe2. reflexivity.
+Defined.
 
+Definition swap_var (x:atom) (y:atom) (z:atom) :=
+  if (z == x) then y else if (z == y) then x else z.
+
+Fixpoint swap (x:atom) (y:atom) (t:ECCexp) : ECCexp :=
+  match t with
+  | eId z     => eId (swap_var x y z)
+  | eAbs z A t1  => eAbs (swap_var x y z) (swap x y A) (swap x y t1)
+  | eApp t1 t2 => eApp (swap x y t1) (swap x y t2)
+  | eUni => t
+  end.
+
+Lemma swap_size_eq : forall x y t,
+    ECCsize (swap x y t) = ECCsize t.
+Proof.
+  induction t; simpl; auto.
+Qed.
 
 Program Fixpoint trickySubst (x: atom) (arg body: ECCexp) (FVInArg: atoms) {measure (ECCsize body)}:=
 match body with
@@ -229,40 +122,15 @@ match body with
         then (eAbs x' (trickySubst x arg A FVInArg) e)
         else let (xnew, _) := atom_fresh (FVInArg `union` (FV e)) in
                     (eAbs xnew (trickySubst x arg A FVInArg) (trickySubst x arg (swap x' xnew e) FVInArg))
-  | ePi x' A B =>
-      if (x == x')
-        then (ePi x' (trickySubst x arg A FVInArg) B)
-        else let (xnew, _) := atom_fresh (FVInArg `union` (FV B)) in
-                (ePi xnew (trickySubst x arg A FVInArg) (trickySubst x arg (swap x' xnew B) FVInArg))
-  | eLet x' A B =>
-      if (x == x')
-        then (eLet x' (trickySubst x arg A FVInArg) B)
-        else let (xnew, _) := atom_fresh (FVInArg `union` (FV B)) in
-                (eLet xnew (trickySubst x arg A FVInArg) (trickySubst x arg (swap x' xnew B) FVInArg))
-  | eSig x' A B =>
-      if (x == x')
-        then (eSig x' (trickySubst x arg A FVInArg) B)
-        else let (xnew, _) := atom_fresh (FVInArg `union` (FV B)) in
-                (eSig xnew (trickySubst x arg A FVInArg) (trickySubst x arg (swap x' xnew B) FVInArg))
   | eApp e1 e2 => (eApp (trickySubst x arg e1 FVInArg) (trickySubst x arg e2 FVInArg))
-  | eUni U => body
-  | ePair e1 e2 A => (ePair (trickySubst x arg e1 FVInArg) (trickySubst x arg e2 FVInArg) (trickySubst x arg A FVInArg))
-  | eFst e => (eFst (trickySubst x arg e FVInArg))
-  | eSnd e => (eSnd (trickySubst x arg e FVInArg))
-  | eIf e e1 e2 => (eIf (trickySubst x arg e FVInArg) (trickySubst x arg e1 FVInArg) (trickySubst x arg e2 FVInArg))
-  | eTru => eTru
-  | eFls => eFls
-  | eBool => eBool
+  | eUni => body
 end.
-Obligations.
-Solve Obligations with (Tactics.program_simpl; cbn; omega).
-Solve Obligations with (Tactics.program_simpl; cbn; rewrite -> swap_size_eq; omega).
+Solve Obligations with (Tactics.program_simpl; simpl; omega).
+Solve Obligations with (Tactics.program_simpl; simpl; rewrite -> swap_size_eq; omega).
 
-Print trickySubst_func.
-
-Timeout 30 Compute trickySubst X (eTru) (eId X) (FV eTru). 
-Eval cbn in trickySubst X (eTru) (eAbs Y (eBool) (eId X)) (FV eTru).
-Compute trickySubst X (eTru) (eAbs X (eId X) (eId X)).
+Timeout 30 Compute trickySubst X (eUni) (eId X) (FV eUni). 
+Compute trickySubst X (eUni) (eAbs Y (eUni) (eId X)) empty.
+Compute subst x (eTru) (eAbs x (eId x) (eId x)).
 
 (* -Step- *)
 Inductive ECC_RedR : ECCenv -> ECCexp -> ECCexp -> Prop :=
