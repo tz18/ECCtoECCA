@@ -1,9 +1,30 @@
 (*From Coq Require Import Strings.String.
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Init.Datatypes.*)
-Require Import Metalib.Metatheory.
 Require Import Omega.
-Require Import Metalib.LibLNgen.
+Require Import Coq.Lists.ListSet.
+Require Import Coq.Init.Nat.
+Require Import Arith.
+Require Import Coq.Program.Wf.
+Open Scope list.
+
+Definition atom:= nat.
+Definition atoms := set atom.
+Definition empty : atoms := empty_set atom.
+Definition singleton (x : atom) := x :: nil.
+
+Definition union := set_union Nat.eq_dec.
+Definition remove := set_remove Nat.eq_dec.
+Definition add := set_add Nat.eq_dec.
+
+Definition fresh (ns: atoms): atom :=
+(set_fold_left max ns 0) + 1
+.
+
+Definition X: atom := (fresh nil).
+Definition Y: atom := (fresh (X :: nil)).
+Definition Z: atom := (fresh (X :: Y :: nil)).
+
 
 (* Module ECC. *)
 
@@ -73,8 +94,8 @@ Or _two different types of lookup_ *)
 Fixpoint ECC_Lookup (g: ECCenv) (x: atom): (option ECCexp) :=
 match g with
   | gEmpty => None
-  | gTypeDec g' x' A => (if (x == x') then Some A else (ECC_Lookup g' x))
-  | gAssign g' x' e => (if (x == x') then Some e else (ECC_Lookup g' x))
+  | gTypeDec g' x' A => (if (x =? x') then Some A else (ECC_Lookup g' x))
+  | gAssign g' x' e => (if (x =? x') then Some e else (ECC_Lookup g' x))
 end.
 
 
@@ -97,10 +118,6 @@ Inductive ECC_LookupR : ECCenv -> atom -> ECCexp -> Prop:=
 
 Hint Constructors ECC_LookupR.
 
-Definition X: atom := (fresh nil).
-Definition Y: atom := (fresh (X :: nil)).
-Definition Z: atom := (fresh (X :: Y :: nil)).
-
 Example ECC_LookupFirstExample:
 ECC_LookupR (gTypeDec gEmpty X eTru) X eTru.
 Proof.
@@ -113,8 +130,6 @@ Proof.
   auto.  (* WOW!*)
 Qed.
 
-
-
 (* Substitution *)
 
 
@@ -122,8 +137,8 @@ Fixpoint FV (e: ECCexp) : atoms :=
 match e with
   | eId x => singleton x
   | eUni U => empty
-  | ePi x A B =>  FV A `union` (remove x (FV B))
-  | eAbs x A e => FV A `union` (remove  x (FV e))
+  | ePi x A B =>  union (FV A) (remove x (FV B))
+  | eAbs x A e => union (FV A) (remove  x (FV e))
   | eApp  e1 e2 => (union (FV e1) (FV e2))
   | eLet x e1 e2 => (union (FV e1) (FV e2))
   | eSig x A B => (union (FV A) (remove  x (FV B)))
@@ -136,58 +151,10 @@ match e with
   | eBool => empty
 end.
 
-Compute (FV (eId X)).
-Compute (FV (eApp (eId X) (eId X))).
-Compute (FV (eApp (eId X) (eId Y))).
-Compute (FV (eAbs X (eId Y) (eId Z))).
-Compute (FV (eAbs X (eId X) (eId Z))).
-Compute (FV (eAbs X (eId Z) (eId X))).
-Compute (FV (eAbs X (eId X) (eId X))).
-
-(* If there are no free variables in the substitute,
-   then substitution is simple.  *)
-
-(*
-Fixpoint graft (x: atom) (arg body: ECCexp) :=
-match body with
-  | eId x' => if (x == x') then arg else body
-  | eAbs x' A e =>
-      if (x == x')
-        then (eAbs x' (graft x arg A) e)
-        else (eAbs x' (graft x arg A) (graft x arg e))
-  | ePi x' A B =>
-      if (x == x')
-        then (ePi x' (graft x arg A) B)
-        else (ePi x' (graft x arg A) (graft x arg B))
-  | eLet x' e1 e2 =>
-      if (x == x')
-        then (eLet x' (graft x arg e1) e2)
-        else (eLet x' (graft x arg e1) (graft x arg e2))
-  | eSig x' A B =>
-      if (x == x')
-        then (eSig x' (graft x arg A) B)
-        else (eSig x' (graft x arg A) (graft x arg B))
-  | eApp e1 e2 => (eApp (graft x arg e1) (graft x arg e2))
-  | eUni U => body
-  | ePair e1 e2 A => (ePair (graft x arg e1) (graft x arg e2) (graft x arg A))
-  | eFst e => (eFst (graft x arg e))
-  | eSnd e => (eSnd (graft x arg e))
-  | eIf e e1 e2 => (eIf (graft x arg e) (graft x arg e1) (graft x arg e2))
-  | eTru => eTru
-  | eFls => eFls
-  | eBool => eBool
-end.
-
-Lemma graft_id_size_preserving : forall xnew x' e, (ECCsize (graft x' (eId xnew) e)) = ECCsize e.
-  intros. induction e; simpl; try case (x' =? x0); eauto; destruct (x' == x); auto; simpl; omega.
-Qed.
-*)
-
-
 (*Let's get nominal!*)
 
 Definition swap_var (x:atom) (y:atom) (z:atom) :=
-  if (z == x) then y else if (z == y) then x else z.
+  if (z =? x) then y else if (z =? y) then x else z.
 
 Fixpoint swap (x:atom) (y:atom) (t:ECCexp) : ECCexp :=
   match t with
@@ -217,39 +184,35 @@ Qed.
    that avoids capturing any free variables in the substitute or in the body
    of the term being substituted in. *)
 
-(* Cannot guess decreasing argument of fix :( *)
-
-
-
-Program Fixpoint trickySubst (x: atom) (arg body: ECCexp) (FVInArg: atoms) {measure (ECCsize body)}:=
+Program Fixpoint substWork (x: atom) (arg body: ECCexp) (FVInArg: atoms) {measure (ECCsize body)}:=
 match body with
-  | eId x' => if (x == x') then arg else body
+  | eId x' => if (x =? x') then arg else body
   | eAbs x' A e =>
-      if (x == x')
-        then (eAbs x' (trickySubst x arg A FVInArg) e)
-        else let (xnew, _) := atom_fresh (FVInArg `union` (FV e)) in
-                    (eAbs xnew (trickySubst x arg A FVInArg) (trickySubst x arg (swap x' xnew e) FVInArg))
+      if (x =? x')
+        then (eAbs x' (substWork x arg A FVInArg) e)
+        else let xnew := fresh (union FVInArg (FV e)) in
+                    (eAbs xnew (substWork x arg A FVInArg) (substWork x arg (swap x' xnew e) FVInArg))
   | ePi x' A B =>
-      if (x == x')
-        then (ePi x' (trickySubst x arg A FVInArg) B)
-        else let (xnew, _) := atom_fresh (FVInArg `union` (FV B)) in
-                (ePi xnew (trickySubst x arg A FVInArg) (trickySubst x arg (swap x' xnew B) FVInArg))
+      if (x =? x')
+        then (ePi x' (substWork x arg A FVInArg) B)
+        else let xnew := fresh (union FVInArg (FV B)) in
+                (ePi xnew (substWork x arg A FVInArg) (substWork x arg (swap x' xnew B) FVInArg))
   | eLet x' A B =>
-      if (x == x')
-        then (eLet x' (trickySubst x arg A FVInArg) B)
-        else let (xnew, _) := atom_fresh (FVInArg `union` (FV B)) in
-                (eLet xnew (trickySubst x arg A FVInArg) (trickySubst x arg (swap x' xnew B) FVInArg))
+      if (x =? x')
+        then (eLet x' (substWork x arg A FVInArg) B)
+        else let xnew := fresh (union FVInArg (FV B)) in
+                (eLet xnew (substWork x arg A FVInArg) (substWork x arg (swap x' xnew B) FVInArg))
   | eSig x' A B =>
-      if (x == x')
-        then (eSig x' (trickySubst x arg A FVInArg) B)
-        else let (xnew, _) := atom_fresh (FVInArg `union` (FV B)) in
-                (eSig xnew (trickySubst x arg A FVInArg) (trickySubst x arg (swap x' xnew B) FVInArg))
-  | eApp e1 e2 => (eApp (trickySubst x arg e1 FVInArg) (trickySubst x arg e2 FVInArg))
+      if (x =? x')
+        then (eSig x' (substWork x arg A FVInArg) B)
+        else let xnew := fresh (union FVInArg (FV B)) in
+                (eSig xnew (substWork x arg A FVInArg) (substWork x arg (swap x' xnew B) FVInArg))
+  | eApp e1 e2 => (eApp (substWork x arg e1 FVInArg) (substWork x arg e2 FVInArg))
   | eUni U => body
-  | ePair e1 e2 A => (ePair (trickySubst x arg e1 FVInArg) (trickySubst x arg e2 FVInArg) (trickySubst x arg A FVInArg))
-  | eFst e => (eFst (trickySubst x arg e FVInArg))
-  | eSnd e => (eSnd (trickySubst x arg e FVInArg))
-  | eIf e e1 e2 => (eIf (trickySubst x arg e FVInArg) (trickySubst x arg e1 FVInArg) (trickySubst x arg e2 FVInArg))
+  | ePair e1 e2 A => (ePair (substWork x arg e1 FVInArg) (substWork x arg e2 FVInArg) (substWork x arg A FVInArg))
+  | eFst e => (eFst (substWork x arg e FVInArg))
+  | eSnd e => (eSnd (substWork x arg e FVInArg))
+  | eIf e e1 e2 => (eIf (substWork x arg e FVInArg) (substWork x arg e1 FVInArg) (substWork x arg e2 FVInArg))
   | eTru => eTru
   | eFls => eFls
   | eBool => eBool
@@ -258,29 +221,33 @@ Obligations.
 Solve Obligations with (Tactics.program_simpl; cbn; omega).
 Solve Obligations with (Tactics.program_simpl; cbn; rewrite -> swap_size_eq; omega).
 
-Print trickySubst_func.
+Definition subst (x: atom) (arg body: ECCexp):= substWork x arg body (FV arg).
 
-Timeout 30 Compute trickySubst X (eTru) (eId X) (FV eTru). 
-Eval cbn in trickySubst X (eTru) (eAbs Y (eBool) (eId X)) (FV eTru).
-Compute trickySubst X (eTru) (eAbs X (eId X) (eId X)).
+Timeout 30 Compute substWork X (eTru) (eId X) (FV eTru). 
+Compute substWork X (eTru) (eAbs Y (eBool) (eId X)) (FV eTru).
+Compute substWork X (eTru) (eAbs X (eId X) (eId X)) (FV eTru).
+Eval vm_compute in substWork X (eTru) (eAbs X (eId X) (eId X)) (FV eTru).
+
 
 (* -Step- *)
 Inductive ECC_RedR : ECCenv -> ECCexp -> ECCexp -> Prop :=
-  | R_ID (g: ECCenv) (x: string) (e': ECCexp) :
+  | R_ID (g: ECCenv) (x: atom) (e': ECCexp) :
     ECC_LookupR g x e' -> ECC_RedR g (eId x) e'
-  | R_App (g: ECCenv) (x: string) (A body arg: ECCexp) :
+  | R_App (g: ECCenv) (x: atom) (A body arg: ECCexp) :
     ECC_RedR g (eApp (eAbs x A body) arg) (subst x arg body) (*do anything with env here?*)
   | R_Fst (g: ECCenv) (e1 e2 A: ECCexp) :
     ECC_RedR g (eFst (ePair e1 e2 A)) e1
   | R_Snd (g: ECCenv) (e1 e2 A: ECCexp) :
     ECC_RedR g (eSnd (ePair e1 e2 A)) e2
-  | R_Let (g: ECCenv) (x: string) (e1 e2: ECCexp) :
+  | R_Let (g: ECCenv) (x: atom) (e1 e2: ECCexp) :
     ECC_RedR g (eLet x e1 e2) (subst x e1 e2)  (*or here?*)
   | R_IfTru (g: ECCenv) (e1 e2: ECCexp) :
     ECC_RedR g (eIf eTru e1 e2) e1
   | R_IfFls (g: ECCenv) (e1 e2: ECCexp) :
     ECC_RedR g (eIf eFls e1 e2) e2
 .
+
+Hint Constructors ECC_RedR.
 
 (* Reflective Transitive Closure of step*)
 Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCexp -> Prop :=
@@ -293,18 +260,18 @@ Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCexp -> Prop :=
       ECC_RedR g e e' ->
       ECC_RedClosR g e' e'' ->
       ECC_RedClosR g e e''
-  | R_CongLet (g: ECCenv) (e e1 e2: ECCexp) (x: string) :
+  | R_CongLet (g: ECCenv) (e e1 e2: ECCexp) (x: atom) :
       ECC_RedClosR (gAssign g x e) e1 e2 ->
       ECC_RedClosR g (eLet x e e1) (eLet x e e2)
-  | R_CongLam1 (g: ECCenv) (A A' e e': ECCexp) (x: string) :
+  | R_CongLam1 (g: ECCenv) (A A' e e': ECCexp) (x: atom) :
       ECC_RedClosR g A A' ->
       ECC_RedClosR (gTypeDec g x A) e e' ->
       ECC_RedClosR g (eAbs x A e) (eAbs x A' e')
-  | R_CongPi (g: ECCenv) (A A' B B': ECCexp) (x: string) :
+  | R_CongPi (g: ECCenv) (A A' B B': ECCexp) (x: atom) :
       ECC_RedClosR g A A' ->
       ECC_RedClosR (gTypeDec g x A) B B' ->
       ECC_RedClosR g (ePi x A B) (ePi x A' B')
-  | R_CongSig (g: ECCenv) (A A' B B': ECCexp) (x: string) :
+  | R_CongSig (g: ECCenv) (A A' B B': ECCexp) (x: atom) :
       ECC_RedClosR g A A' ->
       ECC_RedClosR (gTypeDec g x A) B B' ->
       ECC_RedClosR g (eSig x A B) (eSig x A' B')
@@ -330,6 +297,8 @@ Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCexp -> Prop :=
       ECC_RedClosR g (eIf e e1 e2) (eIf e' e1' e2')
 .
 
+Hint Constructors ECC_RedClosR.
+
 (* Congruence conversion?*)
 
 Inductive ECC_CongConv: ECCenv -> ECCexp -> ECCexp -> Prop :=
@@ -337,17 +306,19 @@ Inductive ECC_CongConv: ECCenv -> ECCexp -> ECCexp -> Prop :=
       ECC_RedClosR g e1 e ->
       ECC_RedClosR g e2 e ->
       ECC_CongConv g e1 e2
-  | C_CongIta1 (g: ECCenv) (e1 A e e2 e2': ECCexp) (x: string) :
+  | C_CongIta1 (g: ECCenv) (e1 A e e2 e2': ECCexp) (x: atom) :
       ECC_RedClosR g e1 (eAbs x A e) ->
       ECC_RedClosR g e2 e2' ->
       ECC_CongConv (gTypeDec g x A) e (eApp e2' (eId x)) ->
       ECC_CongConv g e1 e2
-  | C_CongIta2 (g: ECCenv) (e e1 e1' e2 A : ECCexp) (x: string) :
+  | C_CongIta2 (g: ECCenv) (e e1 e1' e2 A : ECCexp) (x: atom) :
       ECC_RedClosR g e1 e1' ->
       ECC_RedClosR g e2 (eAbs x A e) ->
       ECC_CongConv (gTypeDec g x A) (eApp e1' (eId x)) e ->
       ECC_CongConv g e1 e2
 .
+
+Hint Constructors ECC_CongConv.
 
 (* Typing *)
 
@@ -357,51 +328,53 @@ Inductive ECC_sub_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
   ECC_sub_type g A B
 | ST_Cum (g: ECCenv) (i: nat) :
   ECC_sub_type g (eUni (uType i)) (eUni (uType (S i)))
-| ST_Pi (g: ECCenv) (A1 A2 B1 B2: ECCexp) (x1 x2: string) :
+| ST_Pi (g: ECCenv) (A1 A2 B1 B2: ECCexp) (x1 x2: atom) :
   (ECC_CongConv g A1 A2) ->
   (ECC_sub_type (gTypeDec g x1 A2) B1 (subst x2 (eId x1) B2)) -> (* eId x1 ?*)
   (ECC_sub_type g (ePi x1 A1 B1) (ePi x2 A2 B2))
 .
+
+Hint Constructors ECC_sub_type.
 
 Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
 | T_Ax_Prop (g: ECCenv) :
   (ECC_has_type g (eUni uProp) (eUni (uType 0)))
 | T_Ax_Type (g: ECCenv) (i: nat) :
   (ECC_has_type g (eUni (uType i)) (eUni (uType (S i))))
-| T_Var (g: ECCenv) (x: string) (A: ECCexp) :
+| T_Var (g: ECCenv) (x: atom) (A: ECCexp) :
   (ECC_LookupR g x A) -> (* this needs adjustment *)
   (ECC_has_type g (eId x) A)
-| T_Let (g: ECCenv) (e e' A B: ECCexp) (x: string):
+| T_Let (g: ECCenv) (e e' A B: ECCexp) (x: atom):
   (ECC_has_type g e A) ->
   (ECC_has_type (gAssign (gTypeDec g x A) x e) e' B) ->
   (ECC_has_type g (eLet x e e') (subst x e B))
-| T_Prod_Prop (g: ECCenv) (x: string) (A B: ECCexp) (i: nat):
+| T_Prod_Prop (g: ECCenv) (x: atom) (A B: ECCexp) (i: nat):
   (ECC_has_type g A (eUni (uType i))) ->
   (ECC_has_type (gTypeDec g x A) B (eUni (uProp))) ->
   (ECC_has_type g (ePi x A B) (eUni (uProp)))
-| T_Prod_Type (g: ECCenv) (x: string) (A B: ECCexp) (i: nat):
+| T_Prod_Type (g: ECCenv) (x: atom) (A B: ECCexp) (i: nat):
   (ECC_has_type g A (eUni (uType i))) ->
   (ECC_has_type (gTypeDec g x A) B (eUni (uType i))) ->
   (ECC_has_type g (ePi x A B) (eUni (uType i)))
-| T_Lam (g: ECCenv) (x: string) (A e B: ECCexp) :
+| T_Lam (g: ECCenv) (x: atom) (A e B: ECCexp) :
   (ECC_has_type (gAssign g x A) e B) ->
   (ECC_has_type g (eAbs x A e) (ePi x A B))
-| T_App (g: ECCenv) (x: string) (e e' A' B: ECCexp) :
+| T_App (g: ECCenv) (x: atom) (e e' A' B: ECCexp) :
   (ECC_has_type g e (ePi x A' B)) ->
   (ECC_has_type g e' A') ->
   (ECC_has_type g (eApp e e') (subst x e B))
-| T_Sig (g: ECCenv) (x: string) (A B: ECCexp) (i: nat) :
+| T_Sig (g: ECCenv) (x: atom) (A B: ECCexp) (i: nat) :
   (ECC_has_type g A (eUni (uType i))) ->
   (ECC_has_type (gTypeDec g x A) B (eUni (uType i))) -> (* should these be the same i*)
   (ECC_has_type g (eSig x A B) (eUni (uType i)))
-| T_Pair (g: ECCenv) (e1 e2 A B: ECCexp) (x: string) :
+| T_Pair (g: ECCenv) (e1 e2 A B: ECCexp) (x: atom) :
   (ECC_has_type g e1 A) ->
   (ECC_has_type g e2 (subst x e1 B)) ->
   (ECC_has_type g (ePair e1 e2 (eSig x A B)) (eSig x A B))
-| T_Fst (g: ECCenv) (e A B: ECCexp) (x: string) :
+| T_Fst (g: ECCenv) (e A B: ECCexp) (x: atom) :
   (ECC_has_type g e (eSig x A B)) ->
   (ECC_has_type g (eFst e) A)
-| T_Snd (g: ECCenv) (e A B: ECCexp) (x: string) :
+| T_Snd (g: ECCenv) (e A B: ECCexp) (x: atom) :
   (ECC_has_type g e (eSig x A B)) ->
   (ECC_has_type g (eSnd e) (subst x (eFst e) B))
 | T_Bool (g: ECCenv):
@@ -410,7 +383,7 @@ Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
   (ECC_has_type g (eTru) (eBool))
 | T_False (g: ECCenv):
   (ECC_has_type g (eFls) (eBool))
-| T_If (g: ECCenv) (B U e e1 e2: ECCexp) (x: string):
+| T_If (g: ECCenv) (B U e e1 e2: ECCexp) (x: atom):
   (ECC_has_type (gTypeDec g x (eBool)) B U) ->
   (ECC_has_type g e (eBool)) ->
   (ECC_has_type g e1 (subst x (eTru) B)) ->
@@ -436,10 +409,7 @@ Bind Scope ECC_scope with ECCexp.
 Bind Scope ECC_scope with ECCuni.
 Bind Scope ECC_scope with ECCenv.
 Delimit Scope ECC_scope with ECC.
-Coercion eId: string >-> ECCexp.
-
-Definition X := "x".
-Definition F := "f".
+Coercion eId: atom >-> ECCexp.
 
 Notation "'type' x" := (eUni (uType x)) (at level 50):  ECC_scope.
 Notation "'prop'" := (eUni uProp) (at level 50):  ECC_scope.
@@ -447,30 +417,44 @@ Definition example_Type := (type 3)%ECC: ECCexp.
 Definition example_Prop := (prop)%ECC: ECCexp.
 
 Notation "{ e1 e2 }" := (eApp e1 e2) (at level 50,e1 at level 9):  ECC_scope.
-Definition example_App := { "x" "y" }%ECC: ECCexp.
+Definition example_App := { X Y }%ECC: ECCexp.
 
 Notation "'LET' x ':=' A 'in' B" := (eLet x A B) (at level 50, format "'[v' 'LET'  x  ':='  A '/' 'in' '['  B ']' ']'") : ECC_scope.
-Definition example_Let := (LET "x" := "c" in "d")%ECC : ECCexp.
+Definition example_Let := (LET X := Y in Z)%ECC : ECCexp.
 Print example_Let.
+Definition F:= fresh (X::Y::Z::nil).
 Definition example_Let2 := (LET X := (type 3) in LET F := (LET X := (type 2) in X) in ({X F}))%ECC.
 Print example_Let2.
 
 Notation "'P' x : A '->' B" := (ePi x A B) (at level 50, x at level 9, A at level 9) : ECC_scope.
-Definition example_Pi := (P "x" : "f" -> "b")%ECC : ECCexp.
+Definition example_Pi := (P X : F -> Y)%ECC : ECCexp.
 Notation "'\'  x : A  '->'  B" := (eAbs x A B) (at level 50, x at level 9, A at level 9) : ECC_scope.
-Definition example_Abs := (\ "x" : "a" -> "b")%ECC : ECCexp.
+Definition example_Abs := (\ X: Y -> Z)%ECC : ECCexp.
 Notation "'M' x : A '..' B" := (eSig x A B) (at level 50, x at level 1, A at level 1): ECC_scope.
-Definition example_Sig := (M "x" : "A" .. "B")%ECC : ECCexp.
+Definition example_Sig := (M X : Y .. Z)%ECC : ECCexp.
 Notation "< e1 , e2 > 'as' A" := (ePair e1 e2 A) (at level 50, e1 at level 5, e2 at level 5, A at level 5): ECC_scope.
-Definition example_Pair := (< "x", "y" > as (M "x" : "A" .. "B"))%ECC : ECCexp.
+Definition example_Pair := (< X, Y > as (M X : Y .. Z))%ECC : ECCexp.
 Notation "'fst' e" := (eFst e) (at level 50, e at level 5): ECC_scope.
 Notation "'snd' e" := (eSnd e) (at level 50, e at level 5): ECC_scope.
 
 Definition example_ycombinator := (\F:(type 3) -> ({(\X:(type 2) -> ({F {X X}})) (\X:(type 2) -> ({F {X X}}))}))%ECC.
 Print example_ycombinator.
 
-Print (size example_ycombinator).
+Compute subst X Y (LET Y := type 1 in X).
 
+Goal ECC_RedClosR gEmpty (LET X := Y in LET Y := type 1 in X) X.
+Proof.
+cut (ECC_RedR gEmpty (LET X := Y in LET Y := type 1 in X)%ECC (LET Y := type 1 in X)%ECC).
+cut (ECC_RedR gEmpty (LET Y := type 1 in X)%ECC (X)%ECC).
+- intros. eauto.
+- apply R_Let.
+- Abort.  (*apply R_Let. Need alpha-equivalence *)
+
+Goal ECC_RedR gEmpty 
+      (LET X := Y in (LET Y := type 1 in X)) 
+      (LET Y := type 1 in X).
+Proof.
+Abort.
 
 (* End ECC.*)
 
@@ -479,17 +463,12 @@ Print (size example_ycombinator).
 
 (* -=ECCA Definition=- *)
 
-Inductive ECCAsym: Type:=
-  | asymStr (x: string)
-  | asymNum (x: nat)
-.
-
 Inductive ECCAval: Type :=
-  | avId (x: ECCAsym)
+  | avId (x: atom)
   | avUni (U: ECCuni)
-  | avPi (x: ECCAsym) (A B: ECCAconf)
-  | avAbs (x: ECCAsym) (A B: ECCAconf)
-  | avSig (x: ECCAsym) (A B: ECCAconf)
+  | avPi (x: atom) (A B: ECCAconf)
+  | avAbs (x: atom) (A B: ECCAconf)
+  | avSig (x: atom) (A B: ECCAconf)
   | avPair (v1 v2: ECCAval) (A: ECCAconf)
   | avTru
   | avFls
@@ -498,7 +477,7 @@ Inductive ECCAval: Type :=
 with
 ECCAconf: Type :=
   | acfComp (e: ECCAcomp)
-  | acfLet (x: ECCAsym) (A: ECCAcomp) (B: ECCAconf)
+  | acfLet (x: atom) (A: ECCAcomp) (B: ECCAconf)
 with
 ECCAcomp: Type :=
   | acpApp (v1 v2: ECCAval)
@@ -509,20 +488,17 @@ ECCAcomp: Type :=
 
 Inductive ECCAcont: Type :=
   | actHole
-  | actLetHole (x: ECCAsym) (B: ECCAconf)
+  | actLetHole (x: atom) (B: ECCAconf)
 .
 
 (* -=ECCA Notation=- *)
 
-Bind Scope ECCA_scope with ECCAsym.
 Bind Scope ECCA_scope with ECCAval.
 Bind Scope ECCA_scope with ECCAconf.
 Bind Scope ECCA_scope with ECCAcomp.
 Bind Scope ECCA_scope with ECCAcont.
 Delimit Scope ECCA_scope with ECCA.
-Coercion asymStr: string >-> ECCAsym.
-Coercion asymNum: nat >-> ECCAsym.
-Coercion avId: ECCAsym >-> ECCAval.
+Coercion avId: atom >-> ECCAval.
 Coercion acpVal: ECCAval >-> ECCAcomp.
 Coercion acfComp: ECCAcomp >-> ECCAconf.
 Notation "'type' x" := (avUni (uType x)) (at level 50):  ECCA_scope.
@@ -531,23 +507,23 @@ Definition example_aType := (type 3)%ECCA: ECCAval.
 Definition example_aProp := (prop)%ECCA: ECCAval.
 
 Notation "{ e1 e2 }" := (acpApp e1 e2) (at level 50,e1 at level 9):  ECCA_scope.
-Definition example_aApp := { "x" "y" }%ECCA: ECCAcomp.
+Definition example_aApp := { X Y }%ECCA: ECCAcomp.
 
 Notation "'LET' x ':=' A 'in' B" := (acfLet x A B) (at level 50, format "'[v' 'LET'  x  ':='  A '/' 'in' '['  B ']' ']'") : ECCA_scope.
-Definition example_aLet := (LET "x" := "c" in "d")%ECCA : ECCAconf.
+Definition example_aLet := (LET X := Y in Z)%ECCA : ECCAconf.
 Print example_aLet.
 Definition example_aLet2 := (LET X := (type 3) in LET F := (LET X := (type 2) in X) in ({X F}))%ECC.
 Print example_aLet2.
 
 Notation "'P' x : A '->' B" := (avPi x A B) (at level 50, x at level 9, A at level 9) : ECCA_scope.
-Definition example_aPi := (P "x" : "f" -> "b")%ECCA : ECCAval.
+Definition example_aPi := (P X : Y -> Z)%ECCA : ECCAval.
 Notation "'\' x : A '->' B" := (avAbs x A B) (at level 50, x at level 9, A at level 9) : ECCA_scope.
-Definition example_aAbs := (\ "x" : "a" -> "b")%ECCA : ECCAval.
+Definition example_aAbs := (\ X : Y -> Z)%ECCA : ECCAval.
 
 Notation "'[]'" := (actHole) (at level 50) : ECCA_scope.
 Definition aHole := []%ECCA.
 Notation "'LET' x ':=' '[]' 'in' B" := (actLetHole x B) (at level 50) : ECCA_scope.
-Definition example_aLetHole := (LET "x" := [] in "x")%ECCA.
+Definition example_aLetHole := (LET X := [] in X)%ECCA.
 Print example_aLetHole.
 (* End ECCA. *)
 
@@ -564,16 +540,16 @@ end.
 (* {ns : NameState} *)
 Fixpoint trans  (ns: nat) (e: ECCexp) (K: ECCAcont) : ECCAconf :=
   match e with
-    | eId x => (fill_hole (acpVal (avId (asymStr x))) K)
-    | ePi x A B => (fill_hole (acpVal (avPi (asymStr x) (trans ns A actHole) (trans ns B actHole))) K)
-    | eAbs x A e => (fill_hole (acpVal (avAbs (asymStr x) (trans ns A actHole) (trans ns e actHole))) K)
+    | eId x => (fill_hole (acpVal (avId x)) K)
+    | ePi x A B => (fill_hole (acpVal (avPi (x) (trans ns A actHole) (trans ns B actHole))) K)
+    | eAbs x A e => (fill_hole (acpVal (avAbs x (trans ns A actHole) (trans ns e actHole))) K)
     | eApp e1 e2 =>
         (trans (S ns) e1 (actLetHole (asymNum (S ns))
             (trans (S (S ns)) e2 (actLetHole (asymNum (S (S ns)))
                 (fill_hole (acpApp (avId (asymNum (S ns))) (avId (asymNum (S (S ns))))) K)))))
-    | eLet x e1 e2 => (trans ns e1 (actLetHole (asymStr x)
+    | eLet x e1 e2 => (trans ns e1 (actLetHole x
                           (trans (ns) e2 K)))
-    | eSig x A B => (fill_hole (acpVal (avSig (asymStr x) (trans ns A actHole) (trans ns B actHole))) K)
+    | eSig x A B => (fill_hole (acpVal (avSig x (trans ns A actHole) (trans ns B actHole))) K)
     | ePair e1 e2 A => (trans (S ns) e1 (actLetHole (asymNum (S ns))
             (trans (S (S ns)) e2 (actLetHole (asymNum (S (S ns)))
                (trans (S (S (S ns))) A (actLetHole (asymNum (S (S (S ns))))

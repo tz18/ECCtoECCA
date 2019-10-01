@@ -1,13 +1,19 @@
 Require Export Omega.
-Import Coq.Sets.Finite_sets.
+Require Export Metalib.LibLNgen.
+Require Export Metalib.Metatheory.
+
+
 (** Some fresh variables *)
-Notation X := 1.
-Notation Y := 2.
-Notation Z := 3.
+Notation X := (fresh nil).
+Notation Y := (fresh (X :: nil)).
+Notation Z := (fresh (X :: Y :: nil)).
+
+Require Export Metalib.CoqEqDec.
+Compute (X == X).
 
 Inductive n_exp : Set :=
- | n_var (x:nat)
- | n_abs (x:nat) (t:n_exp)
+ | n_var (x:atom)
+ | n_abs (x:atom) (t:n_exp)
  | n_app (t1:n_exp) (t2:n_exp).
 
 Hint Constructors n_exp.
@@ -22,7 +28,7 @@ Definition demo_rep2 := n_abs Z (n_app (n_var Y) (n_var Z)).
 
 Fixpoint fv_nom (n : n_exp) : atoms :=
   match n with
-  | n_var x => {x}
+  | n_var x => {{x}}
   | n_abs x n => remove x (fv_nom n)
   | n_app t1 t2 => fv_nom t1 `union` fv_nom t2
   end.

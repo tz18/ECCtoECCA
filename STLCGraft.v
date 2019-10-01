@@ -85,7 +85,7 @@ Defined.
    that avoids capturing any free variables in the substitute or in the body
    of the term being substituted in. *)
 
-
+Unset Transparent Obligations.
 Program Fixpoint trickySubst (x: atom) (arg body: ECCexp) (FVInArg: atoms) {measure (ECCsize body)}:=
 match body with
   | eId x' => if (x == x') then arg else body
@@ -101,5 +101,5 @@ Solve Obligations with (Tactics.program_simpl; simpl; omega).
 Solve Obligations with (Tactics.program_simpl; simpl; rewrite -> graft_id_size_preserving; omega).
 
 Compute trickySubst X (eUni) (eId X) (FV eUni).
-Timeout 2 Compute trickySubst X (eUni) (eAbs Y (eUni) (eId X)) empty.
+Eval cbn in trickySubst X (eUni) (eAbs Y (eUni) (eId X)) empty.
 Compute subst x (eTru) (eAbs x (eId x) (eId x)).
