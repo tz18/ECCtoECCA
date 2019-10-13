@@ -16,6 +16,7 @@ Definition singleton (x : atom) := x :: nil.
 Definition union := set_union Nat.eq_dec.
 Definition remove := set_remove Nat.eq_dec.
 Definition add := set_add Nat.eq_dec.
+Definition mem := set_mem Nat.eq_dec.
 
 Definition fresh (ns: atoms): atom :=
 (set_fold_left max ns 0) + 1
@@ -223,6 +224,72 @@ Solve Obligations with (Tactics.program_simpl; cbn; rewrite -> swap_size_eq; ome
 
 Definition subst (x: atom) (arg body: ECCexp):= substWork x arg body (FV arg).
 
+Inductive ECC_Aeq : ECCexp -> ECCexp -> Prop :=
+  | aeq_id (e: ECCexp):
+    ECC_Aeq e e
+  | aeq_var (x: atom):
+     ECC_Aeq (eId x) (eId x)
+  | aeq_abs_same (x: atom) (t1 t2 b1 b2: ECCexp):
+     ECC_Aeq t1 t2 -> 
+     ECC_Aeq b1 b2 ->
+     ECC_Aeq (eAbs x t1 b1) (eAbs x t2 b2)
+  | aeq_abs_diff (x y: atom) (t1 t2 b1 b2: ECCexp):
+     x <> y ->
+     (mem x (FV b2)) = false ->
+     ECC_Aeq b1 (swap y x b2) ->
+     ECC_Aeq t1 t2 ->
+     ECC_Aeq (eAbs x t1 b1) (eAbs y t2 b2)
+  | aeq_pi_same (x: atom) (t1 t2 b1 b2: ECCexp):
+     ECC_Aeq t1 t2 -> 
+     ECC_Aeq b1 b2 ->
+     ECC_Aeq (ePi x t1 b1) (ePi x t2 b2)
+  | aeq_pi_diff (x y: atom) (t1 t2 b1 b2: ECCexp):
+     x <> y ->
+     (mem x (FV b2)) = false ->
+     ECC_Aeq b1 (swap y x b2) ->
+     ECC_Aeq t1 t2 ->
+     ECC_Aeq (ePi x t1 b1) (ePi y t2 b2)
+  | aeq_let_same (x: atom) (t1 t2 b1 b2: ECCexp):
+     ECC_Aeq t1 t2 -> 
+     ECC_Aeq b1 b2 ->
+     ECC_Aeq (eLet x t1 b1) (eLet x t2 b2)
+  | aeq_let_diff (x y: atom) (t1 t2 b1 b2: ECCexp):
+     x <> y ->
+     (mem x (FV b2)) = false ->
+     ECC_Aeq b1 (swap y x b2) ->
+     ECC_Aeq t1 t2 ->
+     ECC_Aeq (eLet x t1 b1) (eLet y t2 b2)
+  | aeq_sig_same (x: atom) (t1 t2 b1 b2: ECCexp):
+     ECC_Aeq t1 t2 -> 
+     ECC_Aeq b1 b2 ->
+     ECC_Aeq (eSig x t1 b1) (eSig x t2 b2)
+  | aeq_sig_diff (x y: atom) (t1 t2 b1 b2: ECCexp):
+     x <> y ->
+     (mem x (FV b2)) = false ->
+     ECC_Aeq b1 (swap y x b2) ->
+     ECC_Aeq t1 t2 ->
+     ECC_Aeq (eSig x t1 b1) (eSig y t2 b2)
+  | aeq_app (t1 t2 t1' t2': ECCexp):
+     ECC_Aeq t1 t1' -> ECC_Aeq t2 t2' ->
+     ECC_Aeq (eApp t1 t2) (eApp t1' t2')
+  | aeq_pair (t1 t2 t1' t2' A A': ECCexp):
+     ECC_Aeq t1 t1' -> ECC_Aeq t2 t2' ->
+     ECC_Aeq A A' ->
+     ECC_Aeq (ePair t1 t2 A) (ePair t1' t2' A')
+  | aeq_eFst (e e': ECCexp):
+     ECC_Aeq e e' ->
+     ECC_Aeq (eFst e) (eFst e')
+  | aeq_eSnd (e e': ECCexp):
+     ECC_Aeq e e' ->
+     ECC_Aeq (eSnd e) (eSnd e')
+  | aeq_if (e1 e2 e3 e1' e2' e3': ECCexp):
+     ECC_Aeq e1 e1' ->
+     ECC_Aeq e2 e2' ->
+     ECC_Aeq e3 e3' ->
+     ECC_Aeq (eIf e1 e2 e3) (eIf e1' e2' e3').
+
+Hint Constructors ECC_Aeq.
+
 Timeout 30 Compute substWork X (eTru) (eId X) (FV eTru). 
 Compute substWork X (eTru) (eAbs Y (eBool) (eId X)) (FV eTru).
 Compute substWork X (eTru) (eAbs X (eId X) (eId X)) (FV eTru).
@@ -252,8 +319,8 @@ Hint Constructors ECC_RedR.
 (* Reflective Transitive Closure of step*)
 Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCexp -> Prop :=
   (*| R_RedR (g g': ECCenv) (e e': ECCexp): (* maybe don't need this one? it follows from refl + trans*)
-      ECC_RedR g e g' e' ->
-      ECC_RedClosR g e g' e'*)
+      ECC_RedR g e e' ->
+      ECC_RedClosR g e e'*)
   | R_Refl (g: ECCenv) (e: ECCexp):
       ECC_RedClosR g e e
   | R_Trans (g: ECCenv) (e e' e'': ECCexp) :
@@ -299,37 +366,40 @@ Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCexp -> Prop :=
 
 Hint Constructors ECC_RedClosR.
 
-(* Congruence conversion?*)
 
-Inductive ECC_CongConv: ECCenv -> ECCexp -> ECCexp -> Prop :=
-  | C_Cong (g: ECCenv) (e e1 e2: ECCexp) :
+
+Inductive ECC_Equiv: ECCenv -> ECCexp -> ECCexp -> Prop :=
+  | E_Equiv (g: ECCenv) (e e1 e2: ECCexp) :
       ECC_RedClosR g e1 e ->
       ECC_RedClosR g e2 e ->
-      ECC_CongConv g e1 e2
-  | C_CongIta1 (g: ECCenv) (e1 A e e2 e2': ECCexp) (x: atom) :
+      ECC_Equiv g e1 e2
+  | E_EquivIta1 (g: ECCenv) (e1 A e e2 e2': ECCexp) (x: atom) :
       ECC_RedClosR g e1 (eAbs x A e) ->
       ECC_RedClosR g e2 e2' ->
-      ECC_CongConv (gTypeDec g x A) e (eApp e2' (eId x)) ->
-      ECC_CongConv g e1 e2
-  | C_CongIta2 (g: ECCenv) (e e1 e1' e2 A : ECCexp) (x: atom) :
+      ECC_Equiv (gTypeDec g x A) e (eApp e2' (eId x)) ->
+      ECC_Equiv g e1 e2
+  | E_EquivIta2 (g: ECCenv) (e e1 e1' e2 A : ECCexp) (x: atom) :
       ECC_RedClosR g e1 e1' ->
       ECC_RedClosR g e2 (eAbs x A e) ->
-      ECC_CongConv (gTypeDec g x A) (eApp e1' (eId x)) e ->
-      ECC_CongConv g e1 e2
+      ECC_Equiv (gTypeDec g x A) (eApp e1' (eId x)) e ->
+      ECC_Equiv g e1 e2
+  | E_EquivAlpha (g: ECCenv) (e1 e2: ECCexp):
+      ECC_Aeq e1 e2 ->
+      ECC_Equiv g e1 e2
 .
 
-Hint Constructors ECC_CongConv.
+Hint Constructors ECC_Equiv.
 
 (* Typing *)
 
 Inductive ECC_sub_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
 | ST_Cong (g: ECCenv) (A B: ECCexp) :
-  ECC_CongConv g A B ->
+  ECC_Equiv g A B ->
   ECC_sub_type g A B
 | ST_Cum (g: ECCenv) (i: nat) :
   ECC_sub_type g (eUni (uType i)) (eUni (uType (S i)))
 | ST_Pi (g: ECCenv) (A1 A2 B1 B2: ECCexp) (x1 x2: atom) :
-  (ECC_CongConv g A1 A2) ->
+  (ECC_Equiv g A1 A2) ->
   (ECC_sub_type (gTypeDec g x1 A2) B1 (subst x2 (eId x1) B2)) -> (* eId x1 ?*)
   (ECC_sub_type g (ePi x1 A1 B1) (ePi x2 A2 B2))
 .
@@ -442,19 +512,24 @@ Print example_ycombinator.
 
 Compute subst X Y (LET Y := type 1 in X).
 
-Goal ECC_RedClosR gEmpty (LET X := Y in LET Y := type 1 in X) X.
+Goal ECC_RedClosR gEmpty (LET X := Y in LET Y := type 1 in X) Y.
 Proof.
-cut (ECC_RedR gEmpty (LET X := Y in LET Y := type 1 in X)%ECC (LET Y := type 1 in X)%ECC).
-cut (ECC_RedR gEmpty (LET Y := type 1 in X)%ECC (X)%ECC).
-- intros. eauto.
-- apply R_Let.
-- Abort.  (*apply R_Let. Need alpha-equivalence *)
+cut (ECC_RedR gEmpty (LET X := Y in LET Y := type 1 in X)%ECC (subst X (eId Y) (LET Y := type 1 in X))%ECC).
+- cut (ECC_RedR gEmpty (subst X (eId Y) (LET Y := type 1 in X))%ECC Y). 
+  + eauto.
+  + cbv. apply R_Let.
+- cbv. apply R_Let.
+Qed.
 
-Goal ECC_RedR gEmpty 
-      (LET X := Y in (LET Y := type 1 in X)) 
-      (LET Y := type 1 in X).
-Proof.
-Abort.
+Goal ECC_has_type gEmpty (fst (<eTru , eFls> as (M X : eBool .. eBool))) eBool.
+eauto.
+Qed.
+
+Goal ECC_has_type gEmpty (fst (<eTru , eFls> as 
+                            (M X : eBool .. (eIf X eBool (P Y : eBool -> eBool))))) eBool.
+eapply T_Fst. eapply T_Pair.
+  - auto.
+  - cbv. eapply T_False?
 
 (* End ECC.*)
 
