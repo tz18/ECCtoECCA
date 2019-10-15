@@ -496,14 +496,14 @@ Definition F:= fresh (X::Y::Z::nil).
 Definition example_Let2 := (LET X := (type 3) in LET F := (LET X := (type 2) in X) in ({X F}))%ECC.
 Print example_Let2.
 
-Notation "'P' x : A '->' B" := (ePi x A B) (at level 50, x at level 9, A at level 9) : ECC_scope.
-Definition example_Pi := (P X : F -> Y)%ECC : ECCexp.
+Notation "'Pi' x : A '->' B" := (ePi x A B) (at level 50, x at level 9, A at level 9) : ECC_scope.
+Definition example_Pi := (Pi X : F -> Y)%ECC : ECCexp.
 Notation "'\'  x : A  '->'  B" := (eAbs x A B) (at level 50, x at level 9, A at level 9) : ECC_scope.
 Definition example_Abs := (\ X: Y -> Z)%ECC : ECCexp.
-Notation "'M' x : A '..' B" := (eSig x A B) (at level 50, x at level 1, A at level 1): ECC_scope.
-Definition example_Sig := (M X : Y .. Z)%ECC : ECCexp.
+Notation "'Sig' x : A '..' B" := (eSig x A B) (at level 50, x at level 1, A at level 1): ECC_scope.
+Definition example_Sig := (Sig X : Y .. Z)%ECC : ECCexp.
 Notation "< e1 , e2 > 'as' A" := (ePair e1 e2 A) (at level 50, e1 at level 5, e2 at level 5, A at level 5): ECC_scope.
-Definition example_Pair := (< X, Y > as (M X : Y .. Z))%ECC : ECCexp.
+Definition example_Pair := (< X, Y > as (Sig X : Y .. Z))%ECC : ECCexp.
 Notation "'fst' e" := (eFst e) (at level 50, e at level 5): ECC_scope.
 Notation "'snd' e" := (eSnd e) (at level 50, e at level 5): ECC_scope.
 
@@ -521,21 +521,37 @@ cut (ECC_RedR gEmpty (LET X := Y in LET Y := type 1 in X)%ECC (subst X (eId Y) (
 - cbv. apply R_Let.
 Qed.
 
-Goal ECC_has_type gEmpty (fst (<eTru , eFls> as (M X : eBool .. eBool))) eBool.
+Goal ECC_has_type gEmpty (fst (<eTru , eFls> as (Sig X : eBool .. eBool))) eBool.
 eauto.
 Qed.
 
 Goal ECC_has_type gEmpty (fst (<eTru , eFls> as 
-                            (M X : eBool .. (eIf X eBool (P Y : eBool -> eBool))))) eBool.
+                            (Sig X : eBool .. (eIf X eBool (Pi Y : eBool -> eBool))))) eBool.
 eapply T_Fst. eapply T_Pair.
-  - auto.
-  - cbv. eapply T_False?
+  - apply T_True.
+  - cbv. apply T_Conv with (A := eBool) (U := (type 0)%ECC).
+    + apply T_False.
+    + eapply T_Conv.
+      * apply T_If with (U:=(type 1)%ECC). 
+        -- auto.
+        -- auto.
+        -- auto.
+        -- cbn. eapply T_Prod_Type.
+          ++ auto.
+          ++ auto.
+      * auto.
+      * cbn. apply ST_Cong. apply E_EquivAlpha. apply aeq_id.
+    + apply ST_Cong. apply E_Equiv with (e:= eBool).
+      * auto.
+      * eauto.
+Unshelve. exact 1.
+Qed.
+   
 
 (* End ECC.*)
 
-
-(* Module ECCA. *)
-
+(* (* Module ECCA. *)
+ *)
 (* -=ECCA Definition=- *)
 
 Inductive ECCAval: Type :=
@@ -548,23 +564,32 @@ Inductive ECCAval: Type :=
   | avTru
   | avFls
   | avBool
-  | avUndef
 with
 ECCAconf: Type :=
   | acfComp (e: ECCAcomp)
   | acfLet (x: atom) (A: ECCAcomp) (B: ECCAconf)
+  | acfIf (v: ECCAval) (m1 m2: ECCAconf)
 with
 ECCAcomp: Type :=
   | acpApp (v1 v2: ECCAval)
   | acpVal (v: ECCAval)
   | acpFst (v: ECCAval)
   | acpSnd (v: ECCAval)
+  | acpSubst (x arg body: ECCAval)
 .
 
 Inductive ECCAcont: Type :=
   | actHole
   | actLetHole (x: atom) (B: ECCAconf)
 .
+
+Inductive ECCAenv: Type :=
+  | agEmpty
+  | agAssume (x A: ECCAval)
+  | agDef (x V: ECCAVal)
+(*| agValEqVal???*)
+.
+
 
 (* -=ECCA Notation=- *)
 
@@ -576,6 +601,7 @@ Delimit Scope ECCA_scope with ECCA.
 Coercion avId: atom >-> ECCAval.
 Coercion acpVal: ECCAval >-> ECCAcomp.
 Coercion acfComp: ECCAcomp >-> ECCAconf.
+
 Notation "'type' x" := (avUni (uType x)) (at level 50):  ECCA_scope.
 Notation "'prop'" := (avUni uProp) (at level 50):  ECCA_scope.
 Definition example_aType := (type 3)%ECCA: ECCAval.
