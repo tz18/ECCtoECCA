@@ -1,9 +1,11 @@
+
 (*From Coq Require Import Strings.String.
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Init.Datatypes.*)
 Require Import Omega.
 Require Import Coq.Lists.ListSet.
 Require Import Coq.Init.Nat.
+Require Import Coq.Arith.EqNat.
 Require Import Arith.
 Require Import Coq.Program.Wf.
 Open Scope list.
@@ -99,7 +101,7 @@ Inductive ECC_LookupTypeR : ECCenv -> atom -> ECCexp -> Prop:=
     (ECC_LookupTypeR (gAssum g x' a') x A)
   | LT_DefRest (g: ECCenv) (x x': atom) (A a': ECCexp):
     ECC_LookupTypeR g x A ->
-    (x <> x') ->
+(*     (x <> x') -> *)
     (ECC_LookupTypeR (gDef g x' a') x A)
 .
 
@@ -129,6 +131,80 @@ Example ECC_LookupRestExample:
 X <> Y -> ECC_LookupTypeR (gAssum (gAssum gEmpty X eTru) Y eFls) X eTru.
 Proof.
   auto.  (* WOW!*)
+Qed.
+
+Fixpoint ECC_LookupType (g: ECCenv) (x: atom): option ECCexp :=
+match g with
+  | gEmpty => None
+  | gAssum g' x' A => if (x' =? x) then Some A else (ECC_LookupType g' x)
+  | gDef g' x' e => (ECC_LookupType g' x)
+end.
+
+Fixpoint ECC_LookupDef (g: ECCenv) (x: atom): option ECCexp :=
+match g with
+  | gEmpty => None
+  | gAssum g' x' A => if (x' =? x) then match g' with
+      | gEmpty => None
+      | gAssum g'' x'' A => None
+      | gDef g' x'' e => if (x'' =? x) then Some e else None
+      end      
+      else (ECC_LookupDef g' x)
+  | gDef g' x' e => if (x' =? x) then None else (ECC_LookupDef g' x)
+end.
+
+Lemma ECC_EmptyImpliesNothing : forall (x: atom) (A: ECCexp), ECC_LookupTypeR gEmpty x A -> False.
+Proof.
+intros. inversion H.
+Qed.
+
+Lemma ECC_LookupTypeReflects (g: ECCenv) (x: atom) (A: ECCexp) : ECC_LookupTypeR g x A <-> (ECC_LookupType g x) = Some A.
+Proof.
+intros. split.
+ - intros. induction H.
+  + cbn. rewrite <- beq_nat_refl. reflexivity.
+  + cbn. cut (x' =? x = false).
+    * intros. rewrite H1. apply IHECC_LookupTypeR.
+    * apply Nat.eqb_neq. auto.
+  + cbn. apply IHECC_LookupTypeR.
+ - intros. induction g.
+  + discriminate.
+  + inversion H. destruct (x0 =? x) eqn:eq.
+    * inversion H1. apply Nat.eqb_eq in eq. rewrite eq. apply LT_gFirst.
+    * apply LT_AssumRest.
+      -- apply IHg. apply H1.
+      -- apply Nat.eqb_neq in eq. auto.
+  + apply LT_DefRest.
+    * apply IHg. apply H.
+Qed.
+
+Lemma ECC_LookupDefReflects (g: ECCenv) (x: atom) (A: ECCexp) : ECC_LookupDefR g x A <-> (ECC_LookupDef g x) = Some A.
+Proof.
+intros. split.
+ - intros. induction H.
+  + cbn. rewrite <- beq_nat_refl. reflexivity.
+  + cbn. cut (x' =? x = false).
+    * intros. rewrite H1. apply IHECC_LookupDefR.
+    * apply Nat.eqb_neq. auto.
+  + cbn. cut (x' =? x = false). 
+    * intros. rewrite H1. apply IHECC_LookupDefR.
+    * apply Nat.eqb_neq. auto.
+ - intros. induction g.
+  + discriminate.
+  + inversion H. destruct (x0 =? x) eqn:eq.
+    *  destruct g eqn:eq2.
+      -- discriminate.
+      -- discriminate.
+      -- apply Nat.eqb_eq in eq. rewrite eq. destruct (x1 =? x) eqn:eq3.
+        ++ inversion H1. apply Nat.eqb_eq in eq3. rewrite eq3. apply LD_gFirst.
+        ++ discriminate.
+   * apply LD_AssumRest.
+     -- apply IHg. apply H1.
+     -- apply Nat.eqb_neq in eq. auto.
+  + inversion H. destruct (x0 =? x) eqn:eq.
+    * discriminate.
+    * apply LD_DefRest.
+      -- apply IHg. apply H1.
+      -- apply Nat.eqb_neq in eq. auto.
 Qed.
 
 (* Substitution *)
@@ -466,6 +542,9 @@ Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
   (ECC_has_type g e B)
 .
 
+Fixpoint ECC_type (g: ECCenv) (e: ECCexp): option Prop :=
+
+
 Hint Constructors ECC_has_type.
 
 Goal ECC_has_type gEmpty (eUni uProp) (eUni (uType 0)).
@@ -631,8 +710,72 @@ Definition example_aLetHole := (LET X := [] in X)%ECCA.
 Print example_aLetHole.
 
 (* End ECCA. *)
+(* 
+Inductive ECCA_Aeq : ECCexp -> ECCexp -> Prop :=
+  | aeq_id (e: ECCexp):
+    ECC_Aeq e e
+  | aeq_var (x: atom):
+     ECC_Aeq (eId x) (eId x)
+  | aeq_abs_same (x: atom) (t1 t2 b1 b2: ECCexp):
+     ECC_Aeq t1 t2 -> 
+     ECC_Aeq b1 b2 ->
+     ECC_Aeq (eAbs x t1 b1) (eAbs x t2 b2)
+  | aeq_abs_diff (x y: atom) (t1 t2 b1 b2: ECCexp):
+     x <> y ->
+     (mem x (FV b2)) = false ->
+     ECC_Aeq b1 (swap y x b2) ->
+     ECC_Aeq t1 t2 ->
+     ECC_Aeq (eAbs x t1 b1) (eAbs y t2 b2)
+  | aeq_pi_same (x: atom) (t1 t2 b1 b2: ECCexp):
+     ECC_Aeq t1 t2 -> 
+     ECC_Aeq b1 b2 ->
+     ECC_Aeq (ePi x t1 b1) (ePi x t2 b2)
+  | aeq_pi_diff (x y: atom) (t1 t2 b1 b2: ECCexp):
+     x <> y ->
+     (mem x (FV b2)) = false ->
+     ECC_Aeq b1 (swap y x b2) ->
+     ECC_Aeq t1 t2 ->
+     ECC_Aeq (ePi x t1 b1) (ePi y t2 b2)
+  | aeq_let_same (x: atom) (t1 t2 b1 b2: ECCexp):
+     ECC_Aeq t1 t2 -> 
+     ECC_Aeq b1 b2 ->
+     ECC_Aeq (eLet x t1 b1) (eLet x t2 b2)
+  | aeq_let_diff (x y: atom) (t1 t2 b1 b2: ECCexp):
+     x <> y ->
+     (mem x (FV b2)) = false ->
+     ECC_Aeq b1 (swap y x b2) ->
+     ECC_Aeq t1 t2 ->
+     ECC_Aeq (eLet x t1 b1) (eLet y t2 b2)
+  | aeq_sig_same (x: atom) (t1 t2 b1 b2: ECCexp):
+     ECC_Aeq t1 t2 -> 
+     ECC_Aeq b1 b2 ->
+     ECC_Aeq (eSig x t1 b1) (eSig x t2 b2)
+  | aeq_sig_diff (x y: atom) (t1 t2 b1 b2: ECCexp):
+     x <> y ->
+     (mem x (FV b2)) = false ->
+     ECC_Aeq b1 (swap y x b2) ->
+     ECC_Aeq t1 t2 ->
+     ECC_Aeq (eSig x t1 b1) (eSig y t2 b2)
+  | aeq_app (t1 t2 t1' t2': ECCexp):
+     ECC_Aeq t1 t1' -> ECC_Aeq t2 t2' ->
+     ECC_Aeq (eApp t1 t2) (eApp t1' t2')
+  | aeq_pair (t1 t2 t1' t2' A A': ECCexp):
+     ECC_Aeq t1 t1' -> ECC_Aeq t2 t2' ->
+     ECC_Aeq A A' ->
+     ECC_Aeq (ePair t1 t2 A) (ePair t1' t2' A')
+  | aeq_eFst (e e': ECCexp):
+     ECC_Aeq e e' ->
+     ECC_Aeq (eFst e) (eFst e')
+  | aeq_eSnd (e e': ECCexp):
+     ECC_Aeq e e' ->
+     ECC_Aeq (eSnd e) (eSnd e')
+  | aeq_if (e1 e2 e3 e1' e2' e3': ECCexp):
+     ECC_Aeq e1 e1' ->
+     ECC_Aeq e2 e2' ->
+     ECC_Aeq e3 e3' ->
+     ECC_Aeq (eIf e1 e2 e3) (eIf e1' e2' e3').
 
-
+ *)
 (* ===ECC to ECCA translation== *)
 
 
