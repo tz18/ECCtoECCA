@@ -542,8 +542,6 @@ Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
   (ECC_has_type g e B)
 .
 
-Fixpoint ECC_type (g: ECCenv) (e: ECCexp): option Prop :=
-
 
 Hint Constructors ECC_has_type.
 
@@ -606,6 +604,7 @@ Qed.
 
 Goal ECC_has_type gEmpty (fst (<eTru , eFls> as 
                             (Sig X : eBool .. (eIf X eBool (Pi Y : eBool -> eBool))))) eBool.
+Proof.
 eapply T_Fst. eapply T_Pair.
   - apply T_True.
   - cbv. apply T_Conv with (A := eBool) (U := (type 0)%ECC).
@@ -632,6 +631,8 @@ Qed.
 (* (* Module ECCA. *)
  *)
 (* -=ECCA Definition=- *)
+
+(* Restricted ECCA, used in computing *)
 
 Inductive ECCAval: Type :=
   | avId (x: atom)
@@ -664,11 +665,130 @@ Inductive ECCAcont: Type :=
 
 Inductive ECCAenv: Type :=
   | agEmpty
-  | agAssume (x A: ECCAval)
-  | agDef (x V: ECCAval)
-(*| agValEqVal???*)
+  | agAssum (g: ECCAenv) (x: atom) (A: ECCAval)
+  | agDef (g: ECCAenv) (x: atom) (v: ECCAval)
+  | agEq (g: ECCAenv) (v1 v2: ECCAval)
 .
 
+(* An "ECCA expression" can be any of these three *)
+Inductive ECCAexp: Type :=
+  |  aVal (v: ECCAval)
+  |  aConf (c: ECCAconf)
+  |  aComp (c: ECCAcomp)
+.
+
+Inductive ECCA_LookupTypeR : ECCAenv -> atom -> ECCAval -> Prop:=
+  | aLT_gFirst (g': ECCAenv) (x: atom) (A: ECCAval):
+      ECCA_LookupTypeR (agAssum g' x A) x A
+  | aLT_AssumRest (g: ECCAenv) (x x': atom) (A a': ECCAval):
+      ECCA_LookupTypeR g x A ->
+      (x <> x') ->
+      (ECCA_LookupTypeR (agAssum g x' a') x A)
+  | aLT_DefRest (g: ECCAenv) (x x': atom) (A a': ECCAval):
+      ECCA_LookupTypeR g x A ->
+  (*     (x <> x') -> *)
+      (ECCA_LookupTypeR (agDef g x' a') x A)
+  | aLT_EqRest (g: ECCAenv) (x: atom) (v A v': ECCAval):
+      ECCA_LookupTypeR g x A ->
+      ECCA_LookupTypeR (agEq g v v') x A 
+.
+
+Inductive ECCA_LookupDefR : ECCAenv -> atom -> ECCAval -> Prop:=
+  | aLD_gFirst (g': ECCAenv) (x: atom) (e A: ECCAval):
+      ECCA_LookupDefR (agAssum (agDef g' x e) x A) x e
+  | aLD_AssumRest (g: ECCAenv) (x x': atom) (e a': ECCAval):
+      ECCA_LookupDefR g x e ->
+      (x <> x') ->
+      (ECCA_LookupDefR (agAssum g x' a') x e)
+  | aLD_DefRest (g: ECCAenv) (x x': atom) (e e': ECCAval):
+      ECCA_LookupDefR g x e ->
+      (x <> x') ->
+      (ECCA_LookupDefR (agDef g x' e') x e)
+  | aLD_EqRest (g: ECCAenv) (x: atom) (v A v': ECCAval):
+      ECCA_LookupDefR g x A ->
+      ECCA_LookupDefR (agEq g v v') x A 
+.
+
+Inductive ECCA_LookupEqR : ECCAenv -> ECCAval -> ECCAval -> Prop:=
+  | aLE_gFirst (g': ECCAenv) (v v': ECCAval):
+    ECCA_LookupEqR (agEq g' v v') v v'
+  | aLE_AssumRest (g: ECCAenv) (x : atom) (v v' a: ECCAval):
+      ECCA_LookupEqR g v v' ->
+      (ECCA_LookupEqR (agAssum g x a) v v')
+  | aLE_DefRest (g: ECCAenv) (x: atom) (v v' e: ECCAval):
+      ECCA_LookupEqR g v v' ->
+      (ECCA_LookupEqR (agDef g x e) v v')
+  | aLE_EqRest (g: ECCAenv) (x: atom) (v1 v2 v1' v2': ECCAval):
+      ECCA_LookupEqR g v1 v2 ->
+      (v1 <> v1') ->
+      ECCA_LookupEqR (agEq g v1' v2') v1 v2 
+. 
+
+Inductive ECCA_val_has_type: ECCAenv -> ECCAval -> ECCAexp -> Prop :=
+| aT_Ax_Prop (g: ECCAenv) :
+  (ECCA_val_has_type g (avUni uProp) (aVal (avUni (uType 0))))
+| aT_Ax_Type (g: ECCAenv) (i: nat) :
+  (ECCA_val_has_type g (avUni (uType i)) (aVal (avUni (uType (S i)))))
+| aT_Var (g: ECCAenv) (x: atom) (A: ECCAval) :
+  (ECCA_LookupTypeR g x A) -> (* this needs adjustment *)
+  (ECCA_val_has_type g (avId x) (aVal A))
+| aT_Bool (g: ECCAenv):
+  (ECCA_val_has_type g (avBool) (aVal (avUni (uType 0))))
+| aT_True (g: ECCAenv):
+  (ECCA_val_has_type g (avTru) (aVal (avBool)))
+| aT_False (g: ECCAenv):
+  (ECCA_val_has_type g (avFls) (aVal (avBool)))
+| aT_Sig (g: ECCAenv) (x: atom) (A B: ECCAconf) (i: nat) :
+  (ECCA_conf_has_type g A (aVal (avUni (uType i)))) ->
+  (ECCA_conf_has_type (agAssum g x A) B (aVal (avUni (uType i)))) ->
+  (ECCA_val_has_type g (avSig x A B) (aVal (avUni (uType i))))
+| aT_Pair (g: ECCAenv) (v1 v2: ECCAval) (A B: ECCAconf) (x: atom) :
+  (ECCA_val_has_type g v1 (aConf A)) ->
+  (ECCA_val_has_type g v2 (aSubst x e1 B)) ->
+  (ECCA_val_has_type g (ePair v1 v2 (eSig x A B)) (eSig x A B))
+with 
+ECCA_conf_has_type: ECCAenv -> ECCAconf -> ECCAexp -> Prop :=
+| T_Let (g: ECCenv) (e e' A B: ECCexp) (x: atom):
+  (ECC_has_type g e A) ->
+  (ECC_has_type (gDef (gAssum g x A) x e) e' B) ->
+  (ECC_has_type g (eLet x e e') (subst x e B))
+| T_If (g: ECCenv) (B U e e1 e2: ECCexp) (x: atom):
+  (ECC_has_type (gAssum g x (eBool)) B U) ->
+  (ECC_has_type g e (eBool)) ->
+  (ECC_has_type g e1 (subst x (eTru) B)) ->
+  (ECC_has_type g e2 (subst x (eFls) B)) ->
+  (ECC_has_type g (eIf e e1 e2) (subst x e B))
+| comp
+.
+|(*  aT_Prod_Prop (g: ECCAenv) (x: atom) (A B: ECCexp) (i: nat):
+  (ECCA_val_has_type g A (eUni (uType i))) ->
+  (ECCA_val_has_type (gAssum g x A) B (eUni (uProp))) ->
+  (ECCA_val_has_type g (ePi x A B) (eUni (uProp)))
+| aT_Prod_Type (g: ECCAenv) (x: atom) (A B: ECCexp) (i: nat):
+  (ECCA_val_has_type g A (eUni (uType i))) ->
+  (ECCA_val_has_type (gAssum g x A) B (eUni (uType i))) ->
+  (ECCA_val_has_type g (ePi x A B) (eUni (uType i)))
+| aT_Lam (g: ECCAenv) (x: atom) (A e B: ECCexp) :
+  (ECCA_val_has_type (gDef g x A) e B) ->
+  (ECCA_val_has_type g (eAbs x A e) (ePi x A B))
+. *)
+
+
+
+Inductive ECCA_comp_has_type: ECCAenv -> ECCAcomp -> ECCAexp -> Prop :=
+| T_App (g: ECCenv) (x: atom) (e e' A' B: ECCexp) :
+  (ECC_has_type g e (ePi x A' B)) ->
+  (ECC_has_type g e' A') ->
+  (ECC_has_type g (eApp e e') (subst x e B))
+| T_Fst (g: ECCenv) (e A B: ECCexp) (x: atom) :
+  (ECC_has_type g e (eSig x A B)) ->
+  (ECC_has_type g (eFst e) A)
+| T_Snd (g: ECCenv) (e A B: ECCexp) (x: atom) :
+  (ECC_has_type g e (eSig x A B)) ->
+  (ECC_has_type g (eSnd e) (subst x (eFst e) B))
+| subst
+| val
+.
 
 (* -=ECCA Notation=- *)
 
@@ -678,8 +798,7 @@ Bind Scope ECCA_scope with ECCAcomp.
 Bind Scope ECCA_scope with ECCAcont.
 Delimit Scope ECCA_scope with ECCA.
 Coercion avId: atom >-> ECCAval.
-Definition natToAtom (i: nat) : atom :=
-i.
+Definition natToAtom (i: nat) : atom := i.
 Coercion natToAtom: nat >-> atom.
 Coercion acpVal: ECCAval >-> ECCAcomp.
 Coercion acfComp: ECCAcomp >-> ECCAconf.
