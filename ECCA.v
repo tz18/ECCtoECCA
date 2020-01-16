@@ -2,7 +2,6 @@
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Init.Datatypes.*)
 Require Import Atom.
-Module ECCA.
 (* -=ECCA Definition=- *)
 
 (* Restricted ECCA, used in computing *)
@@ -36,12 +35,6 @@ Inductive ECCAcont: Type :=
   | LetHole (x: atom) (B: ECCAconf)
 .
 
-Inductive ECCAenv: Type :=
-  | Empty
-  | Assum (g: ECCAenv) (x: atom) (A: ECCAconf)
-  | Def (g: ECCAenv) (x: atom) (v: ECCAcomp)
-  | Eq (g: ECCAenv) (v1 v2: ECCAval)
-.
 Inductive ECCAexp: Type :=
   | eId (x: atom)
   | eUni (U: ECCuni)
@@ -58,6 +51,13 @@ Inductive ECCAexp: Type :=
   | eFst (v: ECCAexp)
   | eSnd (v: ECCAexp)
   | eSubst (x arg body: ECCAexp)
+.
+
+Inductive ECCAenv: Type :=
+  | Empty
+  | Assum (g: ECCAenv) (x: atom) (A: ECCAexp)
+  | Def (g: ECCAenv) (x: atom) (v: ECCAexp)
+  | Eq (g: ECCAenv) (v1 v2: ECCAexp)
 .
 
 Fixpoint flattenECCAval (e: ECCAval): ECCAexp :=
@@ -127,7 +127,7 @@ Inductive ECCA_LookupDefR : ECCAenv -> atom -> ECCAexp -> Prop:=
 .
 
 (*should change val to conf *)
-Inductive ECCA_LookupEqR : ECCAenv -> ECCAval -> ECCAexp -> Prop:=
+Inductive ECCA_LookupEqR : ECCAenv -> ECCAexp -> ECCAexp -> Prop:=
   | aLE_gFirst (g': ECCAenv) (v v': ECCAval):
     ECCA_LookupEqR (Eq g' v v') v v'
   | aLE_AssumRest (g: ECCAenv) (x : atom) (v v' a: ECCAval):
@@ -188,6 +188,7 @@ Fixpoint ECCAsize (e: ECCAexp) : nat :=
   | eFst e => 1 + (ECCAsize e)
   | eSnd e => 1 + (ECCAsize e)
   | eIf e e1 e2 => 1 + (ECCAsize e) + (ECCAsize e1) + (ECCAsize e2)
+  | eSubst a b c => 1 + (ECCAsize a) + (ECCAsize b) + (ECCAsize c)
   | _ => 1
 end.
 
@@ -241,7 +242,7 @@ match body with
   | eTru => eTru
   | eFls => eFls
   | eBool => eBool
-  | eSubst a b c => eSubst a b c (**)
+  | eSubst a b c => eSubst (substWork x arg a FVInArg) (substWork x arg b FVInArg) (substWork x arg c FVInArg) (**)
 end.
 Obligations.
 Solve Obligations with (Tactics.program_simpl; cbn; omega).
@@ -346,18 +347,18 @@ Inductive ECCA_RedClosR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
       ECCA_RedR g e e' ->
       ECCA_RedClosR g e' e'' ->
       ECCA_RedClosR g e e''
-  | R_CongLet (g: ECCAenv) (e: ECCAcomp) (e1 e2: ECCAexp) (x: atom) :
+  | R_CongLet (g: ECCAenv) (e: ECCAexp) (e1 e2: ECCAexp) (x: atom) :
       ECCA_RedClosR (Def g x e) e1 e2 ->
       ECCA_RedClosR g (eLet x e e1) (eLet x e e2)
-  | R_CongLam1 (g: ECCAenv) (A: ECCAconf) (A' e e': ECCAexp) (x: atom) :
+  | R_CongLam1 (g: ECCAenv) (A: ECCAexp) (A' e e': ECCAexp) (x: atom) :
       ECCA_RedClosR g A A' ->
       ECCA_RedClosR (Assum g x A) e e' ->
       ECCA_RedClosR g (eAbs x A e) (eAbs x A' e')
-  | R_CongPi (g: ECCAenv) (A: ECCAconf) (A' B B': ECCAexp) (x: atom) :
+  | R_CongPi (g: ECCAenv) (A: ECCAexp) (A' B B': ECCAexp) (x: atom) :
       ECCA_RedClosR g A A' ->
       ECCA_RedClosR (Assum g x A) B B' ->
       ECCA_RedClosR g (ePi x A B) (ePi x A' B')
-  | R_CongSig (g: ECCAenv) (A: ECCAconf) (A' B B': ECCAexp) (x: atom) :
+  | R_CongSig (g: ECCAenv) (A: ECCAexp) (A' B B': ECCAexp) (x: atom) :
       ECCA_RedClosR g A A' ->
       ECCA_RedClosR (Assum g x A) B B' ->
       ECCA_RedClosR g (eSig x A B) (eSig x A' B')
@@ -407,125 +408,119 @@ intros. destruct e; auto.
     +  *)
 
 Inductive ECCA_Equiv: ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
-  | aE_Equiv (g: ECCAenv) (e e1 e2: ECCAconf) :
+  | aE_Equiv (g: ECCAenv) (e e1 e2: ECCAexp) :
       ECCA_RedClosR g e1 e ->
       ECCA_RedClosR g e2 e ->
       ECCA_Equiv g e1 e2
-   | aE_EquivIta1 (g: ECCAenv) (e1 A e e2 e2': ECCAconf) (v2': ECCAval) (x: atom) :
-      ECCA_RedClosR g e1 (Abs x A e) ->
+   | aE_EquivIta1 (g: ECCAenv) (e1 A e e2 e2': ECCAexp) (e2' v2': ECCAexp) (x: atom) :
+      ECCA_RedClosR g e1 (eAbs x A e) ->
       ECCA_RedClosR g e2 e2' ->
-      conf_to_val e2' = Some v2' ->
-      ECCA_Equiv (Assum g x A) e (App v2' (Id x)) ->
+(*       conf_to_val e2' = Some v2' -> *)
+      ECCA_Equiv (Assum g x A) e (eApp v2' (Id x)) ->
       ECCA_Equiv g e1 e2 
-   | aE_EquivIta2 (g: ECCAenv) (e e1 e1' e2 A : ECCAconf) (v1': ECCAval) (x: atom) :
+   | aE_EquivIta2 (g: ECCAenv) (e e1 e1' e2 A : ECCAexp) (e1' v1': ECCAexp) (x: atom) :
       ECCA_RedClosR g e1 e1' ->
-      ECCA_RedClosR g e2 (Abs x A e) ->
-      conf_to_val e1' = Some v1' ->
-      ECCA_Equiv (Assum g x A) (App v1' (Id x)) e ->
+      ECCA_RedClosR g e2 (eAbs x A e) ->
+(*       conf_to_val e1' = Some v1' -> *)
+      ECCA_Equiv (Assum g x A) (eApp v1' (Id x)) e ->
       ECCA_Equiv g e1 e2 
-  | aE_EquivAlpha (g: ECCAenv) (e1 e2: ECCAconf):
+  | aE_EquivAlpha (g: ECCAenv) (e1 e2: ECCAexp):
       ECCA_Aeq e1 e2 ->
       ECCA_Equiv g e1 e2
-  | aE_Subst1 (g: ECCAenv) (e1 e2 v: ECCAval) (e e': ECCAconf):
-      conf_to_val e = Some v ->
+  | aE_Subst1 (g: ECCAenv) (e e1 e2 v: ECCAexp) (e': ECCAexp):
+(*       conf_to_val e = Some v -> *)
       ECCA_Equiv g e e' ->
-      ECCA_Equiv g (Subst e1 e2 v) e'
-  | aE_Subst2 (g: ECCAenv) (e1 e2 v: ECCAval) (e e': ECCAconf):
-      conf_to_val e = Some v ->
+      ECCA_Equiv g (eSubst e1 e2 v) e'
+  | aE_Subst2 (g: ECCAenv) (e1 e2 v: ECCAexp) (e e': ECCAexp):
+(*       conf_to_val e = Some v -> *)
       ECCA_Equiv g e e' ->
-      ECCA_Equiv g e' (Subst e1 e2 v)
+      ECCA_Equiv g e' (eSubst e1 e2 v)
 .
 
 Hint Constructors ECCA_Equiv.
 
 Inductive ECCA_sub_type: ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
-| aST_Cong (g: ECCAenv) (A B: ECCAconf) :
+| aST_Cong (g: ECCAenv) (A B: ECCAexp) :
   ECCA_Equiv g A B ->
   ECCA_sub_type g A B
 | aST_Cum (g: ECCAenv) (i: nat) :
-  ECCA_sub_type g (Uni (uType i)) (Uni (uType (S i)))
-| aST_Pi (g: ECCAenv) (A1 A2 B1 B2: ECCAconf) (x1 x2: atom) :
+  ECCA_sub_type g (eUni (uType i)) (eUni (uType (S i)))
+| aST_Pi (g: ECCAenv) (A1 A2 B1 B2: ECCAexp) (x1 x2: atom) :
   (ECCA_Equiv g A1 A2) ->
   (ECCA_sub_type (Assum g x1 A2) B1 (subst x2 (Id x1) B2)) -> (* eId x1 ?*)
-  (ECCA_sub_type g (Pi x1 A1 B1) (Pi x2 A2 B2))
+  (ECCA_sub_type g (ePi x1 A1 B1) (ePi x2 A2 B2))
 .
 
 Hint Constructors ECCA_sub_type.
 
 Inductive ECCA_has_type: ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
 | aT_Ax_Prop (g: ECCAenv) :
-  (ECCA_has_type g (Uni uProp) (Uni (uType 0)))
+  (ECCA_has_type g (eUni uProp) (eUni (uType 0)))
 | aT_Ax_Type (g: ECCAenv) (i: nat) :
-  (ECCA_has_type g (Uni (uType i)) (Uni (uType (S i))))
-| aT_Var (g: ECCAenv) (x: atom) (A: ECCAval) :
+  (ECCA_has_type g (eUni (uType i)) (eUni (uType (S i))))
+| aT_Var (g: ECCAenv) (x: atom) (A: ECCAexp) :
   (ECCA_LookupTypeR g x A) -> (* this needs adjustment *)
-  (ECCA_has_type g (Id x) A)
+  (ECCA_has_type g (eId x) A)
 | aT_Bool (g: ECCAenv):
-  (ECCA_has_type g (Bool) (Uni (uType 0)))
+  (ECCA_has_type g (eBool) (Uni (uType 0)))
 | aT_True (g: ECCAenv):
-  (ECCA_has_type g (Tru) (Bool))
+  (ECCA_has_type g (eTru) (eBool))
 | aT_False (g: ECCAenv):
-  (ECCA_has_type g (Fls) (Bool))
-| aT_Sig (g: ECCAenv) (x: atom) (A B: ECCAconf) (i: nat) :
-  (ECCA_has_type g A (Uni (uType i))) ->
-  (ECCA_has_type (Assum g x A) B (Uni (uType i))) ->
-  (ECCA_has_type g (Sig x A B) (Uni (uType i)))
-| aT_Pair (g: ECCAenv) (v1 v2: ECCAval) (A B: ECCAconf) (x: atom) :
+  (ECCA_has_type g (eFls) (eBool))
+| aT_Sig (g: ECCAenv) (x: atom) (A B: ECCAexp) (i: nat) :
+  (ECCA_has_type g A (eUni (uType i))) ->
+  (ECCA_has_type (Assum g x A) B (eUni (uType i))) ->
+  (ECCA_has_type g (eSig x A B) (eUni (uType i)))
+| aT_Pair (g: ECCAenv) (v1 v2: ECCAexp) (A B: ECCAexp) (x: atom) :
   (ECCA_has_type g v1 A) ->
   (ECCA_has_type g v2 (subst x v1 B)) ->
-  (ECCA_has_type g (Pair v1 v2 (Sig x A B)) (Sig x A B))
-| aT_Prod_Prop (g: ECCAenv) (x: atom) (A B: ECCAconf) (i: nat):
-  (ECCA_has_type g A (Uni (uType i))) ->
-  (ECCA_has_type (Assum g x A) B (Uni (uProp))) ->
-  (ECCA_has_type g (Pi x A B) (Uni (uProp)))
-| aT_Prod_Type (g: ECCAenv) (x: atom) (A B: ECCAconf) (i: nat):
-  (ECCA_has_type g A (Uni (uType i))) ->
-  (ECCA_has_type (Assum g x A) B (Uni (uType i))) ->
-  (ECCA_has_type g (Pi x A B) (Uni (uType i)))
-| aT_Lam (g: ECCAenv) (x: atom) (A e B: ECCAconf) :
+  (ECCA_has_type g (ePair v1 v2 (eSig x A B)) (eSig x A B))
+| aT_Prod_Prop (g: ECCAenv) (x: atom) (A B: ECCAexp) (i: nat):
+  (ECCA_has_type g A (eUni (uType i))) ->
+  (ECCA_has_type (Assum g x A) B (eUni (uProp))) ->
+  (ECCA_has_type g (ePi x A B) (eUni (uProp)))
+| aT_Prod_Type (g: ECCAenv) (x: atom) (A B: ECCAexp) (i: nat):
+  (ECCA_has_type g A (eUni (uType i))) ->
+  (ECCA_has_type (Assum g x A) B (eUni (uType i))) ->
+  (ECCA_has_type g (ePi x A B) (eUni (uType i)))
+| aT_Lam (g: ECCAenv) (x: atom) (A e B: ECCAexp) :
   (ECCA_has_type (Assum g x A) e B) ->
-  (ECCA_has_type g (Abs x A e) (Pi x A B))
+  (ECCA_has_type g (eAbs x A e) (ePi x A B))
 (* ECCA_has_type: ECCAenv -> ECCAconf -> ECCAconf -> Prop := *)
-| aT_Let (g: ECCAenv) (n: ECCAcomp) (m A B: ECCAconf) (x: atom):
+| aT_Let (g: ECCAenv) (n: ECCAcomp) (m A B: ECCAexp) (x: atom):
   (ECCA_has_type g n A) ->
 (*should this be (def(assum(g))) or (assum(def(g)))*)
   (ECCA_has_type (Def (Assum g x A) x n) m B) ->
-  (ECCA_has_type g (Let x n m) (subst x n B))
-| aT_If (g: ECCAenv) (B U e1 e2: ECCAconf) (e: ECCAval) (x: atom):
-  ECCA_has_type (Assum g x Bool) B U -> 
-  ECCA_has_type g e Bool ->
-  ECCA_has_type (Eq g e Tru) e1 (subst x Tru B) ->
-  ECCA_has_type (Eq g e Fls) e2 (subst x Fls B) -> 
-  ECCA_has_type g (If e e1 e2) (subst x e B)
-| aT_Comp (g: ECCAenv) (e: ECCAcomp) (A: ECCAconf):
-  ECCA_has_type g e A ->
-  ECCA_has_type g (Comp e) A
-| aT_Conv (g: ECCAenv) (e A B U: ECCAconf) :
+  (ECCA_has_type g (eLet x n m) (subst x n B))
+| aT_If (g: ECCAenv) (B U e1 e2: ECCAexp) (e: ECCAexp) (x: atom):
+  ECCA_has_type (Assum g x eBool) B U -> 
+  ECCA_has_type g e eBool ->
+  ECCA_has_type (Eq g e Tru) e1 (subst x eTru B) ->
+  ECCA_has_type (Eq g e Fls) e2 (subst x eFls B) -> 
+  ECCA_has_type g (eIf e e1 e2) (subst x e B)
+| aT_Conv (g: ECCAenv) (e A B U: ECCAexp) :
   (ECCA_has_type g e A) ->
   (ECCA_has_type g B U) ->
   (ECCA_sub_type g A B) ->
   (ECCA_has_type g e B)
 (* ECCA_has_type: ECCAenv -> ECCAcomp -> ECCAconf -> Prop := *)
-| aT_App (g: ECCAenv) (x: atom) (e e': ECCAval) (A' B: ECCAconf) :
-  (ECCA_has_type g e (Pi x A' B)) ->
+| aT_App (g: ECCAenv) (x: atom) (e e': ECCAexp) (A' B: ECCAexp) :
+  (ECCA_has_type g e (ePi x A' B)) ->
   (ECCA_has_type g e' A') ->
-  (ECCA_has_type g (App e e') (subst x e B))
-| aT_Fst (g: ECCAenv) (e: ECCAval) (A B: ECCAconf) (x: atom) :
-  (ECCA_has_type g e (Sig x A B)) ->
-  (ECCA_has_type g (Fst e) A)
-| aT_Snd (g: ECCAenv) (e: ECCAval) (A B: ECCAconf) (x: atom) :
-  (ECCA_has_type g e (Sig x A B)) ->
-  (ECCA_has_type g (Snd e) (subst x (Fst e) B)) 
-| aT_Subst (x: atom) (g: ECCAenv) (A B U: ECCAconf) (e e1 e2: ECCAval):
+  (ECCA_has_type g (eApp e e') (subst x e B))
+| aT_Fst (g: ECCAenv) (e: ECCAexp) (A B: ECCAexp) (x: atom) :
+  (ECCA_has_type g e (eSig x A B)) ->
+  (ECCA_has_type g (eFst e) A)
+| aT_Snd (g: ECCAenv) (e: ECCAexp) (A B: ECCAexp) (x: atom) :
+  (ECCA_has_type g e (eSig x A B)) ->
+  (ECCA_has_type g (eSnd e) (subst x (eFst e) B)) 
+| aT_Subst (x: atom) (g: ECCAenv) (A B U: ECCAexp) (e e1 e2: ECCAexp):
   (ECCA_has_type (Assum g x A) B U) ->
   ECCA_has_type g e1 A -> 
   ECCA_has_type g e2 A ->
   ECCA_has_type g e (subst x e1 B) ->
   ECCA_LookupEqR g e1 e2 ->
-  ECCA_has_type g (Subst e1 e2 e) (subst x e2 B) 
-| aT_Val (g: ECCAenv) (v: ECCAval) (A: ECCAconf):
-  ECCA_has_type g v A ->
-  ECCA_has_type g (Val v) A
+  ECCA_has_type g (eSubst e1 e2 e) (subst x e2 B) 
 .
 
 Hint Constructors ECCA_has_type.
@@ -596,24 +591,19 @@ Goal ECCA_has_type Empty (Fst (Pair Tru Fls
 Proof.
 eapply aT_Fst with (A:= Bool). eapply aT_Pair.
   - apply aT_True.
-  - cbv. apply aT_Conv with (A := Bool) (U := (Uni (uType 0))) (e:=Fls) (B:=(If Tru Bool (Pi 1 Bool Bool))).
-    + apply aT_Comp. apply aT_Val. apply aT_False.
-    + eapply T_Conv.
-      * apply T_If with (U:=(type 1)%ECC). 
+  - cbv. apply aT_Conv with (A := Bool) (U := (Uni (uType 0))).
+    + apply aT_False.
+    + eapply aT_Conv.
+      * apply aT_If with (e:= Tru) (e1:= Bool) (e2:= (P 1 : Bool -> Bool)%ECCA) (x:= 20) (B:= (Uni (uType 0))) (U:= Uni (uType 1)). 
+        -- apply aT_Ax_Type.
         -- auto.
         -- auto.
-        -- auto.
-        -- cbn. eapply T_Prod_Type.
+        -- cbv. eapply aT_Prod_Type.
           ++ auto.
           ++ auto.
-      * auto.
-      * cbn. apply ST_Cong. apply E_EquivAlpha. apply aeq_id.
-    + apply ST_Cong. apply E_Equiv with (e:= eBool).
+      * apply aT_Ax_Type.
+      * cbn. apply aST_Cong. apply aE_EquivAlpha. apply aeq_id.
+    + apply aST_Cong. apply aE_Equiv with (e:= eBool).
       * auto.
       * eauto.
-Unshelve. exact 1.
 Qed.
-
-
-
-End ECCA.

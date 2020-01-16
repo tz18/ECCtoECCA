@@ -1,5 +1,6 @@
 Require Import Atom.
 
+
 (* -=ECC Definition=- *)
 
 Inductive ECCexp: Type :=
@@ -534,14 +535,14 @@ Definition F:= fresh (X::Y::Z::nil).
 Definition example_Let2 := (LET X := (type 3) in LET F := (LET X := (type 2) in X) in ({X F}))%ECC.
 Print example_Let2.
 
-Notation "'Pi' x : A '->' B" := (Pi x A B) (at level 50, x at level 9, A at level 9) : ECC_scope.
-Definition example_Pi := (Pi X : F -> Y)%ECC : ECCexp.
+Notation "'P' x : A '->' B" := (Pi x A B) (at level 50, x at level 9, A at level 9) : ECC_scope.
+Definition example_Pi := (P X : F -> Y)%ECC : ECCexp.
 Notation "'\'  x : A  '->'  B" := (Abs x A B) (at level 50, x at level 9, A at level 9) : ECC_scope.
 Definition example_Abs := (\ X: Y -> Z)%ECC : ECCexp.
-Notation "'Sig' x : A '..' B" := (Sig x A B) (at level 50, x at level 1, A at level 1): ECC_scope.
-Definition example_Sig := (Sig X : Y .. Z)%ECC : ECCexp.
+Notation "'Si' x : A '..' B" := (Sig x A B) (at level 50, x at level 1, A at level 1): ECC_scope.
+Definition example_Sig := (Si X : Y .. Z)%ECC : ECCexp.
 Notation "< e1 , e2 > 'as' A" := (Pair e1 e2 A) (at level 50, e1 at level 5, e2 at level 5, A at level 5): ECC_scope.
-Definition example_Pair := (< X, Y > as (Sig X : Y .. Z))%ECC : ECCexp.
+Definition example_Pair := (< X, Y > as (Si X : Y .. Z))%ECC : ECCexp.
 Notation "'fst' e" := (Fst e) (at level 50, e at level 5): ECC_scope.
 Notation "'snd' e" := (Snd e) (at level 50, e at level 5): ECC_scope.
 
@@ -559,12 +560,12 @@ cut (ECC_RedR Empty (LET X := Y in LET Y := type 1 in X)%ECC (subst X (Id Y) (LE
 - cbv. apply R_Let.
 Qed.
 
-Goal ECC_has_type Empty (fst (<Tru , Fls> as (Sig X : Bool .. Bool))) Bool.
+Goal ECC_has_type Empty (fst (<Tru , Fls> as (Si X : Bool .. Bool))) Bool.
 eauto.
 Qed.
 
 Goal ECC_has_type Empty (fst (<Tru , Fls> as 
-                            (Sig X : Bool .. (If X Bool (Pi Y : Bool -> Bool))))) Bool.
+                            (Si X : Bool .. (If X Bool (P Y : Bool -> Bool))))) Bool.
 Proof.
 eapply T_Fst. eapply T_Pair.
   - apply T_True.
