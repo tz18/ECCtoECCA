@@ -356,13 +356,13 @@ Hint Constructors ECC_RedR.
 
 (* Reflective Transitive Closure of step*)
 Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCexp -> Prop :=
-  (*| R_RedR (g g': ECCenv) (e e': ECCexp): (* maybe don't need this one? it follows from refl + trans*)
+  | R_RedR (g g': ECCenv) (e e': ECCexp): (* maybe don't need this one? it follows from refl + trans*)
       ECC_RedR g e e' ->
-      ECC_RedClosR g e e'*)
+      ECC_RedClosR g e e'
   | R_Refl (g: ECCenv) (e: ECCexp):
       ECC_RedClosR g e e
   | R_Trans (g: ECCenv) (e e' e'': ECCexp) :
-      ECC_RedR g e e' ->
+      ECC_RedClosR g e e' ->
       ECC_RedClosR g e' e'' ->
       ECC_RedClosR g e e''
   | R_CongLet (g: ECCenv) (e e1 e2: ECCexp) (x: atom) :

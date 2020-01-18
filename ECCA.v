@@ -332,19 +332,21 @@ Inductive ECCA_RedR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
     ECCA_RedR g (eIf Tru e1 e2) e1
   | R_IfFls (g: ECCAenv) (e1 e2: ECCAexp) :
     ECCA_RedR g (eIf Fls e1 e2) e2
+  | R_Subst (g: ECCAenv) (e e': ECCAexp) :
+    ECCA_RedR g (eSubst e e e') e'
 .
 
 Hint Constructors ECCA_RedR.
 
 (* Reflective Transitive Closure of step*)
 Inductive ECCA_RedClosR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
-  (*| R_RedR (g g': ECCAenv) (e e': ECCAexp): (* maybe don't need this one? it follows from refl + trans*)
+  | R_RedR (g g': ECCAenv) (e e': ECCAexp): (* maybe don't need this one? it follows from refl + trans*)
       ECCA_RedR g e e' ->
-      ECCA_RedClosR g e e'*)
+      ECCA_RedClosR g e e'
   | R_Refl (g: ECCAenv) (e: ECCAexp):
       ECCA_RedClosR g e e
   | R_Trans (g: ECCAenv) (e e' e'': ECCAexp) :
-      ECCA_RedR g e e' ->
+      ECCA_RedClosR g e e' ->
       ECCA_RedClosR g e' e'' ->
       ECCA_RedClosR g e e''
   | R_CongLet (g: ECCAenv) (e: ECCAexp) (e1 e2: ECCAexp) (x: atom) :
@@ -382,6 +384,11 @@ Inductive ECCA_RedClosR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
       ECCA_RedClosR g e1 e1' ->
       ECCA_RedClosR g e2 e2' ->
       ECCA_RedClosR g (eIf e e1 e2) (eIf e' e1' e2')
+  | R_CongSubst (g: ECCAenv) (e1 e1' e2 e2' e e': ECCAexp):
+      ECCA_RedClosR g e1 e1' ->
+      ECCA_RedClosR g e2 e2' ->
+      ECCA_RedClosR g e e' ->
+      ECCA_RedClosR g (eSubst e1 e2 e) (eSubst e1' e2' e')
 .
 
 Hint Constructors ECCA_RedClosR.
