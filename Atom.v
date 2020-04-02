@@ -1,15 +1,26 @@
 Require Export Omega.
-Require Export Coq.Lists.ListSet.
-Require Export Coq.Init.Nat.
-Require Export Coq.Arith.EqNat.
-Require Export Arith.
-Require Export Coq.Program.Wf.
-Open Scope list.
+Require Export Metalib.Metatheory.
+Require Export Metalib.LibLNgen.
 
+Inductive ECCuni: Type :=
+  | uProp
+  | uType (i: nat)
+.
+
+Definition X: atom := (fresh nil).
+Definition Y: atom := (fresh (X :: nil)).
+Definition Z: atom := (fresh (X :: Y :: nil)).
+
+(* Notation " x == y " := (eq_dec x y) (at level 70).
+ *)
+Definition swap_var (x:atom) (y:atom) (z:atom) :=
+  if (z == x) then y else if (z == y) then x else z.
+
+(* 
 Definition atom:= nat.
 Definition atoms := set atom.
 Definition empty : atoms := empty_set atom.
-Definition singleton (x : atom) := x :: nil.
+
 Definition eq_dec : forall n m : atom, {n = m} + {n <> m} := Nat.eq_dec.
 Definition union := set_union eq_dec.
 Definition remove := set_remove eq_dec.
@@ -20,17 +31,10 @@ Definition fresh (ns: atoms): atom :=
 (set_fold_left max ns 0) + 1
 .
 
-Definition X: atom := (fresh nil).
-Definition Y: atom := (fresh (X :: nil)).
-Definition Z: atom := (fresh (X :: Y :: nil)).
 
-Inductive ECCuni: Type :=
-  | uProp
-  | uType (i: nat)
-.
 
-Definition swap_var (x:atom) (y:atom) (z:atom) :=
-  if (z =? x) then y else if (z =? y) then x else z.
+
+
 
 Definition fresh_in (x: atom) (N: atoms) :=
   ~ (set_In x N).
@@ -50,4 +54,4 @@ Proof.
 intros. unfold fresh_in. unfold fresh_in in H. split.
 - unfold set_In. unfold set_In in H. pose proof (set_union_iff eq_dec x N1 N2) as s. rewrite -> s in H. auto.
 - unfold set_In. unfold set_In in H. pose proof (set_union_iff eq_dec x N1 N2) as s. rewrite -> s in H. auto.
-Qed.
+Qed. *)

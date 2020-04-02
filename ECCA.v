@@ -3,6 +3,7 @@ From Coq Require Import Strings.Ascii.
 From Coq Require Import Init.Datatypes.*)
 Require Import Atom.
 Require Import FunInd.
+
 (* 
 =====================================
 =======--ECCA Definition--=========== 
@@ -517,26 +518,26 @@ Require Import Recdef.
 
 Function substWork (x: atom) (arg body: ECCAexp) (FVInArg: atoms) {measure ECCAsize body}:=
 match body with
-  | eId x' => if (x =? x') then arg else body
+  | eId x' => if (x == x') then arg else body
   | eAbs x' A e =>
-      if (x =? x')
+      if (x == x')
         then (eAbs x' (substWork x arg A FVInArg) e)
-        else let xnew := fresh (union FVInArg (FV e)) in
+        else let (xnew,_) := atom_fresh (union FVInArg (FV e)) in
                     (eAbs xnew (substWork x arg A FVInArg) (substWork x arg (swap x' xnew e) FVInArg))
   | ePi x' A B =>
-      if (x =? x')
+      if (x == x')
         then (ePi x' (substWork x arg A FVInArg) B)
-        else let xnew := fresh (union FVInArg (FV B)) in
+        else let (xnew,_) := atom_fresh (union FVInArg (FV B)) in
                 (ePi xnew (substWork x arg A FVInArg) (substWork x arg (swap x' xnew B) FVInArg))
   | eLet x' A B =>
-      if (x =? x')
+      if (x == x')
         then (eLet x' (substWork x arg A FVInArg) B)
-        else let xnew := fresh (union FVInArg (FV B)) in
+        else let (xnew,_) := atom_fresh (union FVInArg (FV B)) in
                 (eLet xnew (substWork x arg A FVInArg) (substWork x arg (swap x' xnew B) FVInArg))
   | eSig x' A B =>
-      if (x =? x')
+      if (x == x')
         then (eSig x' (substWork x arg A FVInArg) B)
-        else let xnew := fresh (union FVInArg (FV B)) in
+        else let (xnew,_) := atom_fresh (union FVInArg (FV B)) in
                 (eSig xnew (substWork x arg A FVInArg) (substWork x arg (swap x' xnew B) FVInArg))
   | eApp e1 e2 => (eApp (substWork x arg e1 FVInArg) (substWork x arg e2 FVInArg))
   | eUni U => body
@@ -671,8 +672,8 @@ Inductive ECCA_Aeq : ECCAexp -> ECCAexp -> Prop :=
      ECCA_Aeq b1 b2 ->
      ECCA_Aeq (eAbs x t1 b1) (eAbs x t2 b2)
   | aeq_abs_diff (x y: atom) (t1 t2 b1 b2: ECCAexp):
-     x <> y ->
-     (mem x (FV b2)) = false ->
+(*      x <> y -> *)
+     x `notin` (FV b2) ->
      ECCA_Aeq b1 (swap y x b2) ->
      ECCA_Aeq t1 t2 ->
      ECCA_Aeq (eAbs x t1 b1) (eAbs y t2 b2)
@@ -682,7 +683,7 @@ Inductive ECCA_Aeq : ECCAexp -> ECCAexp -> Prop :=
      ECCA_Aeq (ePi x t1 b1) (ePi x t2 b2)
   | aeq_pi_diff (x y: atom) (t1 t2 b1 b2: ECCAexp):
 (*      x <> y ->  Don't think we need this. If x binds nothing, then our new var could be x.*)
-     (mem x (FV b2)) = false ->
+     x `notin` (FV b2) ->
      ECCA_Aeq b1 (swap y x b2) ->
      ECCA_Aeq t1 t2 ->
      ECCA_Aeq (ePi x t1 b1) (ePi y t2 b2)
@@ -691,8 +692,8 @@ Inductive ECCA_Aeq : ECCAexp -> ECCAexp -> Prop :=
      ECCA_Aeq b1 b2 ->
      ECCA_Aeq (eLet x t1 b1) (eLet x t2 b2)
   | aeq_let_diff (x y: atom) (t1 t2 b1 b2: ECCAexp):
-     x <> y ->
-     (mem x (FV b2)) = false ->
+(*      x <> y -> *)
+     x `notin` (FV b2) ->
      ECCA_Aeq b1 (swap y x b2) ->
      ECCA_Aeq t1 t2 ->
      ECCA_Aeq (eLet x t1 b1) (eLet y t2 b2)
@@ -701,8 +702,8 @@ Inductive ECCA_Aeq : ECCAexp -> ECCAexp -> Prop :=
      ECCA_Aeq b1 b2 ->
      ECCA_Aeq (eSig x t1 b1) (eSig x t2 b2)
   | aeq_sig_diff (x y: atom) (t1 t2 b1 b2: ECCAexp):
-     x <> y ->
-     (mem x (FV b2)) = false ->
+(*      x <> y -> *)
+     x `notin` (FV b2) ->
      ECCA_Aeq b1 (swap y x b2) ->
      ECCA_Aeq t1 t2 ->
      ECCA_Aeq (eSig x t1 b1) (eSig y t2 b2)
@@ -861,7 +862,7 @@ intros. apply aT_Bool. Qed.
 
 Hint Resolve substWork_equation.
 
-Goal ECCA_has_type Empty (ePair eTru eBool (eSig 1 eBool (eUni (uType 0)))) (eSig 1 eBool (eUni (uType 0))).
+Goal ECCA_has_type Empty (ePair eTru eBool (eSig X eBool (eUni (uType 0)))) (eSig X eBool (eUni (uType 0))).
 Proof.
 intros. apply aT_Pair. 
 - apply aT_True.
@@ -903,6 +904,7 @@ Inductive ECCA_cont_has_type: ECCAenv -> ECCAcont -> ECCAconttype -> Prop :=
   | aK_Bind (g: ECCAenv) (y: atom) (M: ECCAexp) (M' A B: ECCAexp):
     ECCA_has_type g M' A ->
     ECCA_has_type (Assum (Def g y M') y A) M B ->
+    (* y `notin` FV B -> *) (*Prove as a lemma later*)
     FV B = empty -> (* TODO: Questionable! *)
     ECCA_cont_has_type g (LetHole y M) (Cont M' A B)
 .
@@ -934,8 +936,6 @@ Bind Scope ECCA_scope with ECCAcomp.
 Bind Scope ECCA_scope with ECCAcont.
 
 Coercion Id: atom >-> ECCAval.
-Definition natToAtom (i: nat) : atom := i.
-Coercion natToAtom: nat >-> atom.
 
 Definition F:=4.
 
@@ -1003,33 +1003,109 @@ intros. induction B; try intuition.
   + intuition. apply Nat.eqb_neq. apply Nat.eqb_neq in H0. apply Nat.eqb_neq in H0. auto.
 } *)
 
+Lemma swap_var_equivariance : forall v x y z w,
+    swap_var x y (swap_var z w v) =
+    swap_var (swap_var x y z) (swap_var x y w) (swap_var x y v).
+Proof.
+  unfold swap_var; default_simp.
+Qed.
+
+Lemma swap_equivariance : forall t x y z w,
+    swap x y (swap z w t) = swap (swap_var x y z) (swap_var x y w) (swap x y t).
+Proof.
+  induction t; intros; simpl; try rewrite swap_var_equivariance; try auto.
+  - rewrite swap_var_equivariance. rewrite IHt1. rewrite IHt2. auto.
+  - rewrite swap_var_equivariance. rewrite IHt1. rewrite IHt2. auto.
+  - rewrite swap_var_equivariance. rewrite IHt1. rewrite IHt2. auto.
+  - default_simp.
+  - rewrite swap_var_equivariance. rewrite IHt1. rewrite IHt2. auto.
+  - default_simp.
+  - default_simp.
+  - default_simp.
+Qed. 
+
+Lemma swap_id : forall n x,
+    swap x x n = n.
+Proof.
+  induction n; simpl; unfold swap_var;  default_simp.
+Qed.
+
+Lemma notin_fv_nom_equivariance : forall x0 x y t ,
+  x0 `notin` FV t ->
+  swap_var x y x0  `notin` FV (swap x y t).
+Proof.
+  (* ADMITTED *)
+  induction t; intros; simpl in *.
+  1-13: unfold swap_var in *; default_simp.
+Qed. (* /ADMITTED *)
+
+Lemma ECCA_Aeq_equivariance : forall x y t1 t2,
+    ECCA_Aeq t1 t2 ->
+    ECCA_Aeq (swap x y t1) (swap x y t2).
+Proof.
+  (* ADMITTED *)
+  induction 1; intros; simpl in *; auto.
+  all: destruct (swap_var x y x0 == swap_var x y y0).
+  1,3,5,7: rewrite e; eapply aeq_abs_same || eapply aeq_pi_same || eapply aeq_let_same || eapply aeq_sig_same;
+   auto; 
+   rewrite swap_equivariance in IHECCA_Aeq1; rewrite e in IHECCA_Aeq1; rewrite swap_id in IHECCA_Aeq1; auto.
+  all: rewrite swap_equivariance in IHECCA_Aeq1; eapply aeq_abs_diff || eapply aeq_pi_diff || eapply aeq_let_diff || eapply aeq_sig_diff;
+      try eapply notin_fv_nom_equivariance; auto.
+Qed. (* /ADMITTED *)
+
+
+(* y <> x ->
+y `notin` (remove x (FV B)) *)
+
+Lemma subst_over_swap (x y z: atom) (A B: ECCAexp):
+y <> x ->
+y `notin` (FV B) ->
+(z `notin` union (FV A) (FV B) ->
+(substWork y A B (FV A) =a= B) ->
+(substWork y A (swap x z B) (FV A) =a= swap x z B))%ECCA.
+Proof.
+Admitted.
+
+Lemma subst_no_fv_aeq_2 (y: atom) (A B C: ECCAexp) :
+(C =a= B ->
+y `notin` (FV C) ->
+substWork y A C (FV A) =a= B)%ECCA.
+Proof. Admitted.
+
+Require Import Coq.Program.Equality.
 
 Lemma subst_no_fv_aeq (y: atom) (A B: ECCAexp) :
-(fresh_in y (FV B) ->
+(y `notin` (FV B) ->
 substWork y A B (FV A) =a= B)%ECCA.
 Proof.
 intros. induction B; rewrite substWork_equation; eauto.
-- cut ((y =? x) = false).
-  + intros. cut ((if y =? x then A else eId x) = eId x).
-    * intros. rewrite H0. auto.
-    * rewrite H0. reflexivity.
-  + cbv in H. apply Nat.eqb_neq. auto.
-- remember (y=?x) as same. destruct same.
-  + symmetry in Heqsame. apply Nat.eqb_eq in Heqsame. subst. cbn in H. apply fresh_over_union in H. destruct H.
-    apply aeq_pi_same.
-    * apply IHB1. apply H.
-    * apply aeq_id.
-  + symmetry in Heqsame. apply Nat.eqb_neq in Heqsame. apply aeq_pi_diff.
-    * 
-
-
+- default_simp. fsetdec. 
+- default_simp. apply aeq_pi_diff.
+  * fsetdec.
+  * cbn in H. apply subst_over_swap; auto.
+  * apply IHB1; cbn in H; fsetdec.
+- default_simp. apply aeq_abs_diff.
+  * fsetdec.
+  * cbn in H. apply subst_over_swap; auto.
+  * apply IHB1; cbn in H; fsetdec.
+- default_simp. apply aeq_sig_diff.
+  * fsetdec.
+  * cbn in H. apply subst_over_swap; auto.
+  * apply IHB1; cbn in H; fsetdec.
+- apply aeq_pair; default_simp.
+- default_simp. apply aeq_let_diff.
+  * fsetdec.
+  * cbn in H. apply subst_over_swap; auto.
+  * default_simp.
+- apply aeq_app; default_simp.
+Qed.
 
 (* | aT_Conv (g: ECCAenv) (e A B U: ECCAexp) :
   (g |- e : A) ->
   (g |- B : U) ->
   (ECCA_sub_type g A B) ->
   (g |- e : B)
-
+       
 Unable to unify "(g |- eLet y N M : subst y N B)%ECCA" with "(g |- eLet y N M : B)%ECCA".
  *)
 Lemma Cut (g: ECCAenv) (K : ECCAcont) (N: ECCAexp) (A B B': ECCAexp):
@@ -1045,8 +1121,8 @@ intros. inversion H ; subst ; cbv.
   + eapply aT_Let with (n:= N) (m:= M) (A:=A) (B:=B) (x:=y) (g:=g).
     * assumption.
     * assumption.
-  + apply aE_EquivAlpha.
-Abort.
+  + apply subst_no_fv_aeq. rewrite H8. auto.
+Qed.
 
 Lemma def_to_subst (g: ECCAenv) (N M A B: ECCAexp) (y: atom):
 (g |- N : A)%ECCA ->
