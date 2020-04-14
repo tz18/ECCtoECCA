@@ -1,5 +1,5 @@
-Require Import Atom.
-
+(* Require Import Atom.
+TODO: FIX later
 
 (* -=ECC Definition=- *)
 
@@ -101,20 +101,20 @@ Qed.
 Fixpoint ECC_LookupType (g: ECCenv) (x: atom): option ECCexp :=
 match g with
   | Empty => None
-  | Assum g' x' A => if (x' =? x) then Some A else (ECC_LookupType g' x)
+  | Assum g' x' A => if (x' == x) then Some A else (ECC_LookupType g' x)
   | Def g' x' e => (ECC_LookupType g' x)
 end.
 
 Fixpoint ECC_LookupDef (g: ECCenv) (x: atom): option ECCexp :=
 match g with
   | Empty => None
-  | Assum g' x' A => if (x' =? x) then match g' with
+  | Assum g' x' A => if (x' == x) then match g' with
       | Empty => None
       | Assum g'' x'' A => None
-      | Def g' x'' e => if (x'' =? x) then Some e else None
+      | Def g' x'' e => if (x'' == x) then Some e else None
       end      
       else (ECC_LookupDef g' x)
-  | Def g' x' e => if (x' =? x) then None else (ECC_LookupDef g' x)
+  | Def g' x' e => if (x' == x) then None else (ECC_LookupDef g' x)
 end.
 
 Lemma ECC_EmptyImpliesNothing : forall (x: atom) (A: ECCexp), ECC_LookupTypeR Empty x A -> False.
@@ -126,18 +126,18 @@ Lemma ECC_LookupTypeReflects (g: ECCenv) (x: atom) (A: ECCexp) : ECC_LookupTypeR
 Proof.
 intros. split.
  - intros. induction H.
-  + cbn. rewrite <- beq_nat_refl. reflexivity.
-  + cbn. cut (x' =? x = false).
-    * intros. rewrite H1. apply IHECC_LookupTypeR.
-    * apply Nat.eqb_neq. auto.
+  + cbn. destruct (x == x); auto || contradiction.
+  + cbn. destruct (x' == x).
+    * subst. contradiction.
+    * auto.
   + cbn. apply IHECC_LookupTypeR.
  - intros. induction g.
   + discriminate.
-  + inversion H. destruct (x0 =? x) eqn:eq.
-    * inversion H1. apply Nat.eqb_eq in eq. rewrite eq. apply LT_gFirst.
+  + inversion H. destruct (x0 == x).
+    * inversion H1. subst. apply LT_gFirst.
     * apply LT_AssumRest.
       -- apply IHg. apply H1.
-      -- apply Nat.eqb_neq in eq. auto.
+      -- auto.
   + apply LT_DefRest.
     * apply IHg. apply H.
 Qed.
@@ -146,9 +146,9 @@ Lemma ECC_LookupDefReflects (g: ECCenv) (x: atom) (A: ECCexp) : ECC_LookupDefR g
 Proof.
 intros. split.
  - intros. induction H.
-  + cbn. rewrite <- beq_nat_refl. reflexivity.
-  + cbn. cut (x' =? x = false).
-    * intros. rewrite H1. apply IHECC_LookupDefR.
+  + cbn. destruct (x == x); auto || contradiction.
+  + cbn. destruct (x' == x).
+    * subst. rewrite H0. apply IHECC_LookupDefR.
     * apply Nat.eqb_neq. auto.
   + cbn. cut (x' =? x = false). 
     * intros. rewrite H1. apply IHECC_LookupDefR.
@@ -585,4 +585,4 @@ eapply T_Fst. eapply T_Pair.
       * auto.
       * eauto.
 Unshelve. exact 1.
-Qed.
+Qed. *)
