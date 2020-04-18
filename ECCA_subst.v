@@ -107,8 +107,7 @@ if (AtomSetImpl.mem x (FV body)) then
     | _ => body
   (*   | eSubst a b c => eSubst (substWork x arg a FVInArg) (substWork x arg b FVInArg) (substWork x arg c FVInArg) (**) *)
   end
-else body
-.
+else body.
 Proof.
 1-19: try (Tactics.program_simpl; cbn; omega).
 1-4: try (Tactics.program_simpl; cbn; rewrite -> swap_size_eq; omega).
