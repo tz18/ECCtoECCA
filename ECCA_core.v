@@ -62,15 +62,6 @@ Inductive ECCAexp: Type :=
 
 Hint Constructors ECCAexp.
 
-Inductive ECCAenv: Type :=
-  | Empty
-  | Assum (g: ECCAenv) (x: atom) (A: ECCAexp)
-  | Def (g: ECCAenv) (x: atom) (v: ECCAexp)
-  | Eq (g: ECCAenv) (v1 v2: ECCAexp)
-.
-Hint Constructors ECCAenv. 
-Notation "g ',' x '=' e" := (Def g x e) (at level 50, x at level 50): ECCA_scope.
-Notation "g ',' x ':' e" := (Assum g x e) (at level 50, x at level 50): ECCA_scope.
 
 (* 
 ============================================================
@@ -380,6 +371,16 @@ Coercion Comp: ECCAcomp >-> ECCAconf.
 =====================================
 *)
 
+Inductive ECCAenv: Type :=
+  | Empty
+  | Assum (g: ECCAenv) (x: atom) (A: ECCAexp)
+  | Def (g: ECCAenv) (x: atom) (v: ECCAexp)
+  | Eq (g: ECCAenv) (v1 v2: ECCAexp)
+.
+Hint Constructors ECCAenv. 
+Notation "g ',' x '=' e" := (Def g x e) (at level 50, x at level 50): ECCA_scope.
+Notation "g ',' x ':' e" := (Assum g x e) (at level 50, x at level 50): ECCA_scope.
+
 Inductive ECCA_LookupTypeR : ECCAenv -> atom -> ECCAexp -> Prop:=
   | aLT_gFirst (g': ECCAenv) (x: atom) (A: ECCAexp):
       ECCA_LookupTypeR (Assum g' x A) x A
@@ -432,3 +433,14 @@ Inductive ECCA_LookupEqR : ECCAenv -> ECCAexp -> ECCAexp -> Prop:=
       ECCA_LookupEqR (Eq g v1' v2') v1 v2 
 .
 Hint Constructors ECCA_LookupEqR.
+
+
+(*Defining "g,g'|-"
+  Append environment g to environment g'*)
+Fixpoint appendEnv (g g': ECCAenv) :=
+match g' with
+| Empty => g
+| Assum g'' x A => Assum (appendEnv g g'') x A
+| Def g'' x A => Def (appendEnv g g'') x A
+| Eq g'' x A => Eq (appendEnv g g'') x A
+end.

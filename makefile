@@ -41,7 +41,7 @@ HASNATDYNLINK     := $(COQMF_HASNATDYNLINK)
 OCAMLWARN         := $(COQMF_WARN)
 
 makefile.conf: 
-	coq_makefile -o makefile Atom.v ECC.v ECCA_core.v ECCA_equiv.v ECCA_equiv_lemmas.v ECCA_key_lemmas.v ECCA_reduction.v ECCA_subst.v ECCA_subst_lemmas.v ECCA_typing.v
+	coq_makefile -o makefile Atom.v ECC.v ECCA_continuations.v ECCA_core.v ECCA_equiv.v ECCA_equiv_lemmas.v ECCA_het_comp.v ECCA_key_lemmas.v ECCA_reduction.v ECCA_subst.v ECCA_subst_lemmas.v ECCA_trans_preservation.v ECCA_typing.v translator.v
 
 # This file can be created by the user to hook into double colon rules or
 # add any other Makefile code he may need

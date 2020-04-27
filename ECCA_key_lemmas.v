@@ -1,8 +1,9 @@
 Require Export ECCA_typing.
 Require Export ECCA_equiv_lemmas.
 Require Export ECCA_subst_lemmas.
+Require Export ECCA_continuations.
 
-Lemma Cut (g: ECCAenv) (K : ECCAcont) (N: ECCAexp) (A B B': ECCAexp):
+Lemma Cut (g: ECCAenv) (K : cont) (N: ECCAexp) (A B B': ECCAexp):
 (ECCA_cont_has_type g K (Cont N A B) ->
 ECCA_has_type g N A ->
 exists B', ECCA_has_type g (fill_hole N K) B' /\ (B' =a= B))%ECCA.
@@ -32,7 +33,7 @@ Proof. (* intros. induction H2; default_simp.
     - } *)
 Abort.
 
-Lemma Cut_modulo_equivalence (g: ECCAenv) (K : ECCAcont) (N N': ECCAexp) (A B B': ECCAexp):
+Lemma Cut_modulo_equivalence (g: ECCAenv) (K : cont) (N N': ECCAexp) (A B B': ECCAexp):
 (ECCA_cont_has_type g K (Cont N A B) ->
 ECCA_has_type g N A ->
 ECCA_has_type g N' A ->

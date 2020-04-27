@@ -482,14 +482,23 @@ Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
   (ECC_sub_type g A B) ->
   (ECC_has_type g e B)
 .
-
-
 Hint Constructors ECC_has_type.
 
-Goal ECC_has_type Empty (Uni uProp) (Uni (uType 0)).
-Proof.
-intuition.
-Qed.
+(* ECC Well-Formed Environments *)
+Inductive ECC_Env_WF: ECCenv -> Prop :=
+| W_Empty (g: ECCenv) :
+  ECC_Env_WF Empty
+| W_Assum (g: ECCenv) (x: atom) (A U: ECCexp) :
+  ECC_Env_WF g ->
+  ECC_has_type g A U ->
+  ECC_Env_WF (Assum g x A)
+| W_Def (g: ECCenv) (x: atom) (e A U: ECCexp) :
+  ECC_Env_WF g ->
+  ECC_has_type g A U ->
+  ECC_has_type g e A ->
+  ECC_Env_WF (Assum (Def g x e) x A)
+.
+Hint Constructors ECC_Env_WF.
 
 (* ECC Notation *)
 

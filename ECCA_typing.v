@@ -91,67 +91,20 @@ Inductive ECCA_has_type: ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
   g |- (eSubst e1 e2 e): (subst x e2 B)  *)
 where "g '|-' a ':' b" := (ECCA_has_type g a b) : ECCA_scope
 .
-Check (Empty |- eTru : eBool)%ECCA.
-
 Hint Constructors ECCA_has_type.
 
-Goal ECCA_has_type Empty eBool (eUni (uType 0)).
-Proof.
-intros. apply aT_Bool. Qed.
-
-Hint Resolve substWork_equation.
-
-Goal ECCA_has_type Empty (ePair eTru eBool (eSig X eBool (eUni (uType 0)))) (eSig X eBool (eUni (uType 0))).
-Proof.
-intros. apply aT_Pair. 
-- apply aT_True.
-- rewrite substWork_equation. destruct AtomSetImpl.mem; apply aT_Bool.
-Qed.
-
-(*===========================
-  ==--Continuation Typing--==
-  ===========================*)
-
-(* TODO: incomplete *)
-
-Inductive ECCAcont: Type :=
-  | Hole
-  | LetHole (x: atom) (E: ECCAexp)
+(* ECC Well-Formed Environments *)
+Inductive ECCA_Env_WF: ECCAenv -> Prop :=
+| W_Empty (g: ECCAenv) :
+  ECCA_Env_WF Empty
+| W_Assum (g: ECCAenv) (x: atom) (A U: ECCAexp) :
+  ECCA_Env_WF g ->
+  ECCA_has_type g A U ->
+  ECCA_Env_WF (Assum g x A)
+| W_Def (g: ECCAenv) (x: atom) (e A U: ECCAexp) :
+  ECCA_Env_WF g ->
+  ECCA_has_type g A U ->
+  ECCA_has_type g e A ->
+  ECCA_Env_WF (Assum (Def g x e) x A)
 .
-Hint Constructors ECCAcont.
-Bind Scope ECCA_scope with ECCAcont.
-
-Notation "'[]'" := (Hole) (at level 50) : ECCA_scope.
-Definition aHole := []%ECCA.
-Notation "'LET' x ':=' '[]' 'in' B" := (LetHole x B) (at level 50) : ECCA_scope.
-Definition example_aLetHole := (LET X := [] in (eId X))%ECCA.
-
-Inductive ECCAconttype: Type :=
-  | Cont (M: ECCAexp) (A: ECCAexp) (B: ECCAexp)
-.
-Hint Constructors ECCAconttype.
-(* TODO: Add notation for cont type  *)
-
-
-
-Inductive ECCA_cont_has_type: ECCAenv -> ECCAcont -> ECCAconttype -> Prop :=
-  | aK_Empty (M: ECCAexp) (g: ECCAenv) (A: ECCAexp):
-    ECCA_cont_has_type g Hole (Cont M A A)
-  | aK_Bind (g: ECCAenv) (y: atom) (M: ECCAexp) (M' A B: ECCAexp):
-    ECCA_has_type g M' A ->
-    ECCA_has_type (Assum (Def g y M') y A) M B ->
-    y `notin` FV B ->  (*Prove as a lemma later*)
-    ECCA_cont_has_type g (LetHole y M) (Cont M' A B)
-.
-
-Hint Constructors ECCA_cont_has_type.
-
-Definition fill_hole (e: ECCAexp) (K: ECCAcont): ECCAexp :=
-  match K with
-    | Hole => e
-    | LetHole x B => eLet x e B
-end.
-
-Lemma fill_with_hole_is_id (e: ECCAexp): fill_hole e Hole = e.
-Proof.
-eauto. Qed.
+Hint Constructors ECCA_Env_WF.
