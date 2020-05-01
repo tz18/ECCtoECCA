@@ -503,14 +503,14 @@ ECC_Env_WF: ECCenv -> Prop :=
 .
 Hint Constructors ECC_Env_WF.
 Hint Constructors ECC_has_type.
+
+(* Mutual induction Scheme *)
 Scheme ECC_type_env_mut := Induction for ECC_has_type Sort Prop
 with ECC_env_type_mut := Induction for ECC_Env_WF Sort Prop.
-Print ECC_type_env_mut.
-(* Scheme ECC_env_wf_ind := Induction for ECC_Env_WF Sort Prop.
-Scheme ECC_has_type_ind := Induction for ECC_has_type Sort Prop. *)
 
-(* Combined Scheme ECC_type_env_ind from ECC_has_type_ind, ECC_Env_WF_ind. *)
-
+(* "induction on the mutually defined judgments ..." Scheme.
+ * Think this is "simultaneous induction"? *)
+Combined Scheme ECC_type_env_comb from ECC_env_type_mut, ECC_type_env_mut.
 
 (* ECC Notation *)
 
