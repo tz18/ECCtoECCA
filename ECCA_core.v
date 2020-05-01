@@ -361,6 +361,9 @@ Definition isComp ( e: ECCAexp): Prop :=
   exists a, (getECCAcomp e) = Some a.
 Definition isVal ( e: ECCAexp): Prop :=
   exists a, (getECCAval e) = Some a.
+(* 
+Definition reify_Prop_val { e : ECCAexp} (p : (isVal e)) : ECCAval.
+Definition reflect_Prop_val ( e : ECCAexp) : Option (isVal e). *)
 
 Coercion Val: ECCAval >-> ECCAcomp. 
 Coercion Comp: ECCAcomp >-> ECCAconf. 

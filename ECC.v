@@ -425,8 +425,10 @@ Hint Constructors ECC_sub_type.
 
 Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
 | T_Ax_Prop (g: ECCenv) :
+  ECC_Env_WF g ->
   (ECC_has_type g (Uni uProp) (Uni (uType 0)))
 | T_Ax_Type (g: ECCenv) (i: nat) :
+  ECC_Env_WF g ->
   (ECC_has_type g (Uni (uType i)) (Uni (uType (S i))))
 | T_Var (g: ECCenv) (x: atom) (A: ECCexp) :
   (ECC_LookupTypeR g x A) -> (* this needs adjustment *)
@@ -465,10 +467,13 @@ Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
   (ECC_has_type g e (Sig x A B)) ->
   (ECC_has_type g (Snd e) (subst x (Fst e) B))
 | T_Bool (g: ECCenv):
+  ECC_Env_WF g ->
   (ECC_has_type g (Bool) (Uni (uType 0)))
 | T_True (g: ECCenv):
+  ECC_Env_WF g ->
   (ECC_has_type g (Tru) (Bool))
 | T_False (g: ECCenv):
+  ECC_Env_WF g ->
   (ECC_has_type g (Fls) (Bool))
 (* | T_If (g: ECCenv) (B U e e1 e2: ECCexp) (x: atom):
   (ECC_has_type (Assum g x (Bool)) B U) ->
@@ -481,11 +486,9 @@ Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
   (ECC_has_type g B U) ->
   (ECC_sub_type g A B) ->
   (ECC_has_type g e B)
-.
-Hint Constructors ECC_has_type.
-
+with
 (* ECC Well-Formed Environments *)
-Inductive ECC_Env_WF: ECCenv -> Prop :=
+ECC_Env_WF: ECCenv -> Prop :=
 | W_Empty (g: ECCenv) :
   ECC_Env_WF Empty
 | W_Assum (g: ECCenv) (x: atom) (A U: ECCexp) :
@@ -499,6 +502,15 @@ Inductive ECC_Env_WF: ECCenv -> Prop :=
   ECC_Env_WF (Assum (Def g x e) x A)
 .
 Hint Constructors ECC_Env_WF.
+Hint Constructors ECC_has_type.
+Scheme ECC_type_env_mut := Induction for ECC_has_type Sort Prop
+with ECC_env_type_mut := Induction for ECC_Env_WF Sort Prop.
+Print ECC_type_env_mut.
+(* Scheme ECC_env_wf_ind := Induction for ECC_Env_WF Sort Prop.
+Scheme ECC_has_type_ind := Induction for ECC_has_type Sort Prop. *)
+
+(* Combined Scheme ECC_type_env_ind from ECC_has_type_ind, ECC_Env_WF_ind. *)
+
 
 (* ECC Notation *)
 
