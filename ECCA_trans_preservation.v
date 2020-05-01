@@ -6,7 +6,7 @@ Require Import ECCA_key_lemmas.
 
 Definition P1 (g : ECCenv) (e A : ECCexp) (h : ECC_has_type g e A) := (
 (forall
-(g': ECCAenv) (K: cont_r) 
+(g': ECCAenv) (K: cont_r)
 (B N: ECCAexp),
 ECCA_cont_has_type (appendEnv (transEnv g) g') (unrestrict_cont K) (Cont N (flattenECCAconf (trans A)) B) ->
 ECCA_Equiv (appendEnv (transEnv g) g') (flattenECCAconf (trans e)) N ->
@@ -19,8 +19,8 @@ Combined Scheme ECC_type_env_comb from ECC_env_type_mut, ECC_type_env_mut.
 Lemma strong_trans_preservation :
 
 (forall (g : ECCenv) (h : ECC_Env_WF g),  ECCA_Env_WF (transEnv g)) /\
-(forall (g : ECCenv) (e A : ECCexp) (H : ECC_has_type g e A), 
-forall (g': ECCAenv) (K: cont_r) 
+(forall (g : ECCenv) (e A : ECCexp) (H : ECC_has_type g e A),
+forall (g': ECCAenv) (K: cont_r)
 (B N: ECCAexp),
 ECCA_cont_has_type (appendEnv (transEnv g) g') (unrestrict_cont K) (Cont N (flattenECCAconf (trans A)) B) ->
 ECCA_Equiv (appendEnv (transEnv g) g') (flattenECCAconf (trans e)) N ->
