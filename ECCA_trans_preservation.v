@@ -30,8 +30,6 @@ intros.
 simple apply ECC_type_env_comb; intros.
 - unfold transWork. simpl.  destruct (atom_fresh empty). destruct (atom_fresh (add x empty)). destruct (atom_fresh (add x0 (add x empty))).
   cut (ECCA_has_type (transEnv g) (Uni uProp) (Uni (uType 0))).
-  + shelve. eapply Cut. ...
+  + shelve. (*eapply Cut. *)
   + auto.
--
--
-Qed.
+Admitted.
