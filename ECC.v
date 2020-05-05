@@ -419,6 +419,16 @@ Inductive ECC_sub_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
   (ECC_Equiv g A1 A2) ->
   (ECC_sub_type (Assum g x1 A2) B1 (subst x2 (Id x1) B2)) -> (* Id x1 ?*)
   (ECC_sub_type g (Pi x1 A1 B1) (Pi x2 A2 B2))
+| ST_Trans (g: ECCenv) (A A' B: ECCexp) :
+  (ECC_sub_type g A A') ->
+  (ECC_sub_type g A' B) ->
+  (ECC_sub_type g A B)
+| ST_Prop (g: ECCenv) :
+  (ECC_sub_type g (Uni (uProp)) (Uni (uType 0)))
+| ST_Sig (g: ECCenv) (A1 A2 B1 B2: ECCexp) (x1 x2: atom):
+  (ECC_sub_type g A1 A2) ->
+  (ECC_sub_type (Assum g x1 A2) B1 (subst x2 (Id x1) B2)) ->
+  (ECC_sub_type g (Sig x1 A1 B1) (Sig x2 A2 B2))
 .
 
 Hint Constructors ECC_sub_type.

@@ -17,6 +17,16 @@ Inductive ECCA_sub_type: ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
   (ECCA_Equiv g A1 A2) ->
   (ECCA_sub_type (Assum g x1 A2) B1 (subst x2 (eId x1) B2)) -> (* eId x1 ?*)
   (ECCA_sub_type g (ePi x1 A1 B1) (ePi x2 A2 B2))
+| aST_Trans (g: ECCAenv) (A A' B: ECCAexp) :
+  (ECCA_sub_type g A A') ->
+  (ECCA_sub_type g A' B) ->
+  (ECCA_sub_type g A B)
+| aST_Prop (g: ECCAenv) :
+  (ECCA_sub_type g (eUni (uProp)) (eUni (uType 0)))
+| aST_Sig (g: ECCAenv) (A1 A2 B1 B2: ECCAexp) (x1 x2: atom):
+  (ECCA_sub_type g A1 A2) ->
+  (ECCA_sub_type (Assum g x1 A2) B1 (subst x2 (eId x1) B2)) ->
+  (ECCA_sub_type g (eSig x1 A1 B1) (eSig x2 A2 B2))
 .
 Hint Constructors ECCA_sub_type.
 
