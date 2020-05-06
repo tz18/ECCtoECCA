@@ -116,4 +116,7 @@ Qed.
 Definition subst (x: atom) (arg body: ECCAexp):= substWork x arg body.
 Search "substWork_eq".
 
-Notation "b '[' a '/' x ']'":= (subst x a b) (at level 50, a at level 50): ECCA_scope. 
+Notation "b '[' a '/' x ']'":= (subst x a b) (at level 10, a at next level): ECCA_scope. 
+Locate "_ [ _ / _ ]".
+Check ((eId X) [ (eId Y) / X ])%ECCA.
+Check ((eId X) [ (eId Y) / X ] [ (eId Y) / X ])%ECCA.
