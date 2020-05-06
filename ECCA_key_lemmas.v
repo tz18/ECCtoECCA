@@ -20,12 +20,12 @@ intros. inversion H ; subst ; cbv.
 Qed.
 
 Lemma equivalence_is_equivalence (g: ECCAenv) (y: atom) (N N' M: ECCAexp) (A B: ECCAexp):
-(g |- N : A ->
-g |- N' : A ->
+((g |- N : A) ->
+(g |- N' : A) ->
 ECCA_Equiv g N N' ->
 
-((g, y = N), y : A) |- M : B ->
-((g, y = N'), y : A) |- M : B)%ECCA.
+(((g, y = N), y : A) |- M : B) ->
+(((g, y = N'), y : A) |- M : B))%ECCA.
 Proof. (* intros. induction H2; default_simp.
 1: {shelve. } (* need to show that lookuptype is at most one to one *)
 6: {eapply aT_Let. 

@@ -71,7 +71,7 @@ Bind Scope ECCA_scope with ECCA_Aeq.
 Hint Constructors ECCA_Aeq.
 
 
-Reserved Notation "g '|-' A '=e=' B"  (at level 50, A at level 99).
+Reserved Notation "g '|-' A '=e=' B"  (at level 250, A at level 99).
 Inductive ECCA_Equiv: ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
   | aE_Equiv (g: ECCAenv) (e e1 e2: ECCAexp) :
       ECCA_RedClosR g e1 e ->

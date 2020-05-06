@@ -25,9 +25,9 @@ Definition cont_compose (K : cont_r) (K' : cont_r) : cont_r :=
 (* This is a little more understandable *)
 
 Lemma technical_1 (K : cont_r) (e : ECCAcomp) (G : ECCAenv) :
-(G |- flattenECCAconf (fill_hole_r e K) =e=
- fill_hole (flattenECCAcomp e)
-   (unrestrict_cont K))%ECCA.
+(G |- (flattenECCAconf (fill_hole_r e K)) =e=
+ (fill_hole (flattenECCAcomp e)
+   (unrestrict_cont K)))%ECCA.
 Proof. 
 induction K; auto.
 Qed.
@@ -49,16 +49,15 @@ Lemma naturality ( K : cont_r) ( M : ECCAconf ) ( G : ECCAenv) :
 Proof.
 induction M; try auto. 
 + simpl. apply technical_1.
-+ simpl. Admitted.
-(* (* by zeta *)
-  cut (G |- (eLet x (flattenECCAcomp A) (flattenECCAconf (het_compose K M))) =e=
-            (subst x (flattenECCAcomp A) (flattenECCAconf (het_compose K M))))%ECCA.
++ simpl. 
+cut (G |- (eLet x (flattenECCAcomp A) (flattenECCAconf (het_compose_r K M))) =e=
+            (subst x (flattenECCAcomp A) (flattenECCAconf (het_compose_r K M))))%ECCA. 
 (* property of substitution *)
-  cut (G |- (subst x (flattenECCAcomp A) (flattenECCAconf (het_compose K M))) =e=
-            (fill_hole K (subst x A M)))%ECCA.
- (* by ??? *)
- cut (G |- (fill_hole K (subst x A M) =e=
-            (het_compose_r K (subst x A M))))%ECCA.
+  cut (G |- (subst x (flattenECCAcomp A) (flattenECCAconf (het_compose_r K M))) =e=
+            (fill_hole (subst x A M) (unrestrict_cont K)))%ECCA.
+(*  (* by ??? *)
+ cut (G |- (fill_hole (subst x A M) (unrestrict_cont K)) =e=
+            (het_compose_r K (subst x A M)))%ECCA.
  (* by some tedious property of substitution ??? *)
  cut (G |- (subst x A (fill_hole K M)) =e=
             (subst x A (het_compose_r K M)))%ECCA.
@@ -71,8 +70,10 @@ fill_hole
    (eLet x (flattenECCAcomp A)
       (flattenECCAconf M))
    (unrestrict_cont K)
-           ))%ECCA.
- *)
+           ))%ECCA. *)
+Admitted.
+
+
 Lemma compositionality:
   forall (e : ECCexp) (ns : atoms) (K K' : cont_r),
   het_compose_r K' (transWork ns e K) =

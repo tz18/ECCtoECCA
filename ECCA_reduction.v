@@ -81,7 +81,7 @@ Inductive ECCA_RedClosR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
       ECCA_RedClosR g e e' ->
       ECCA_RedClosR g (eSubst e1 e2 e) (eSubst e1' e2' e') *)
 .
-Notation "g '|-' e1 '=r>' e2":= (ECCA_RedClosR g e1 e2) (at level 50, e1 at level 99): ECCA_scope.
+Notation "g '|-' e1 '=r>' e2":= (ECCA_RedClosR g e1 e2) (at level 250, e1 at level 99): ECCA_scope.
 (* TODO: rewrite with notation for readability *)
 Hint Constructors ECCA_RedClosR.
 Bind Scope ECCA_scope with ECCA_RedClosR.

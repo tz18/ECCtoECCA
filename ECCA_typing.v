@@ -30,7 +30,7 @@ Inductive ECCA_sub_type: ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
 .
 Hint Constructors ECCA_sub_type.
 
-Reserved Notation "g '|-' a ':' b" (at level 50, a at level 99).
+Reserved Notation "g '|-' a ':' b" (at level 250, a at level 99).
 Inductive ECCA_has_type: ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
 | aT_Ax_Prop (g: ECCAenv) :
   (g |- (eUni uProp) : (eUni (uType 0)))

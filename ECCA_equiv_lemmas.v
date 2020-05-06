@@ -1,5 +1,6 @@
 Require Export ECCA_equiv.
 Require Import ECCA_subst_lemmas.
+Require Import ECCA_reduction_lemmas.
 
 Lemma equiv_refl (g: ECCAenv) (A: ECCAexp):
 (g |- A =e= A)%ECCA.
@@ -7,14 +8,7 @@ Proof.
 apply aE_Equiv with (e:= A); auto.
 Qed.
 
-(* 
-Lemma equiv_trans (g: ECCAenv) (A B C: ECCAexp):
-(g |- A =e= B ->
-g |- B =e= C ->
-g |- A =e= C)%ECCA.
-Proof.
-intros. inversion H; inversion H0; subst.
-- case (e = e0). *)
+
 
 Lemma aeq_fv_the_tough_part (x y : atom) (t1 t2 b1 b2 : ECCAexp)
 (H : x `notin` FV b2)
@@ -132,8 +126,8 @@ all: apply aeq_sym_the_hard_part1 with (x:=x) (b2:=b2)
 Qed.
 
 Lemma equiv_sym (g: ECCAenv) (A B: ECCAexp):
-(g |- A =e= B ->
-g |- B =e= A)%ECCA.
+((g |- A =e= B) ->
+(g |- B =e= A))%ECCA.
 Proof.
 intros. inversion H.
 - apply aE_Equiv with (e := e); auto.
@@ -149,6 +143,20 @@ intros. inversion H.
   + apply H2.
 - apply aE_EquivAlpha; apply aeq_sym; auto.
 Qed.
+
+ 
+(* Lemma equiv_trans (g: ECCAenv) (A B C: ECCAexp):
+(g |- A =e= B ->
+g |- B =e= C ->
+g |- A =e= C)%ECCA.
+Proof.
+intros. induction H; induction H0; subst.
+- cut (exists d, (g |- e =r> d) /\ (g |- e0 =r> d))%ECCA.
+  + intros. destruct H3. destruct H3. apply aE_Equiv with (e:=x).
+    * apply R_Trans with (e':=e); auto.
+    * apply R_Trans with (e':=e0); auto.
+  + apply church_rosser with (e:=e2); auto.
+-  *)
 
 (* 
 Lemma equiv_distributes_over_pi (g: ECCAenv) (x: atom) (B B' A A': ECCAexp):
