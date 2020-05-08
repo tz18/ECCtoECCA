@@ -35,13 +35,24 @@ Abort.
 
 (* Admitting for now. Need a nicer way to formulate well formedness
 and/or the idea that a certain id does not already exist in the g *)
+
+Fixpoint domain_of_env (g: ECCAenv): atoms :=
+match g with
+| Empty => empty 
+| Assum g x A => (add x (domain_of_env g))
+| Def g x A => (add x (domain_of_env g))
+| Eq g e1 e2 => domain_of_env g
+end.
+
 Lemma weakening (g : ECCAenv) (x : atom) (N A A' : ECCAexp):
   ECCA_has_type g N A ->
+  (* x `notin` (domain_of_env g) -> *)
   ECCA_has_type (Assum g x A') N A.
 Admitted.
 
 Lemma def_weakening (g : ECCAenv) (x : atom) (N N' A A' : ECCAexp):
   ECCA_has_type g N A ->
+  (* x `notin` (domain_of_env g) -> *)
   ECCA_has_type (Assum (Def g x N') x A') N A.
 Admitted.
 

@@ -144,11 +144,10 @@ intros. inversion H.
 - apply aE_EquivAlpha; apply aeq_sym; auto.
 Qed.
 
- 
-(* Lemma equiv_trans (g: ECCAenv) (A B C: ECCAexp):
-(g |- A =e= B ->
-g |- B =e= C ->
-g |- A =e= C)%ECCA.
+Lemma equiv_trans (g: ECCAenv) (A B C: ECCAexp):
+((g |- A =e= B) ->
+(g |- B =e= C) ->
+(g |- A =e= C))%ECCA.
 Proof.
 intros. induction H; induction H0; subst.
 - cut (exists d, (g |- e =r> d) /\ (g |- e0 =r> d))%ECCA.
@@ -156,7 +155,10 @@ intros. induction H; induction H0; subst.
     * apply R_Trans with (e':=e); auto.
     * apply R_Trans with (e':=e0); auto.
   + apply church_rosser with (e:=e2); auto.
--  *)
+- cut (exists d, (g |- e =r> d) /\ (g |- (eAbs x A e2) =r> d))%ECCA.
+  + intros. destruct H4. destruct H4.
+(*need more church rosser stuff for the eta-equivalence cases.*)
+Admitted.
 
 (* 
 Lemma equiv_distributes_over_pi (g: ECCAenv) (x: atom) (B B' A A': ECCAexp):
