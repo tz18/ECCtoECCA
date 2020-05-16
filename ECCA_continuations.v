@@ -31,6 +31,7 @@ Definition fill_hole (e: ECCAexp) (K: cont): ECCAexp :=
     | Hole => e
     | LetHole x B => eLet x e B
 end.
+Notation "K '[' N ']'" := (fill_hole N K) (at level 200): ECCA_scope.
 
 Definition fill_hole_r (e: ECCAcomp) (K: cont_r): ECCAconf :=
   match K with

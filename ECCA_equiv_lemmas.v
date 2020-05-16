@@ -8,8 +8,8 @@ Proof.
 apply aE_Equiv with (e:= A); auto.
 Qed.
 
-
-
+(* Lemma equiv_refl_thing: forall g A, reflexive _ (equiv g A).
+ *)
 Lemma aeq_fv_the_tough_part (x y : atom) (t1 t2 b1 b2 : ECCAexp)
 (H : x `notin` FV b2)
 (H0 : (b1 =a= swap y x b2)%ECCA)
@@ -237,3 +237,37 @@ subst y A B =a= B)%ECCA.
 Proof.
 intros. rewrite not_mem_iff in H. rewrite substWork_equation. rewrite H. auto.
 Qed.
+
+Require Import ECCA_typing.
+
+Lemma equiv_abs_compositional_1 (g: ECCAenv) (x: atom) (A A' b: ECCAexp): 
+(ECCA_Equiv g A A') ->
+(ECCA_Equiv g (eAbs x A b) (eAbs x A' b))%ECCA.
+Proof.
+intros. inversion H.
++ apply aE_Equiv with (e:=eAbs x e b); apply R_CongLam1; auto.
+Admitted.
+
+Lemma equiv_abs_compositional_2 (g: ECCAenv) (x: atom) (A b b': ECCAexp): 
+(ECCA_Equiv (Assum g x A) b b') ->
+(ECCA_Equiv g (eAbs x A b) (eAbs x A b'))%ECCA.
+Proof.
+intros. induction H.
++ apply aE_Equiv with (e:=eAbs x A e); apply R_CongLam1; auto.
+Admitted.
+
+Lemma equiv_abs_compositional (g: ECCAenv) (x: atom) (A A' b b': ECCAexp): 
+(ECCA_Equiv g A A') ->
+(ECCA_Equiv (Assum g x A) b b') ->
+(ECCA_Equiv g (eAbs x A b) (eAbs x A' b'))%ECCA.
+Proof.
+intros.
+Admitted.
+
+
+
+
+
+
+
+

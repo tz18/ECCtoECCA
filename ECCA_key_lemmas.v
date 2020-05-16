@@ -55,8 +55,13 @@ Lemma def_weakening (g : ECCAenv) (x : atom) (N N' A A' : ECCAexp):
   (* x `notin` (domain_of_env g) -> *)
   ECCA_has_type (Assum (Def g x N') x A') N A.
 Admitted.
+Require Import Coq.Program.Equality.
 
-Lemma equivalence_in_derivation (g: ECCAenv) (N N' M : ECCAexp) (A B : ECCAexp) (x : atom):
+
+(* Dependent induction works for the first case, but not for the other cases. 
+Normal induction works for the other cases, but not the first case *)
+
+Lemma equivalence_in_derivation1 (g: ECCAenv) (N N' M : ECCAexp) (A B : ECCAexp) (x : atom):
 ECCA_has_type g N A ->
 ECCA_has_type g N' A ->
 ECCA_Equiv g N N' ->
@@ -64,16 +69,19 @@ ECCA_has_type (Assum (Def g x N) x A) M B ->
 ECCA_has_type (Assum (Def g x N') x A) M B.
 Proof.
   intros. induction H2; auto.
-  - apply aT_Var. shelve. (* where is g0 coming from??? *)
+  -  shelve. (* apply aT_Var. inversion H2. 
+    + auto. shelve.
+    + default_simp.  *)
+ (* where is g0 coming from??? *)
   - apply aT_Sig.
     + assumption.
     + apply weakening. assumption.
-  - apply aT_Prod_Prop with (i := i).
+(*   - shelve. (* apply aT_Prod_Prop with (i := i).
     + assumption.
-    + apply weakening. assumption.
-  - apply aT_Prod_Type with (i := i).
+    + apply weakening. assumption. *)
+  - shelve. (*  apply aT_Prod_Type with (i := i).
     + assumption.
-    + apply weakening. assumption.
+    + apply weakening. assumption. *)
   - apply aT_Lam. apply weakening. assumption.
   - apply aT_Let with (A := A0).
     + assumption.
@@ -84,7 +92,41 @@ Proof.
     + shelve. (* again, where is g0 coming from??? *)
   - apply aT_App with (A':= A'); assumption.
   - apply aT_Fst with (B := B) (x := x0). assumption.
-  - apply aT_Snd with (A := A0).
+  - apply aT_Snd with (A := A0). *)
+Admitted.
+
+Lemma equivalence_in_derivation2 (g: ECCAenv) (N N' M : ECCAexp) (A B : ECCAexp) (x : atom):
+ECCA_has_type g N A ->
+ECCA_has_type g N' A ->
+ECCA_Equiv g N N' ->
+ECCA_has_type (Assum (Def g x N) x A) M B ->
+ECCA_has_type (Assum (Def g x N') x A) M B.
+Proof.
+  intros. dependent induction H2; auto.
+  - apply aT_Var. inversion H2.
+    + auto.
+    + default_simp. 
+ (* where is g0 coming from??? *)
+  - apply aT_Sig.
+    + apply IHECCA_has_type1 with (N0:=N); auto.
+    + apply weakening. apply IHECCA_has_type2 with (N0:=N'); auto. shelve.
+(*   - shelve. (* apply aT_Prod_Prop with (i := i).
+    + assumption.
+    + apply weakening. assumption. *)
+  - shelve. (*  apply aT_Prod_Type with (i := i).
+    + assumption.
+    + apply weakening. assumption. *)
+  - apply aT_Lam. apply weakening. assumption.
+  - apply aT_Let with (A := A0).
+    + assumption.
+    + apply def_weakening. assumption.
+  - apply aT_Conv with (A := A0) (U := U).
+    + assumption.
+    + assumption.
+    + shelve. (* again, where is g0 coming from??? *)
+  - apply aT_App with (A':= A'); assumption.
+  - apply aT_Fst with (B := B) (x := x0). assumption.
+  - apply aT_Snd with (A := A0). *)
 Admitted.
      
   
@@ -102,7 +144,7 @@ intros. inversion H ; subst ; cbv.
 - exists (subst y N' B). split.
   + eapply aT_Let with (n:= N') (m:= M) (A:=A) (B:=B) (x:=y) (g:=g).
     * assumption.
-    * apply equivalence_in_derivation with (N := N); assumption.
+    * apply equivalence_in_derivation1 with (N := N); assumption.
   + apply subst_no_fv_aeq. auto.
 Qed. 
 

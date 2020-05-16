@@ -9,6 +9,7 @@ Fixpoint het_compose_r (K : cont_r) (M : ECCAconf) : ECCAconf :=
   | Let x N M' => Let x N (het_compose_r K M')
   end.
 
+Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.
 
 (* Fixpoint het_compose (K : cont_r) (M : ECCAexp) (p : IsANF M) : ECCAconf :=
   match M with
@@ -21,6 +22,8 @@ Definition cont_compose (K : cont_r) (K' : cont_r) : cont_r :=
   | rHole => K
   | rLetHole x M => rLetHole x (het_compose_r K M)
   end.
+
+Notation "K1 '<<' K2 '>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
 
 (* This is a little more understandable *)
 
@@ -45,19 +48,23 @@ Qed.
 Open Scope ECCA_scope.
 Print fill_hole.
 Lemma naturality ( K : cont_r) ( M : ECCAconf ) ( G : ECCAenv) : 
-  (G |- ( (het_compose_r K M)) =e= (fill_hole (M) (unrestrict_cont K)))%ECCA.
+  (Empty |- ( (het_compose_r K M)) =e= (fill_hole (M) (unrestrict_cont K)))%ECCA.
 Proof.
 induction M; try auto. 
 + simpl. apply technical_1.
-+ simpl. 
-cut (G |- (eLet x (flattenECCAcomp A) (flattenECCAconf (het_compose_r K M))) =e=
-            (subst x (flattenECCAcomp A) (flattenECCAconf (het_compose_r K M))))%ECCA. 
++ simpl. destruct K.
+  - simpl. induction het_compose_r.
+    * unfold fill_hole in IHM. simpl in IHM. (* 
+    *
+  -
+cut (G |- (eLet x A (het_compose_r K M)) =e=
+            (subst x A (het_compose_r K M)))%ECCA. 
 (* property of substitution *)
-  cut (G |- (subst x (flattenECCAcomp A) (flattenECCAconf (het_compose_r K M))) =e=
+  cut (G |- (subst x A (het_compose_r K M)) =e=
             (fill_hole (subst x A M) (unrestrict_cont K)))%ECCA.
-(*  (* by ??? *)
+  (* by ??? *)
  cut (G |- (fill_hole (subst x A M) (unrestrict_cont K)) =e=
-            (het_compose_r K (subst x A M)))%ECCA.
+            (het_compose_r K (getECCAconf (subst x A M))))%ECCA.
  (* by some tedious property of substitution ??? *)
  cut (G |- (subst x A (fill_hole K M)) =e=
             (subst x A (het_compose_r K M)))%ECCA.
@@ -72,6 +79,7 @@ fill_hole
    (unrestrict_cont K)
            ))%ECCA. *)
 Admitted.
+
 
 
 Lemma compositionality:
