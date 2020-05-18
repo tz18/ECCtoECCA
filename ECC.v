@@ -2,14 +2,14 @@ Require Import Atom.
 
 (* -=ECC Definition=- *)
 
-Inductive ECCexp: Type :=
-  | Id (x: atom)
+Inductive ECCexp {V: nat}: Type :=
+  | Id (x: @atom V)
   | Uni (U: ECCuni)
-  | Pi (x: atom) (A B: ECCexp)
-  | Abs (x: atom) (A e: ECCexp)
+  | Pi (x: @atom V) (A B: ECCexp)
+  | Abs (x: @atom V) (A e: ECCexp)
   | App  (e1 e2: ECCexp)
-  | Let (x: atom) (e1 e2: ECCexp)
-  | Sig (x: atom) (A B: ECCexp)
+  | Let (x: @atom V) (e1 e2: ECCexp)
+  | Sig (x: @atom V) (A B: ECCexp)
   | Pair (e1 e2 A: ECCexp)
   | Fst (e: ECCexp)
   | Snd (e: ECCexp)
@@ -19,13 +19,12 @@ Inductive ECCexp: Type :=
   | Bool
 .
 
-Inductive ECCenv: Type :=
-  | Empty
-  | Assum (g: ECCenv) (x: atom) (A: ECCexp)
-  | Def (g: ECCenv) (x: atom) (e: ECCexp)
-.
+Record ECCenv {V: nat} := mkEnv 
+{ asss : @context (@ECCexp V )
+; defs: @context (@ECCexp V)
+}.
 
-Fixpoint ECCsize (e: ECCexp) : nat :=
+(* Fixpoint ECCsize (e: ECCexp) : nat :=
   match e with
   | Id _ => 1
   | Uni _ => 1
@@ -41,7 +40,7 @@ Fixpoint ECCsize (e: ECCexp) : nat :=
   | Tru => 1
   | Fls => 1
   | Bool => 1
-end.
+end. *)
 
 Hint Constructors ECCuni.
 Hint Constructors ECCexp.
