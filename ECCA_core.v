@@ -11,23 +11,23 @@ Delimit Scope ECCA_scope with ECCA.
 
 (* Restricted ECCA, used in computing *)
 
-Inductive ECCAval: Type :=
-  | Id (x: atom)
+Inductive ECCAval {V: nat}: Type :=
+  | Id (x: @atom V)
   | Uni (U: ECCuni)
-  | Pi (x: atom) (A B: ECCAconf)
-  | Abs (x: atom) (A B: ECCAconf)
-  | Sig (x: atom) (A B: ECCAconf)
+  | Pi (x: @atom V) (A B: ECCAconf)
+  | Abs (x: @atom V) (A B: ECCAconf)
+  | Sig (x: @atom V) (A B: ECCAconf)
   | Pair (v1 v2: ECCAval) (A: ECCAconf)
   | Tru
   | Fls
   | Bool
 with
-ECCAconf: Type :=
+ECCAconf {V: nat}: Type :=
   | Comp (e: ECCAcomp)
-  | Let (x: atom) (A: ECCAcomp) (B: ECCAconf)
+  | Let (x: @atom V) (A: ECCAcomp) (B: ECCAconf)
 (*   | If (v: ECCAval) (m1 m2: ECCAconf) *)
 with
-ECCAcomp: Type :=
+ECCAcomp {V: nat}: Type :=
   | App (v1 v2: ECCAval)
   | Val (v: ECCAval)
   | Fst (v: ECCAval)
@@ -42,17 +42,17 @@ Bind Scope ECCA_scope with ECCAconf.
 Bind Scope ECCA_scope with ECCAcomp.
 
 
-Inductive ECCAexp: Type :=
-  | eId (x: atom)
+Inductive ECCAexp {V: nat}: Type :=
+  | eId (x: @atom V)
   | eUni (U: ECCuni)
-  | ePi (x: atom) (A B: ECCAexp)
-  | eAbs (x: atom) (A B: ECCAexp)
-  | eSig (x: atom) (A B: ECCAexp)
+  | ePi (x: @atom V) (A B: ECCAexp)
+  | eAbs (x: @atom V) (A B: ECCAexp)
+  | eSig (x: @atom V) (A B: ECCAexp)
   | ePair (v1 v2: ECCAexp) (A: ECCAexp)
   | eTru
   | eFls
   | eBool
-  | eLet (x: atom) (A: ECCAexp) (B: ECCAexp)
+  | eLet (x: @atom V) (A: ECCAexp) (B: ECCAexp)
 (*   | eIf (v: ECCAexp) (m1 m2: ECCAexp) *)
   | eApp (v1 v2: ECCAexp)
   | eFst (v: ECCAexp)
