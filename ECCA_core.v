@@ -69,7 +69,7 @@ Hint Constructors ECCAexp.
 ============================================================
 *)
 
-Fixpoint flattenECCAval (e: ECCAval) {V: nat}: ECCAexp :=
+Fixpoint flattenECCAval {V: nat} (e: @ECCAval V): @ECCAexp V:=
 match e with
   | Id x => eId x
   | Uni U => eUni U
@@ -81,7 +81,7 @@ match e with
   | Fls => eFls
   | Bool => eBool
 end
-with flattenECCAcomp (e: ECCAcomp): ECCAexp :=
+with flattenECCAcomp {V: nat}  (e: @ECCAcomp V): @ECCAexp V:=
 match e with
   | App v1 v2 => eApp (flattenECCAval v1) (flattenECCAval v2)
   | Val v => flattenECCAval v
@@ -89,7 +89,7 @@ match e with
   | Snd v => eSnd (flattenECCAval v)
 (*   | Subst x arg body => eSubst (flattenECCAval x) (flattenECCAval arg) (flattenECCAval body) *)
 end
-with flattenECCAconf (e: ECCAconf): ECCAexp :=
+with flattenECCAconf {V: nat}  (e: @ECCAconf V): @ECCAexp V:=
 match e with
   | Comp e => flattenECCAcomp e
   | Let A B => eLet (flattenECCAcomp A) (flattenECCAconf B)
