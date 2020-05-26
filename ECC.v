@@ -19,11 +19,17 @@ Inductive ECCexp {V: nat}: Type :=
   | Bool
 .
 
-Record ECCenv {V: nat} := mkEnv 
-{ asss : @context (@ECCexp V )
-; defs: @context (@ECCexp V)
-}.
+Inductive ctxmem:=
+| Assum (A: @ECCexp 0)
+| Def (e: @ECCexp 0) (A: @ECCexp 0)
+.
 
+Definition ECCenv:= @context (@ctxmem).
+
+Inductive assumes G x A:= 
+has G x (Assum A)  has G x (Def e A)
+.
+ 
 (* Fixpoint ECCsize (e: ECCexp) : nat :=
   match e with
   | Id _ => 1
@@ -54,110 +60,9 @@ Qed.
 (* -=ECC Evaluation=- *)
 
 (* -Lookup- *)
-
-Inductive ECC_LookupTypeR : ECCenv -> atom -> ECCexp -> Prop:=
-  | LT_gFirst (g': ECCenv) (x: atom) (A: ECCexp):
-    ECC_LookupTypeR (Assum g' x A) x A
-  | LT_AssumRest (g: ECCenv) (x x': atom) (A a': ECCexp):
-    ECC_LookupTypeR g x A ->
-    (x <> x') ->
-    (ECC_LookupTypeR (Assum g x' a') x A)
-  | LT_DefRest (g: ECCenv) (x x': atom) (A a': ECCexp):
-    ECC_LookupTypeR g x A ->
-(*     (x <> x') -> *)
-    (ECC_LookupTypeR (Def g x' a') x A)
-.
-
-Inductive ECC_LookupDefR : ECCenv -> atom -> ECCexp -> Prop:=
-  | LD_gFirst (g': ECCenv) (x: atom) (e A: ECCexp):
-    ECC_LookupDefR (Assum (Def g' x e) x A) x e
-  | LD_AssumRest (g: ECCenv) (x x': atom) (e a': ECCexp):
-    ECC_LookupDefR g x e ->
-    (x <> x') ->
-    (ECC_LookupDefR (Assum g x' a') x e)
-  | LD_DefRest (g: ECCenv) (x x': atom) (e e': ECCexp):
-    ECC_LookupDefR g x e ->
-    (x <> x') ->
-    (ECC_LookupDefR (Def g x' e') x e)
-.
-(* Q: what if looking up a type and get a value first, or vice versa? *)
-
-Hint Constructors ECC_LookupTypeR.
-
-Example ECC_LookupFirstExample:
-ECC_LookupTypeR (Assum Empty X Tru) X Tru.
-Proof.
-  auto.
-Qed.
-
-Example ECC_LookupRestExample:
-X <> Y -> ECC_LookupTypeR (Assum (Assum Empty X Tru) Y Fls) X Tru.
-Proof.
-  auto.  (* WOW!*)
-Qed.
-
-Fixpoint ECC_LookupType (g: ECCenv) (x: atom): option ECCexp :=
-match g with
-  | Empty => None
-  | Assum g' x' A => if (x' == x) then Some A else (ECC_LookupType g' x)
-  | Def g' x' e => (ECC_LookupType g' x)
-end.
-
-Fixpoint ECC_LookupDef (g: ECCenv) (x: atom): option ECCexp :=
-match g with
-  | Empty => None
-  | Assum g' x' A => if (x' == x) then match g' with
-      | Empty => None
-      | Assum g'' x'' A => None
-      | Def g' x'' e => if (x'' == x) then Some e else None
-      end      
-      else (ECC_LookupDef g' x)
-  | Def g' x' e => if (x' == x) then None else (ECC_LookupDef g' x)
-end.
-
-Lemma ECC_EmptyImpliesNothing : forall (x: atom) (A: ECCexp), ECC_LookupTypeR Empty x A -> False.
-Proof.
-intros. inversion H.
-Qed.
-
-Lemma ECC_LookupTypeReflects (g: ECCenv) (x: atom) (A: ECCexp) : ECC_LookupTypeR g x A <-> (ECC_LookupType g x) = Some A.
-Proof.
-intros. split.
- - intros. induction H.
-  + cbn. destruct (x == x); auto || contradiction.
-  + cbn. destruct (x' == x).
-    * subst. contradiction.
-    * auto.
-  + cbn. apply IHECC_LookupTypeR.
- - intros. induction g.
-  + discriminate.
-  + inversion H. destruct (x0 == x).
-    * inversion H1. subst. apply LT_gFirst.
-    * apply LT_AssumRest.
-      -- apply IHg. apply H1.
-      -- auto.
-  + apply LT_DefRest.
-    * apply IHg. apply H.
-Qed.
-
-Lemma ECC_LookupDefReflects (g: ECCenv) (x: atom) (A: ECCexp) : ECC_LookupDefR g x A <-> (ECC_LookupDef g x) = Some A.
-Proof.
-intros. split.
- - intros. induction H; default_simp.
- - intros. induction g.
-  + discriminate.
-  + inversion H. destruct (x0 == x).
-    *  destruct g; try discriminate. destruct (x1 == x); try discriminate. 
-       inversion H1. subst. apply LD_gFirst.
-   * apply LD_AssumRest; auto.
-  + inversion H. destruct (x0 == x); try discriminate.
-     apply LD_DefRest; auto.
-Qed.
-
 (* Substitution *)
 
-
-Fixpoint FV (e: ECCexp) : atoms :=
+(* Fixpoint FV (e: ECCexp) : atoms :=
 match e with
   | Id x => singleton x
   | Uni U => empty
@@ -173,11 +78,11 @@ match e with
   | Tru => empty
   | Fls => empty
   | Bool => empty
-end.
+end. *)
 
 (*Let's get nominal!*)
-
-Fixpoint swap (x:atom) (y:atom) (t:ECCexp) : ECCexp :=
+(* LET'S NOT *)
+(* Fixpoint swap (x:atom) (y:atom) (t:ECCexp) : ECCexp :=
   match t with
   | Id z     => Id (swap_var x y z)
   | Abs z A t1  => Abs (swap_var x y z) (swap x y A) (swap x y t1)
@@ -196,7 +101,7 @@ Lemma swap_size_eq : forall x y t,
     ECCsize (swap x y t) = ECCsize t.
 Proof.
   induction t; simpl; auto.
-Qed.
+Qed. *)
 
 
 (* If there are free variables in the substitute,
@@ -204,7 +109,7 @@ Qed.
    then we need to perform an alpha conversion of the term being substituted in
    that avoids capturing any free variables in the substitute or in the body
    of the term being substituted in. *)
-Require Import Recdef.
+(* Require Import Recdef.
 Function substWork (x: atom) (arg body: ECCexp) {measure ECCsize body}:=
 if (AtomSetImpl.mem x (FV body)) then 
   match body with
@@ -242,6 +147,7 @@ Proof.
 1-19: try (Tactics.program_simpl; cbn; omega).
 1-4: try (Tactics.program_simpl; cbn; rewrite -> swap_size_eq; omega).
 Qed.
+ *)
 
 Definition subst (x: atom) (arg body: ECCexp):= substWork x arg body.
 

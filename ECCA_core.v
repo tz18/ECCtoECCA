@@ -14,24 +14,24 @@ Delimit Scope ECCA_scope with ECCA.
 Inductive ECCAval {V: nat}: Type :=
   | Id (x: @atom V)
   | Uni (U: ECCuni)
-  | Pi (x: @atom V) (A B: ECCAconf)
-  | Abs (x: @atom V) (A B: ECCAconf)
-  | Sig (x: @atom V) (A B: ECCAconf)
-  | Pair (v1 v2: ECCAval) (A: ECCAconf)
+  | Pi (A: @ECCAconf V) (B: @ECCAconf (S V))
+  | Abs (A: @ECCAconf V) (B: @ECCAconf (S V))
+  | Sig (A: @ECCAconf V) (B: @ECCAconf (S V))
+  | Pair (v1 v2: ECCAval) (A: @ECCAconf V)
   | Tru
   | Fls
   | Bool
 with
 ECCAconf {V: nat}: Type :=
-  | Comp (e: ECCAcomp)
-  | Let (x: @atom V) (A: ECCAcomp) (B: ECCAconf)
+  | Comp (e: @ECCAcomp V)
+  | Let (A: @ECCAcomp V) (B: @ECCAconf (S V))
 (*   | If (v: ECCAval) (m1 m2: ECCAconf) *)
 with
 ECCAcomp {V: nat}: Type :=
-  | App (v1 v2: ECCAval)
-  | Val (v: ECCAval)
-  | Fst (v: ECCAval)
-  | Snd (v: ECCAval)
+  | App (v1 v2: @ECCAval V)
+  | Val (v: @ECCAval V)
+  | Fst (v: @ECCAval V)
+  | Snd (v: @ECCAval V)
 (*   | Subst (x arg body: ECCAval) *)
 .
 
@@ -45,18 +45,18 @@ Bind Scope ECCA_scope with ECCAcomp.
 Inductive ECCAexp {V: nat}: Type :=
   | eId (x: @atom V)
   | eUni (U: ECCuni)
-  | ePi (x: @atom V) (A B: ECCAexp)
-  | eAbs (x: @atom V) (A B: ECCAexp)
-  | eSig (x: @atom V) (A B: ECCAexp)
-  | ePair (v1 v2: ECCAexp) (A: ECCAexp)
+  | ePi (A: @ECCAexp V) (B: @ECCAexp (S V))
+  | eAbs (A: @ECCAexp V) (B: @ECCAexp (S V))
+  | eSig (A: @ECCAexp V) (B: @ECCAexp (S V))
+  | ePair (v1 v2: @ECCAexp V) (A: ECCAexp)
   | eTru
   | eFls
   | eBool
-  | eLet (x: @atom V) (A: ECCAexp) (B: ECCAexp)
+  | eLet (A: @ECCAexp V) (B: @ECCAexp (S V))
 (*   | eIf (v: ECCAexp) (m1 m2: ECCAexp) *)
-  | eApp (v1 v2: ECCAexp)
-  | eFst (v: ECCAexp)
-  | eSnd (v: ECCAexp)
+  | eApp (v1 v2: @ECCAexp V)
+  | eFst (v: @ECCAexp V)
+  | eSnd (v: @ECCAexp V)
 (*   | eSubst (x arg body: ECCAexp) *)
 .
 
@@ -69,19 +69,19 @@ Hint Constructors ECCAexp.
 ============================================================
 *)
 
-Fixpoint flattenECCAval (e: ECCAval) (* {struct e} *): ECCAexp :=
+Fixpoint flattenECCAval (e: ECCAval) {V: nat}: ECCAexp :=
 match e with
   | Id x => eId x
   | Uni U => eUni U
-  | Pi x A B => ePi x (flattenECCAconf A) (flattenECCAconf B) 
-  | Abs x A B => eAbs x (flattenECCAconf A) (flattenECCAconf B)
-  | Sig x A B => eSig x (flattenECCAconf A) (flattenECCAconf B)
+  | Pi A B => ePi (flattenECCAconf A) (flattenECCAconf B) 
+  | Abs A B => eAbs (flattenECCAconf A) (flattenECCAconf B)
+  | Sig A B => eSig (flattenECCAconf A) (flattenECCAconf B)
   | Pair v1 v2 A => ePair (flattenECCAval v1) (flattenECCAval v2) (flattenECCAconf A)
   | Tru => eTru
   | Fls => eFls
   | Bool => eBool
 end
-with flattenECCAcomp (e: ECCAcomp) (* {struct e} *): ECCAexp :=
+with flattenECCAcomp (e: ECCAcomp): ECCAexp :=
 match e with
   | App v1 v2 => eApp (flattenECCAval v1) (flattenECCAval v2)
   | Val v => flattenECCAval v
@@ -89,10 +89,10 @@ match e with
   | Snd v => eSnd (flattenECCAval v)
 (*   | Subst x arg body => eSubst (flattenECCAval x) (flattenECCAval arg) (flattenECCAval body) *)
 end
-with flattenECCAconf (e: ECCAconf) (* {struct e} *): ECCAexp :=
+with flattenECCAconf (e: ECCAconf): ECCAexp :=
 match e with
   | Comp e => flattenECCAcomp e
-  | Let x A B => eLet x (flattenECCAcomp A) (flattenECCAconf B)
+  | Let A B => eLet (flattenECCAcomp A) (flattenECCAconf B)
 (*   | If v m1 m2 => eIf (flattenECCAval v) (flattenECCAconf m1) (flattenECCAconf m2) *)
 end.
 
