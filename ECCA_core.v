@@ -14,26 +14,30 @@ Delimit Scope ECCA_scope with ECCA.
 Inductive ECCAval {V: nat}: Type :=
   | Id (x: @atom V)
   | Uni (U: ECCuni)
-  | Pi (A: @ECCAconf V) (B: @ECCAconf (S V))
-  | Abs (A: @ECCAconf V) (B: @ECCAconf (S V))
-  | Sig (A: @ECCAconf V) (B: @ECCAconf (S V))
+  | Pi (A: ECCAconf) (B: @ECCAconf (S V))
+  | Abs (A: ECCAconf) (B: @ECCAconf (S V))
+  | Sig (A: ECCAconf) (B: @ECCAconf (S V))
   | Pair (v1 v2: ECCAval) (A: @ECCAconf V)
   | Tru
   | Fls
   | Bool
 with
 ECCAconf {V: nat}: Type :=
-  | Comp (e: @ECCAcomp V)
-  | Let (A: @ECCAcomp V) (B: @ECCAconf (S V))
+  | Comp (e: ECCAcomp)
+  | Let (A: ECCAcomp) (B: @ECCAconf (S V))
 (*   | If (v: ECCAval) (m1 m2: ECCAconf) *)
 with
 ECCAcomp {V: nat}: Type :=
-  | App (v1 v2: @ECCAval V)
-  | Val (v: @ECCAval V)
-  | Fst (v: @ECCAval V)
-  | Snd (v: @ECCAval V)
+  | App (v1 v2: ECCAval)
+  | Val (v: ECCAval)
+  | Fst (v: ECCAval)
+  | Snd (v: ECCAval)
 (*   | Subst (x arg body: ECCAval) *)
 .
+Arguments ECCAval: clear implicits.
+Arguments ECCAconf: clear implicits.
+Arguments ECCAcomp: clear implicits. 
+
 
 Hint Constructors ECCAval. 
 Coercion Id: atom >-> ECCAval.
@@ -45,20 +49,22 @@ Bind Scope ECCA_scope with ECCAcomp.
 Inductive ECCAexp {V: nat}: Type :=
   | eId (x: @atom V)
   | eUni (U: ECCuni)
-  | ePi (A: @ECCAexp V) (B: @ECCAexp (S V))
-  | eAbs (A: @ECCAexp V) (B: @ECCAexp (S V))
-  | eSig (A: @ECCAexp V) (B: @ECCAexp (S V))
-  | ePair (v1 v2: @ECCAexp V) (A: ECCAexp)
+  | ePi (A: ECCAexp) (B: @ECCAexp (S V))
+  | eAbs (A: ECCAexp) (B: @ECCAexp (S V))
+  | eSig (A: ECCAexp) (B: @ECCAexp (S V))
+  | ePair (v1 v2: ECCAexp) (A: ECCAexp)
   | eTru
   | eFls
   | eBool
-  | eLet (A: @ECCAexp V) (B: @ECCAexp (S V))
+  | eLet (A: ECCAexp) (B: @ECCAexp (S V))
 (*   | eIf (v: ECCAexp) (m1 m2: ECCAexp) *)
-  | eApp (v1 v2: @ECCAexp V)
-  | eFst (v: @ECCAexp V)
-  | eSnd (v: @ECCAexp V)
+  | eApp (v1 v2: ECCAexp)
+  | eFst (v: ECCAexp)
+  | eSnd (v: ECCAexp)
 (*   | eSubst (x arg body: ECCAexp) *)
 .
+
+Arguments ECCAexp: clear implicits.
 
 Hint Constructors ECCAexp.
 
@@ -96,36 +102,36 @@ match e with
 (*   | If v m1 m2 => eIf (flattenECCAval v) (flattenECCAconf m1) (flattenECCAconf m2) *)
 end.
 
-Fixpoint getECCAval (e: ECCAexp): option ECCAval :=
+Fixpoint getECCAval {V: nat}(e: ECCAexp V): option (ECCAval V) :=
 match e with
   | eId x => Some (Id x)
   | eUni U => Some (Uni U)
-  | ePi x A B => 
+  | ePi A B => 
       let A := (getECCAconf A) in
       let B := (getECCAconf B) in
       match A with
         | Some A => match B with
-          | Some B => Some (Pi x A B)
+          | Some B => Some (Pi A B)
           | None => None
           end
         | None => None
         end
-  | eAbs x A B =>
+  | eAbs A B =>
       let A := (getECCAconf A) in
       let B := (getECCAconf B) in
       match A with
         | Some A => match B with
-          | Some B => Some (Abs x A B)
+          | Some B => Some (Abs A B)
           | None => None
           end
         | None => None
         end
-  | eSig x A B =>
+  | eSig A B =>
       let A := (getECCAconf A) in
       let B := (getECCAconf B) in
       match A with
         | Some A => match B with
-          | Some B => Some (Sig x A B)
+          | Some B => Some (Sig A B)
           | None => None
           end
         | None => None
@@ -149,14 +155,14 @@ match e with
   | eBool => (Some Bool)
   | _ => None
 end
-with getECCAconf (e: ECCAexp): option ECCAconf :=
+with getECCAconf {V: nat} (e: ECCAexp V): option (ECCAconf V) :=
 match e with
-  | eLet x A B => 
+  | eLet A B => 
       let A := (getECCAcomp A) in
       let B := (getECCAconf B) in
       match A with
         | Some A => match B with
-          | Some B => Some (Let x A B)
+          | Some B => Some (Let A B)
           | None => None
           end
         | None => None
@@ -215,32 +221,32 @@ match e with
 (* Values are also computations which are also configurations *)
   | eId x => Some (Comp (Val (Id x)))
   | eUni U => Some (Comp (Val (Uni U)))
-  | ePi x A B => 
+  | ePi A B => 
       let A := (getECCAconf A) in
       let B := (getECCAconf B) in
       match A with
         | Some A => match B with
-          | Some B => Some (Comp (Val (Pi x A B)))
+          | Some B => Some (Comp (Val (Pi A B)))
           | None => None
           end
         | None => None
         end
-  | eAbs x A B =>
+  | eAbs A B =>
       let A := (getECCAconf A) in
       let B := (getECCAconf B) in
       match A with
         | Some A => match B with
-          | Some B => Some (Comp (Val (Abs x A B)))
+          | Some B => Some (Comp (Val (Abs A B)))
           | None => None
           end
         | None => None
         end
-  | eSig x A B =>
+  | eSig A B =>
       let A := (getECCAconf A) in
       let B := (getECCAconf B) in
       match A with
         | Some A => match B with
-          | Some B => Some (Comp (Val (Sig x A B)))
+          | Some B => Some (Comp (Val (Sig A B)))
           | None => None
           end
         | None => None
@@ -263,7 +269,7 @@ match e with
   | eFls => (Some (Comp (Val Fls)))
   | eBool => (Some (Comp (Val Bool)))
 end
-with getECCAcomp (e: ECCAexp): option ECCAcomp :=
+with getECCAcomp {V: nat} (e: ECCAexp V): option (ECCAcomp V) :=
 match e with
   | eApp v1 v2 =>
       let v1 := (getECCAval v1) in
@@ -304,32 +310,32 @@ match e with
 (* Values are also computations *)
   | eId x => Some (Val (Id x))
   | eUni U => Some (Val (Uni U))
-  | ePi x A B => 
+  | ePi A B => 
       let A := (getECCAconf A) in
       let B := (getECCAconf B) in
       match A with
         | Some A => match B with
-          | Some B => Some (Val (Pi x A B))
+          | Some B => Some (Val (Pi A B))
           | None => None
           end
         | None => None
         end
-  | eAbs x A B =>
+  | eAbs A B =>
       let A := (getECCAconf A) in
       let B := (getECCAconf B) in
       match A with
         | Some A => match B with
-          | Some B => Some (Val (Abs x A B))
+          | Some B => Some (Val (Abs A B))
           | None => None
           end
         | None => None
         end
-  | eSig x A B =>
+  | eSig A B =>
       let A := (getECCAconf A) in
       let B := (getECCAconf B) in
       match A with
         | Some A => match B with
-          | Some B => Some (Val (Sig x A B))
+          | Some B => Some (Val (Sig A B))
           | None => None
           end
         | None => None
