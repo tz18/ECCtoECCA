@@ -1,15 +1,16 @@
 Require Import Atom.
+Require Import String Morph Var Context Relative.
 
 (* -=ECC Definition=- *)
 
 Inductive ECCexp {V: nat}: Type :=
   | Id (x: @atom V)
   | Uni (U: ECCuni)
-  | Pi (x: @atom V) (A B: ECCexp)
-  | Abs (x: @atom V) (A e: ECCexp)
+  | Pi (A: ECCexp) (B: @ECCexp (S V))
+  | Abs (A: ECCexp) (e: @ECCexp (S V))
   | App  (e1 e2: ECCexp)
-  | Let (x: @atom V) (e1 e2: ECCexp)
-  | Sig (x: @atom V) (A B: ECCexp)
+  | Let (e1: ECCexp) (e2: @ECCexp (S V))
+  | Sig (A: ECCexp) (B: @ECCexp (S V))
   | Pair (e1 e2 A: ECCexp)
   | Fst (e: ECCexp)
   | Snd (e: ECCexp)
@@ -19,6 +20,91 @@ Inductive ECCexp {V: nat}: Type :=
   | Bool
 .
 
+Module ECCTerm <: Term.
+  Definition term := @ECCexp.
+  Definition unit {N}: morph (@var) N (@term) N :=
+    morph_inject (@Id).
+
+  Fixpoint kleisli {N M} (f : morph (@var) N (@term) M) V t :=
+      match t with
+      | Id x => f V x
+      | Abs A e =>
+        Abs (kleisli f V A) (nset_push (kleisli f (S V) (nset_pop e)))
+      | Pi A B =>
+        Pi (kleisli f V A) (nset_push (kleisli f (S V) (nset_pop B)))
+      | Let e1 e2 =>
+        Let (kleisli f V e1) (nset_push (kleisli f (S V) (nset_pop e2)))
+      | Sig A B =>
+        Sig (kleisli f V A) (nset_push (kleisli f (S V) (nset_pop B)))
+      | App e1 e2 =>
+        App (kleisli f V e1) (kleisli f V e2)
+      | Pair e1 e2 A =>
+        Pair (kleisli f V e1) (kleisli f V e2) (kleisli f V A)
+      | Fst e => Fst (kleisli f V e)
+      | Snd e => Snd (kleisli f V e)
+      | Uni U => Uni U
+      | Tru => Tru
+      | Fls => Fls
+      | Bool => Bool
+      (*   | If (e e1 e2: ECCexp) *)
+      end.
+
+  Lemma left_identity :
+    forall N M (f : morph (@var) N (@term) M) V t,
+      kleisli f V (unit V t) = f V t.
+  Proof. reflexivity. Qed.
+
+  Lemma right_identity :
+    forall N V (t : @term (N + V)),
+      @kleisli N N unit V t = t.
+  Proof.
+    intros.
+    inductT t; simplT; reflexivity.
+  Qed.
+
+  Lemma associativity :
+      forall N M L
+        (f : morph (@var) N (@term) M)
+        (g : morph (@var) M (@term) L) V t,
+        kleisli (fun V' t' => kleisli g V' (f V' t')) V t
+        = kleisli g V (kleisli f V t).
+    Proof.
+      intros.
+      inductT t; simplT; reflexivity.
+    Qed.
+
+  Lemma unit_extend :
+    forall N V v,
+      morph_extend (@unit N) V v = unit V v.
+  Proof.
+    intros.
+    apply morph_extend_inject.
+  Qed.
+
+  Lemma kleisli_extend :
+    forall N M (f : morph (@var) N (@term) M) V t,
+      morph_extend (kleisli f) V t
+      = kleisli (morph_extend f) V t.
+  Proof.
+    intros.
+    inductT t; simplT; reflexivity.
+  Qed.      
+
+  Lemma extensional :
+    forall N M (f g : morph (@var) N (@term) M) V t,
+      (forall V t, f V t = g V t) ->
+      kleisli f V t = kleisli g V t.
+  Proof.
+    intros.
+    inductT t; simplT; auto.
+  Qed.
+
+End ECCTerm.
+
+Module ECCRen := Renamings(ECCTerm).
+Import ECCTerm.
+Import ECCRen.
+
 Inductive ctxmem:=
 | Assum (A: @ECCexp 0)
 | Def (e: @ECCexp 0) (A: @ECCexp 0)
@@ -26,9 +112,15 @@ Inductive ctxmem:=
 
 Definition ECCenv:= @context (@ctxmem).
 
-Inductive assumes G x A:= 
-has G x (Assum A)  has G x (Def e A)
+Inductive assumes (g: ECCenv) (x: atom) (A: ECCexp) :=
+| ass :
+  (has g x (Assum A)) ->
+  assumes g x A
+| def (e: @ECCexp 0):
+  (has g x (Def e A)) ->
+  assumes g x A
 .
+
  
 (* Fixpoint ECCsize (e: ECCexp) : nat :=
   match e with
@@ -50,12 +142,11 @@ end. *)
 
 Hint Constructors ECCuni.
 Hint Constructors ECCexp.
-Hint Constructors ECCenv.
 
-Lemma ECCsize_non_zero : forall e, 0 < ECCsize e.
+(* Lemma ECCsize_non_zero : forall e, 0 < ECCsize e.
 Proof.
   induction e; simpl; omega.
-Qed.
+Qed. *)
 
 (* -=ECC Evaluation=- *)
 
@@ -149,8 +240,8 @@ Proof.
 Qed.
  *)
 
-Definition subst (x: atom) (arg body: ECCexp):= substWork x arg body.
-
+(* Definition subst (x: atom) (arg body: ECCexp):= substWork x arg body. *)
+(* 
 Inductive ECC_Aeq : ECCexp -> ECCexp -> Prop :=
   | aeq_id (e: ECCexp):
     ECC_Aeq e e
@@ -217,11 +308,12 @@ Inductive ECC_Aeq : ECCexp -> ECCexp -> Prop :=
 .
 
 Hint Constructors ECC_Aeq.
-
+ *)
 (* -Step- *)
+
 Inductive ECC_RedR : ECCenv -> ECCexp -> ECCexp -> Prop :=
   | R_ID (g: ECCenv) (x: atom) (e': ECCexp) :
-    ECC_LookupDefR g x e' -> ECC_RedR g (Id x) e'
+    (has g x (Def e' _)) -> ECC_RedR g (Id x) e'
   | R_App (g: ECCenv) (x: atom) (A body arg: ECCexp) :
     ECC_RedR g (App (Abs x A body) arg) (subst x arg body) (*do anything with env here?*)
   | R_Fst (g: ECCenv) (e1 e2 A: ECCexp) :
@@ -500,4 +592,4 @@ eapply T_Fst. eapply T_Pair.
       * auto.
       * eauto.
 Unshelve. exact 1.
-Qed. *)
+Qed. *) *)
