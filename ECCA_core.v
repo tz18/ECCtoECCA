@@ -1,5 +1,5 @@
 Require Export Atom.
-
+Require Import String Morph Var Context Relative.
 (* 
 =====================================
 =======--ECCA Definition--=========== 
@@ -34,9 +34,7 @@ ECCAcomp {V: nat}: Type :=
   | Snd (v: ECCAval)
 (*   | Subst (x arg body: ECCAval) *)
 .
-Arguments ECCAval: clear implicits.
-Arguments ECCAconf: clear implicits.
-Arguments ECCAcomp: clear implicits. 
+
 
 
 Hint Constructors ECCAval. 
@@ -64,9 +62,92 @@ Inductive ECCAexp {V: nat}: Type :=
 (*   | eSubst (x arg body: ECCAexp) *)
 .
 
-Arguments ECCAexp: clear implicits.
-
 Hint Constructors ECCAexp.
+
+Module ECCATerm <: Term.
+  Definition term := @ECCAexp.
+  Definition unit {N}: morph (@var) N (@term) N :=
+    morph_inject (@eId).
+
+  Fixpoint kleisli {N M} (f : morph (@var) N (@term) M) V t :=
+      match t with
+      | eId x => f V x
+      | eAbs A e =>
+        eAbs (kleisli f V A) (nset_push (kleisli f (S V) (nset_pop e)))
+      | ePi A B =>
+        ePi (kleisli f V A) (nset_push (kleisli f (S V) (nset_pop B)))
+      | eLet e1 e2 =>
+        eLet (kleisli f V e1) (nset_push (kleisli f (S V) (nset_pop e2)))
+      | eSig A B =>
+        eSig (kleisli f V A) (nset_push (kleisli f (S V) (nset_pop B)))
+      | eApp e1 e2 =>
+        eApp (kleisli f V e1) (kleisli f V e2)
+      | ePair e1 e2 A =>
+        ePair (kleisli f V e1) (kleisli f V e2) (kleisli f V A)
+      | eFst e => eFst (kleisli f V e)
+      | eSnd e => eSnd (kleisli f V e)
+      | eUni U => eUni U
+      | eTru => eTru
+      | eFls => eFls
+      | eBool => eBool
+      (*   | If (e e1 e2: ECCexp) *)
+      end.
+
+  Lemma left_identity :
+    forall N M (f : morph (@var) N (@term) M) V t,
+      kleisli f V (unit V t) = f V t.
+  Proof. reflexivity. Qed.
+
+  Lemma right_identity :
+    forall N V (t : @term (N + V)),
+      @kleisli N N unit V t = t.
+  Proof.
+    intros.
+    inductT t; simplT; reflexivity.
+  Qed.
+
+  Lemma associativity :
+      forall N M L
+        (f : morph (@var) N (@term) M)
+        (g : morph (@var) M (@term) L) V t,
+        kleisli (fun V' t' => kleisli g V' (f V' t')) V t
+        = kleisli g V (kleisli f V t).
+    Proof.
+      intros.
+      inductT t; simplT; reflexivity.
+    Qed.
+
+  Lemma unit_extend :
+    forall N V v,
+      morph_extend (@unit N) V v = unit V v.
+  Proof.
+    intros.
+    apply morph_extend_inject.
+  Qed.
+
+  Lemma kleisli_extend :
+    forall N M (f : morph (@var) N (@term) M) V t,
+      morph_extend (kleisli f) V t
+      = kleisli (morph_extend f) V t.
+  Proof.
+    intros.
+    inductT t; simplT; reflexivity.
+  Qed.      
+
+  Lemma extensional :
+    forall N M (f g : morph (@var) N (@term) M) V t,
+      (forall V t, f V t = g V t) ->
+      kleisli f V t = kleisli g V t.
+  Proof.
+    intros.
+    inductT t; simplT; auto.
+  Qed.
+
+End ECCATerm.
+
+Module ECCARen := Renamings(ECCATerm).
+Import ECCATerm.
+Import ECCARen.
 
 
 (* 
@@ -102,7 +183,7 @@ match e with
 (*   | If v m1 m2 => eIf (flattenECCAval v) (flattenECCAconf m1) (flattenECCAconf m2) *)
 end.
 
-Fixpoint getECCAval {V: nat}(e: ECCAexp V): option (ECCAval V) :=
+Fixpoint getECCAval {V: nat}(e: @ECCAexp V): option (@ECCAval V) :=
 match e with
   | eId x => Some (Id x)
   | eUni U => Some (Uni U)
@@ -155,7 +236,7 @@ match e with
   | eBool => (Some Bool)
   | _ => None
 end
-with getECCAconf {V: nat} (e: ECCAexp V): option (ECCAconf V) :=
+with getECCAconf {V: nat} (e: @ECCAexp V): option (@ECCAconf V) :=
 match e with
   | eLet A B => 
       let A := (getECCAcomp A) in
@@ -269,7 +350,7 @@ match e with
   | eFls => (Some (Comp (Val Fls)))
   | eBool => (Some (Comp (Val Bool)))
 end
-with getECCAcomp {V: nat} (e: ECCAexp V): option (ECCAcomp V) :=
+with getECCAcomp {V: nat} (e: @ECCAexp V): option (@ECCAcomp V) :=
 match e with
   | eApp v1 v2 =>
       let v1 := (getECCAval v1) in
@@ -361,11 +442,11 @@ match e with
 end
 .
 
-Definition isANF (e: ECCAexp): Prop :=
+Definition isANF {V: nat} (e: @ECCAexp V): Prop :=
   exists a, (getECCAconf e) = Some a.
-Definition isComp ( e: ECCAexp): Prop :=
+Definition isComp {V: nat} ( e: @ECCAexp V): Prop :=
   exists a, (getECCAcomp e) = Some a.
-Definition isVal ( e: ECCAexp): Prop :=
+Definition isVal {V: nat} ( e: @ECCAexp V): Prop :=
   exists a, (getECCAval e) = Some a.
 (* 
 Definition reify_Prop_val { e : ECCAexp} (p : (isVal e)) : ECCAval.
@@ -380,15 +461,22 @@ Coercion Comp: ECCAcomp >-> ECCAconf.
 =====================================
 *)
 
-Inductive ECCAenv: Type :=
-  | Empty
-  | Assum (g: ECCAenv) (x: atom) (A: ECCAexp)
-  | Def (g: ECCAenv) (x: atom) (v: ECCAexp)
-  | Eq (g: ECCAenv) (v1 v2: ECCAexp)
+Inductive ctxmem:=
+| Assum (A: @ECCAexp 0)
+| Def (e: @ECCAexp 0) (A: @ECCAexp 0)
+| Eq (e1: @ECCAexp 0) (e2: @ECCAexp 0)
 .
-Hint Constructors ECCAenv. 
-Notation "g ',' x '=' e" := (Def g x e) (at level 50, x at level 50): ECCA_scope.
-Notation "g ',' x ':' e" := (Assum g x e) (at level 50, x at level 50): ECCA_scope.
+
+Definition ECCAenv:= @context (@ctxmem).
+
+Inductive assumes (g: ECCAenv) (x: atom) (A: ECCAexp) :=
+| ass :
+  (has g x (Assum A)) ->
+  assumes g x A
+| def (e: @ECCAexp 0):
+  (has g x (Def e A)) ->
+  assumes g x A
+.
 
 Inductive ECCA_LookupTypeR : ECCAenv -> atom -> ECCAexp -> Prop:=
   | aLT_gFirst (g': ECCAenv) (x: atom) (A: ECCAexp):
