@@ -1,4 +1,3 @@
-Require Export Omega.
 Require Import ShiftedNames.Morph.
 Require Export ShiftedNames.Var.
 Require Export ShiftedNames.Context.
