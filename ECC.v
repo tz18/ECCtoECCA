@@ -278,7 +278,7 @@ Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
   (ECC_has_type g A (Uni (uType i))) ->
   (ECC_has_type (g & x ~ Assum A) (open x B) (Uni (uType i))) -> (* should these be the same i*)
   (ECC_has_type g (Sig A B) (Uni (uType i)))
-| T_Pair (g: ECCenv) (e1 e2 A B: ECCexp) (x: name) :
+| T_Pair (g: ECCenv) (e1 e2 A B: ECCexp):
   (ECC_has_type g e1 A) ->
   (ECC_has_type g e2 (bind e1 B)) ->
   (ECC_has_type g (Pair e1 e2 (Sig A B)) (Sig A B))
@@ -311,7 +311,7 @@ Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
 with
 (* ECC Well-Formed Environments *)
 ECC_Env_WF: ECCenv -> Prop :=
-| W_Empty (g: ECCenv) :
+| W_Empty :
   ECC_Env_WF ctx_empty
 | W_Assum (g: ECCenv) (x: name) (A U: ECCexp) :
   ECC_Env_WF g ->
@@ -345,14 +345,18 @@ Coercion Id: atom >-> ECCexp.
 Notation "'type' x" := (Uni (uType x)) (at level 50):  ECC_scope.
 Notation "'prop'" := (Uni uProp) (at level 50):  ECC_scope.
 Notation "{ e1 e2 }" := (App e1 e2) (at level 50,e1 at level 9):  ECC_scope.
-Notation "'LET' x ':=' A 'in' B" := (Let x A B) (at level 50, format "'[v' 'LET'  x  ':='  A '/' 'in' '['  B ']' ']'") : ECC_scope.
-Notation "'P' x : A '->' B" := (Pi x A B) (at level 50, x at level 9, A at level 9) : ECC_scope.
-Notation "'\'  x : A  '->'  B" := (Abs x A B) (at level 50, x at level 9, A at level 9) : ECC_scope.
-Notation "'Si' x : A '..' B" := (Sig x A B) (at level 50, x at level 1, A at level 1): ECC_scope.
+Notation "'LET' x ':=' A 'in' B" := (Let A B) (at level 50, format "'[v' 'LET'  x  ':='  A '/' 'in' '['  B ']' ']'") : ECC_scope.
+Notation "'P' '_' : A '->' B" := (Pi A B) (at level 50, A at level 9) : ECC_scope.
+Notation "'\'  '_' : A  '->'  B" := (Abs A B) (at level 50,  A at level 9) : ECC_scope.
+Notation "'Si' '_' : A '..' B" := (Sig A B) (at level 50, A at level 1): ECC_scope.
 Notation "< e1 , e2 > 'as' A" := (Pair e1 e2 A) (at level 50, e1 at level 5, e2 at level 5, A at level 5): ECC_scope.
 Notation "'fst' e" := (Fst e) (at level 50, e at level 5): ECC_scope.
 Notation "'snd' e" := (Snd e) (at level 50, e at level 5): ECC_scope.
 
+Example ex_fst: ECC_has_type ctx_empty (fst (< Tru, Fls> as (Si _ : Bool .. Bool)))%ECC Bool.
+Proof.
+eapply T_Fst. auto.
+Qed.
 (* Definition example_Type := (type 3)%ECC: ECCexp.
 Definition example_Prop := (prop)%ECC: ECCexp.
 Definition example_App := { X Y }%ECC: ECCexp.

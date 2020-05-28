@@ -1,5 +1,5 @@
 Require Export ECCA_core.
-
+(* 
 
 (* 
 =====================================
@@ -119,4 +119,4 @@ Search "substWork_eq".
 Notation "b '[' a '/' x ']'":= (subst x a b) (at level 10, a at next level): ECCA_scope. 
 Locate "_ [ _ / _ ]".
 Check ((eId X) [ (eId Y) / X ])%ECCA.
-Check ((eId X) [ (eId Y) / X ] [ (eId Y) / X ])%ECCA.
+Check ((eId X) [ (eId Y) / X ] [ (eId Y) / X ])%ECCA. *)

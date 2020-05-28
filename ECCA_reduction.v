@@ -1,4 +1,4 @@
-Require Export ECCA_subst.
+Require Export ECCA_core.
 
 
 (*
@@ -9,16 +9,16 @@ Require Export ECCA_subst.
 
 (* -Step- *)
 Inductive ECCA_RedR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
-  | R_ID (g: ECCAenv) (x: atom) (e': ECCAexp) :
-    ECCA_LookupDefR g x e' -> ECCA_RedR g (eId x) e'
-  | R_App (g: ECCAenv) (x: atom) (A body arg: ECCAexp) :
-    ECCA_RedR g (eApp (eAbs x A body) arg) (subst x arg body) (*do anything with env here?*)
+  | R_ID (g: ECCAenv) (x: atom) (e' A: ECCAexp) :
+    (has g x (Def e' A)) -> ECCA_RedR g (eId x) e'
+  | R_App (g: ECCAenv) (A body arg: ECCAexp) :
+    ECCA_RedR g (eApp (eAbs A body) arg) (bind arg body) 
   | R_Fst (g: ECCAenv) (e1 e2 A: ECCAexp) :
     ECCA_RedR g (eFst (ePair e1 e2 A)) e1
   | R_Snd (g: ECCAenv) (e1 e2 A: ECCAexp) :
     ECCA_RedR g (eSnd (ePair e1 e2 A)) e2
-  | R_Let (g: ECCAenv) (x: atom) (e1 e2: ECCAexp) :
-    ECCA_RedR g (eLet x e1 e2) (subst x e1 e2)  (*or here?*)
+  | R_Let (g: ECCAenv) (e1 e2: ECCAexp) :
+    ECCA_RedR g (eLet e1 e2) (bind e1 e2)  
 (*   | R_IfTru (g: ECCAenv) (e1 e2: ECCAexp) :
     ECCA_RedR g (eIf eTru e1 e2) e1
   | R_IfFls (g: ECCAenv) (e1 e2: ECCAexp) :
@@ -40,21 +40,22 @@ Inductive ECCA_RedClosR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
       ECCA_RedClosR g e e' ->
       ECCA_RedClosR g e' e'' ->
       ECCA_RedClosR g e e''
-  | R_CongLet (g: ECCAenv) (e: ECCAexp) (e1 e2: ECCAexp) (x: atom) :
-      ECCA_RedClosR (Def g x e) e1 e2 ->
-      ECCA_RedClosR g (eLet x e e1) (eLet x e e2)
-  | R_CongLam1 (g: ECCAenv) (A: ECCAexp) (A' e e': ECCAexp) (x: atom) :
+  | R_CongLet (g: ECCAenv) (e: ECCAexp) (e1 e2 A: ECCAexp) (x: name) :
+(* FIXME: Why don't we reduce e? *)
+      ECCA_RedClosR (g & x ~ Def e A) (open x e1) (open x e2) -> (*FIXME: where does A come from *)
+      ECCA_RedClosR g (eLet e e1) (eLet e e2) 
+  | R_CongLam1 (g: ECCAenv) (A: ECCAexp) (A' e e': ECCAexp) (x: name)   :
       ECCA_RedClosR g A A' ->
-      ECCA_RedClosR (Assum g x A) e e' ->
-      ECCA_RedClosR g (eAbs x A e) (eAbs x A' e')
-  | R_CongPi (g: ECCAenv) (A: ECCAexp) (A' B B': ECCAexp) (x: atom) :
+      ECCA_RedClosR (g & x ~ Assum A) (open x e) (open x e') ->
+      ECCA_RedClosR g (eAbs A e) (eAbs A' e')
+  | R_CongPi (g: ECCAenv) (A: ECCAexp) (A' B B': ECCAexp) (x: name) :
       ECCA_RedClosR g A A' ->
-      ECCA_RedClosR (Assum g x A) B B' ->
-      ECCA_RedClosR g (ePi x A B) (ePi x A' B')
-  | R_CongSig (g: ECCAenv) (A: ECCAexp) (A' B B': ECCAexp) (x: atom) :
+      ECCA_RedClosR (g & x ~ Assum A) (open x B) (open x B') ->
+      ECCA_RedClosR g (ePi A B) (ePi A' B')
+  | R_CongSig (g: ECCAenv) (A: ECCAexp) (A' B B': ECCAexp) (x: name) :
       ECCA_RedClosR g A A' ->
-      ECCA_RedClosR (Assum g x A) B B' ->
-      ECCA_RedClosR g (eSig x A B) (eSig x A' B')
+      ECCA_RedClosR (g & x ~ Assum A) (open x B) (open x B') ->
+      ECCA_RedClosR g (eSig A B) (eSig A' B')
   | R_CongPair (g: ECCAenv) (e1 e1' e2 e2' A A': ECCAexp) :
       ECCA_RedClosR g e1 e1' ->
       ECCA_RedClosR g e2 e2' ->

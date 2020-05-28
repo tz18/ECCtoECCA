@@ -146,8 +146,8 @@ Module ECCATerm <: Term.
 End ECCATerm.
 
 Module ECCARen := Renamings(ECCATerm).
-Import ECCATerm.
-Import ECCARen.
+Export ECCATerm.
+Export ECCARen.
 
 
 (* 
@@ -464,7 +464,7 @@ Coercion Comp: ECCAcomp >-> ECCAconf.
 Inductive ctxmem:=
 | Assum (A: @ECCAexp 0)
 | Def (e: @ECCAexp 0) (A: @ECCAexp 0)
-| Eq (e1: @ECCAexp 0) (e2: @ECCAexp 0)
+(* | Eq (e1: @ECCAexp 0) (e2: @ECCAexp 0) *)
 .
 
 Definition ECCAenv:= @context (@ctxmem).
@@ -478,61 +478,7 @@ Inductive assumes (g: ECCAenv) (x: atom) (A: ECCAexp) :=
   assumes g x A
 .
 
-Inductive ECCA_LookupTypeR : ECCAenv -> atom -> ECCAexp -> Prop:=
-  | aLT_gFirst (g': ECCAenv) (x: atom) (A: ECCAexp):
-      ECCA_LookupTypeR (Assum g' x A) x A
-  | aLT_AssumRest (g: ECCAenv) (x x': atom) (A a': ECCAexp):
-      ECCA_LookupTypeR g x A ->
-      (x <> x') ->
-      (ECCA_LookupTypeR (Assum g x' a') x A)
-  | aLT_DefRest (g: ECCAenv) (x x': atom) (A a': ECCAexp):
-      ECCA_LookupTypeR g x A ->
-  (*     (x <> x') -> *)
-      (ECCA_LookupTypeR (Def g x' a') x A)
-  | aLT_EqRest (g: ECCAenv) (x: atom) (v A v': ECCAexp):
-      ECCA_LookupTypeR g x A ->
-      ECCA_LookupTypeR (Eq g v v') x A 
-.
-Hint Constructors ECCA_LookupTypeR.
-
-
-Inductive ECCA_LookupDefR : ECCAenv -> atom -> ECCAexp -> Prop:=
-  | aLD_gFirst (g': ECCAenv) (x: atom) (e: ECCAexp) (A: ECCAexp):
-      ECCA_LookupDefR (Assum (Def g' x e) x A) x e
-  | aLD_AssumRest (g: ECCAenv) (x x': atom) (e: ECCAexp) (a': ECCAexp):
-      ECCA_LookupDefR g x e ->
-      (x <> x') ->
-      (ECCA_LookupDefR (Assum g x' a') x e)
-  | aLD_DefRest (g: ECCAenv) (x x': atom) (e e': ECCAexp):
-      ECCA_LookupDefR g x e ->
-      (x <> x') ->
-      (ECCA_LookupDefR (Def g x' e') x e)
-  | aLD_EqRest (g: ECCAenv) (x: atom) (v v': ECCAexp) (e: ECCAexp):
-      ECCA_LookupDefR g x e ->
-      ECCA_LookupDefR (Eq g v v') x e 
-.
-Hint Constructors ECCA_LookupDefR.
-
-
-(*should change val to conf *)
-Inductive ECCA_LookupEqR : ECCAenv -> ECCAexp -> ECCAexp -> Prop:=
-  | aLE_gFirst (g': ECCAenv) (v v': ECCAexp):
-    ECCA_LookupEqR (Eq g' v v') v v'
-  | aLE_AssumRest (g: ECCAenv) (x : atom) (v v' a: ECCAexp):
-      ECCA_LookupEqR g v v' ->
-      (ECCA_LookupEqR (Assum g x a) v v')
-  | aLE_DefRest (g: ECCAenv) (x: atom) (v v' e: ECCAexp):
-      ECCA_LookupEqR g v v' ->
-      (ECCA_LookupEqR (Def g x e) v v')
-  | aLE_EqRest (g: ECCAenv) (x: atom) (v1 v2 v1' v2': ECCAexp):
-      ECCA_LookupEqR g v1 v2 ->
-      (v1 <> v1') ->
-      ECCA_LookupEqR (Eq g v1' v2') v1 v2 
-.
-Hint Constructors ECCA_LookupEqR.
-
-
-(*Defining "g,g'|-"
+(* (*Defining "g,g'|-"
   Append environment g to environment g'*)
 Fixpoint appendEnv (g g': ECCAenv) :=
 match g' with
@@ -540,4 +486,4 @@ match g' with
 | Assum g'' x A => Assum (appendEnv g g'') x A
 | Def g'' x A => Def (appendEnv g g'') x A
 | Eq g'' x A => Eq (appendEnv g g'') x A
-end.
+end. *)
