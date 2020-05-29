@@ -40,7 +40,13 @@ Instance ECCA_Equiv_equiv (g: ECCAenv) : Equivalence (ECCA_Equiv g).
 Proof.
 split. apply equiv_refl. apply equiv_sym. apply equiv_trans.
 Qed.
+Hint Resolve ECCA_Equiv_equiv.
+Require Import String.
 
+(*TODO: To use this, we need to declare some functions proper wrt to ECCA_equiv.
+Then we can do rewriting. 
+See page 17 of 
+https://www.labri.fr/perso/casteran/CoqArt/TypeClassesTut/typeclassestut.pdf *)
 
 (* Require Import ECCA_typing. *)
 
