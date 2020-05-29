@@ -29,6 +29,8 @@ Inductive ECCA_RedR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
 Hint Constructors ECCA_RedR.
 Bind Scope ECCA_scope with ECCA_RedR.
 
+
+
 (* Reflective Transitive Closure of step*)
 Inductive ECCA_RedClosR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
   | R_RedR (g g': ECCAenv) (e e': ECCAexp): (* maybe don't need this one? it follows from refl + trans*)

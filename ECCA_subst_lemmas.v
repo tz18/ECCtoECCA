@@ -1,4 +1,4 @@
-Require Export ECCA_subst.
+(* Require Export ECCA_subst.
 
 Lemma notin_fv_equivariance : forall x0 x y t ,
   x0 `notin` FV t ->
@@ -81,3 +81,4 @@ Proof.
       -- rewrite <- not_mem_iff. rewrite <- not_mem_iff in H. fsetdec.
  Qed.
 Hint Resolve subst_distributes_over_app.
+ *)
