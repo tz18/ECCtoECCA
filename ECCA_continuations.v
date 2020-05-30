@@ -6,54 +6,54 @@ Require Export ECCA_typing.
 
 (* TODO: incomplete *)
 
-Inductive cont: Type :=
+Inductive cont {V: nat}: Type :=
   | Hole
-  | LetHole (E: @ECCAexp 1)
+  | LetHole (B: @ECCAexp (S V))
 .
 Hint Constructors cont.
 Bind Scope ECCA_scope with cont.
 
-Inductive cont_r: Type :=
+Inductive cont_r {V: nat}: Type :=
   | rHole
-  | rLetHole (E: @ECCAconf 1)
+  | rLetHole (B: @ECCAconf (S V))
 .
 Hint Constructors cont_r.
 Bind Scope ECCA_scope with cont_r.
 
-Fixpoint unrestrict_cont (k: cont_r):=
+Fixpoint unrestrict_cont {V: nat}(k: @cont_r V):=
 match k with
   | rHole => Hole
-  | rLetHole E => LetHole (flattenECCAconf E)
+  | rLetHole B => LetHole (flattenECCAconf B)
 end.
 
-Definition fill_hole (e: ECCAexp) (K: cont): ECCAexp :=
+Definition fill_hole {V: nat}(e: @ECCAexp V) (K: @cont V): @ECCAexp V:=
   match K with
     | Hole => e
     | LetHole B => eLet e B
 end.
 Notation "K '[' N ']'" := (fill_hole N K) (at level 200): ECCA_scope.
 
-Definition fill_hole_r (e: ECCAcomp) (K: cont_r): @ECCAconf 0 :=
+Definition fill_hole_r {V: nat}(e: @ECCAcomp V) (K: @cont_r V): @ECCAconf V:=
   match K with
     | rHole => e
     | rLetHole B => Let e B
 end.
 
 Notation "'[]'" := (Hole) (at level 50) : ECCA_scope.
-Definition aHole := []%ECCA.
 Notation "'LET' '_' ':=' '[]' 'in' B" := (LetHole B) (at level 50) : ECCA_scope.
 Definition exId: @ECCAexp 1 := (eId (@bound 1 l0)).
 Definition example_aLetHole := (LET _ := [] in (eId (@bound 1 l0)))%ECCA.
 Definition ex_fillhole := (fill_hole (eTru) example_aLetHole).
 
-Inductive cont_type: Type :=
-  | Cont (M: @ECCAexp 0) (A: @ECCAexp 0) (B: @ECCAexp 0)
+Inductive cont_type {V: nat}: Type :=
+  | Cont (M: @ECCAexp V) (A: @ECCAexp V) (B: @ECCAexp V)
 .
 Hint Constructors cont_type.
 (* TODO: Add notation for cont type  *)
 
-Inductive ECCA_cont_has_type: ECCAenv -> cont -> cont_type -> Prop :=
+Inductive ECCA_cont_has_type : ECCAenv -> cont  -> cont_type -> Prop :=
   | aK_Empty (M: ECCAexp) (g: ECCAenv) (A: ECCAexp):
+    ECCA_has_type g M A ->
     ECCA_cont_has_type g Hole (Cont M A A)
   | aK_Bind (g: ECCAenv) (y: name) (M: ECCAexp) (M' A B: ECCAexp):
     ECCA_has_type g M' A ->
@@ -63,6 +63,6 @@ Inductive ECCA_cont_has_type: ECCAenv -> cont -> cont_type -> Prop :=
 
 Hint Constructors ECCA_cont_has_type.
 
-Lemma fill_with_hole_is_id (e: ECCAexp): fill_hole e Hole = e.
+Lemma fill_with_hole_is_id {V: nat}(e: @ECCAexp V): fill_hole e Hole = e.
 Proof.
 eauto. Qed.
