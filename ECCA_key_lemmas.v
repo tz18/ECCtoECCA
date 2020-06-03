@@ -12,15 +12,8 @@ Proof.
 intros. inversion H ; subst ; cbv.
 - assumption. 
 - cut (@bind N 0 (@wk 0 B) = B); simpl_term_eq. 
-    + intros. rewrite <- H1. eapply aT_Let with (n:= N) (m:= M) (A:=A) (B:=(wk B)) (x:=y) (g:=g).
-exists B. split.
-  + eauto.
-  + eauto.
-- exists (subst y N B). split.
-  + eapply aT_Let with (n:= N) (m:= M) (A:=A) (B:=B) (x:=y) (g:=g).
-    * assumption.
-    * assumption.
-  + apply subst_no_fv_aeq. auto.
+  + intros. rewrite <- H1. eapply aT_Let with (n:= N) (m:= M) (A:=A) (B:=(wk B)) (x:=y) (g:=g).
+    assumption.
 Qed.
 
 Lemma equivalence_is_equivalence (g: ECCAenv) (y: atom) (N N' M: ECCAexp) (A B: ECCAexp):

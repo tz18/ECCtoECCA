@@ -57,7 +57,7 @@ Inductive ECCA_cont_has_type : ECCAenv -> cont  -> cont_type -> Prop :=
     ECCA_cont_has_type g Hole (Cont M A A)
   | aK_Bind (g: ECCAenv) (y: name) (M: ECCAexp) (M' A B: @ECCAexp 0):
     ECCA_has_type g M' A ->
-    ECCA_has_type (g & y ~ Def A M') (open y M) B ->
+    ECCA_has_type (ctx_cons g y (Def M' A)) (open y M) (open y (wk B)) ->
     ECCA_cont_has_type g (LetHole M) (Cont M' A B)
 .
 
