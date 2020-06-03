@@ -1,15 +1,19 @@
 Require Export ECCA_typing.
 Require Export ECCA_equiv_lemmas.
-Require Export ECCA_subst_lemmas.
 Require Export ECCA_continuations.
 
-Lemma Cut (g: ECCAenv) (K : cont) (N: ECCAexp) (A B B': ECCAexp):
+Check wk.
+
+Lemma Cut (g: ECCAenv) (K : cont) (N: ECCAexp) (A B: ECCAexp):
 (ECCA_cont_has_type g K (Cont N A B) ->
 ECCA_has_type g N A ->
-exists B', ECCA_has_type g (fill_hole N K) B' /\ (B' =a= B))%ECCA.
+ECCA_has_type g (fill_hole N K) B )%ECCA.
 Proof. 
 intros. inversion H ; subst ; cbv.
-- exists B. split.
+- assumption. 
+- cut (@bind N 0 (@wk 0 B) = B); simpl_term_eq. 
+    + intros. rewrite <- H1. eapply aT_Let with (n:= N) (m:= M) (A:=A) (B:=(wk B)) (x:=y) (g:=g).
+exists B. split.
   + eauto.
   + eauto.
 - exists (subst y N B). split.
