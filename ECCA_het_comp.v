@@ -3,10 +3,10 @@ Require Import ECCA_core ECCA_typing.
 Require Import translator.
 Require Import ECCA_continuations.
 
-Fixpoint het_compose_r (K : cont_r) (M : ECCAconf) : ECCAconf :=
+Fixpoint het_compose_r {V: nat} (K : cont_r) (M : @ECCAconf V) : ECCAconf :=
   match M with
   | Comp e => fill_hole_r e K
-  | Let x N M' => Let x N (het_compose_r K M')
+  | Let N M' => Let N (@het_compose_r (S V) (wk_cont K) M')
   end.
 
 Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.
@@ -17,38 +17,41 @@ Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.
   | Let x N M' => Let x N (het_compose K M')
   end. *)
 
-Definition cont_compose (K : cont_r) (K' : cont_r) : cont_r :=
+Definition cont_compose {V: nat} (K : cont_r) (K' : cont_r) : @cont_r V :=
   match K' with
   | rHole => K
-  | rLetHole x M => rLetHole x (het_compose_r K M)
+  | rLetHole M => rLetHole (het_compose_r (wk_cont K) M)
   end.
 
 Notation "K1 '<<' K2 '>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
 
-(* This is a little more understandable *)
+(* This is a little more understandable 
 
 Lemma technical_1 (K : cont_r) (e : ECCAcomp) (G : ECCAenv) :
 (G |- (flattenECCAconf (fill_hole_r e K)) =e=
  (fill_hole (flattenECCAcomp e)
    (unrestrict_cont K)))%ECCA.
 Proof. 
-induction K; auto.
+  induction K; auto.
 Qed.
+*)
 Open Scope ECCA_scope.
 
 Coercion flattenECCAconf: ECCAconf >-> ECCAexp.
 Coercion flattenECCAcomp: ECCAcomp >-> ECCAexp.
 
-Lemma cont_compose_fill_het_compose (K K' : cont_r) (N : ECCAcomp) :
-  (het_compose_r K (fill_hole_r N K')) = (fill_hole_r N (cont_compose K K')).
+Lemma cont_compose_fill_het_compose {V: nat} (K K' : cont_r) (N : ECCAcomp) :
+  (het_compose_r K (fill_hole_r N K')) = (fill_hole_r N (@cont_compose V K K')).
 Proof.
   intros. destruct K'; simpl; reflexivity.
 Qed. 
 
-Open Scope ECCA_scope.
-Print fill_hole.
-Lemma naturality ( K : cont_r) ( M : ECCAconf ) ( G : ECCAenv) : 
-  (Empty |- ( (het_compose_r K M)) =e= (fill_hole (M) (unrestrict_cont K)))%ECCA.
+(* commenting out for now; fill_hole needs an ECCAExp not ECCAconf, 
+is probably related to the fact that we need to define this term stuff over comps/confs/vals?
+not sure 
+
+Lemma naturality {V: nat} ( K : cont_r) ( M : ECCAconf ) ( G : ECCAenv) : 
+  (ctx_empty |- ( (het_compose_r K M)) =e= (@fill_hole V (@flattenECCAconf V M) (unrestrict_cont K)))%ECCA.
 Proof.
 induction M; try auto. 
 + simpl. apply technical_1.
@@ -78,21 +81,21 @@ fill_hole
       (flattenECCAconf M))
    (unrestrict_cont K)
            ))%ECCA. *)
-Admitted.
+Admitted. *)
 
 
+(*
+Oof, fails in the first case when trying to fold transWork, can't seem to figure out the 
+implicit parameter :,(
 
-Lemma compositionality:
-  forall (e : ECCexp) (ns : atoms) (K K' : cont_r),
-  het_compose_r K' (transWork ns e K) =
-  (transWork ns e (cont_compose K' K)).
+Lemma compositionality {V: nat} (e : ECCexp) (K K' : cont_r):
+  @het_compose_r V K' (@transWork V e K) =
+  (@transWork V e (@cont_compose V K' K)).
 Proof.
-intros e. induction e.
-  all: unfold transWork; simpl; intros ns K K'.
-  all: destruct (atom_fresh ns);
-    (destruct (atom_fresh (add x0 ns)); destruct (atom_fresh (add x1 (add x0 ns)))) 
-||   (destruct (atom_fresh (add x ns)); destruct (atom_fresh (add x0 (add x ns)))) .
-  all: try (destruct K; destruct K'; simpl; reflexivity) .
+  intros. induction e.
+  all: unfold transWork; simpl.
+  all: try (destruct K; destruct K'; simpl; reflexivity).
+  - fold transWork.
   - fold transWork.
     rewrite (IHe1 (add x ns) (rLetHole x (transWork (add x0 (add x ns)) e2
                                                (rLetHole x0 (fill_hole_r (App x x0) K)))) K').
@@ -131,4 +134,4 @@ intros e. induction e.
     rewrite (IHe (add x ns) (rLetHole x (fill_hole_r (Snd x) K)) K'). simpl.
     rewrite (cont_compose_fill_het_compose K' K (Snd x)).
     reflexivity.
-Qed.
+Qed.*)
