@@ -72,7 +72,6 @@ Inductive ECCA_has_type: ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
 (* ECCA_has_type: ECCAenv -> ECCAconf -> ECCAconf -> Prop := *)
 | aT_Let (g: ECCAenv) (n m A B: ECCAexp) (x: name):
   (g |- n : A) ->
-(*should this be (def(assum(g))) or (assum(def(g)))*)
   (ECCA_has_type (g & x ~ Def n A) (open x m) (open x B)) ->
   (g |- (eLet n m) : (bind n B))
 (* | aT_If (g: ECCAenv) (B U e1 e2: ECCAexp) (e: ECCAexp) (x: atom):

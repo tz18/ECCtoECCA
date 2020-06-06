@@ -35,6 +35,35 @@ ECCAcomp {V: nat}: Type :=
 (*   | Subst (x arg body: ECCAval) *)
 .
 
+(* Mutual induction Scheme *)
+Scheme ECCA_val_conf_mut := Induction for ECCAval Sort Prop
+with ECCA_conf_comp_mut := Induction for ECCAconf Sort Prop
+with ECCA_comp_val_mut := Induction for ECCAcomp Sort Prop.
+
+Combined Scheme ECCA_val_conf_comp_comb from ECCA_val_conf_mut, ECCA_conf_comp_mut, ECCA_comp_val_mut.
+
+(* Fixpoint open_val a {V} (t: @ECCAval (S V)):=
+match t with 
+  | Id x => Id (openv a v)
+  | Pair v1 v2 A => Pair (open_val a v1) (open_val a v2) (open_conf a A)
+  | Pi A B(A: ECCAconf) (B: @ECCAconf (S V)) => Pi (open_conf a A) (open_conf a B)
+  | Abs A B(A: ECCAconf) (B: @ECCAconf (S V)) => Abs (open_conf a A) (open_conf a B)
+  | Sig A B(A: ECCAconf) (B: @ECCAconf (S V)) => Sig (open_conf a A) (open_conf a B)
+  | (Uni U) as v | Tru as v | Fls as v | Bool as v => v
+end
+with 
+open_comp a {V} (t: @ECCAcomp (S V)) :=
+match
+  | App v1 v2 => App (open_val a v1) (open_val a v2)
+  | Val v => Val (open_val a v)
+  | Fst v => Fst (open_val a v)
+  | Snd v => Snd (open_val a v)
+end
+open_conf a {V} (t: @ECCAconf (S V)) :=
+match
+  | Comp e => Comp (open_comp a e)
+  | Let A B => Let (open_comp a A) (open_comp a B)
+end *)
 
 
 Hint Constructors ECCAval. 
@@ -61,6 +90,14 @@ Inductive ECCAexp {V: nat}: Type :=
   | eSnd (v: ECCAexp)
 (*   | eSubst (x arg body: ECCAexp) *)
 .
+
+(* Approach: If we have an ECCAexp with a proof
+ that we can get an ECCAconf out of it, we should be able to
+ extract the ECCAconf. Three fundamental naming operations cannot break ANF:
+ wk, open, and close. The only operation that could potentially break ANF is bind.
+ Let's apply these constructors by operating over the ECCAexp,
+ preserving the proof that it is ANF,
+ and extracting the ECCAconf back after.*)
 
 Hint Constructors ECCAexp.
 
@@ -156,8 +193,8 @@ Export ECCARen.
 ============================================================
 *)
 
-Fixpoint flattenECCAval {V: nat} (e: @ECCAval V): @ECCAexp V:=
-match e with
+Fixpoint flattenECCAval {V: nat} (v: @ECCAval V): @ECCAexp V :=
+match v with
   | Id x => eId x
   | Uni U => eUni U
   | Pi A B => ePi (flattenECCAconf A) (flattenECCAconf B) 
@@ -448,8 +485,40 @@ Definition isComp {V: nat} ( e: @ECCAexp V): Prop :=
   exists a, (getECCAcomp e) = Some a.
 Definition isVal {V: nat} ( e: @ECCAexp V): Prop :=
   exists a, (getECCAval e) = Some a.
-(* 
-Definition reify_Prop_val { e : ECCAexp} (p : (isVal e)) : ECCAval.
+
+Definition reify_Prop_val {V: nat} (e: @ECCAexp V | (@isVal V e)) : @ECCAval V.
+Proof. auto.
+Qed.
+
+Definition reflectsval {V: nat} (e: @ECCAval V):=
+isVal (flattenECCAval e).
+Definition reflectsconf {V: nat} (e: @ECCAconf V):=
+isANF (flattenECCAconf e).
+Definition reflectscomp {V: nat} (e: @ECCAcomp V):=
+isComp (flattenECCAcomp e).
+
+Lemma flatten_is_ANF {V: nat}:
+   (forall (e: @ECCAval V), reflectsval e) 
+/\ (forall (e: @ECCAconf V), reflectsconf e)
+/\ (forall (e: @ECCAcomp V), reflectscomp e).
+Proof. apply ECCA_val_conf_comp_comb.
+1,2,7,8,9: 
+(intros; unfold reflectsval, reflectsconf, reflectscomp, isVal; cbn ; eauto). 
+1,2,3,6: (intros; unfold reflectsval, reflectsconf in *; cbn; 
+  unfold isVal, isANF in *; destruct H, H0; 
+  cbn; rewrite H, H0; eauto).
++ intros; unfold reflectsval, reflectsconf in *; destruct H, H0, H1; 
+  unfold isVal; cbn; rewrite H, H0, H1; eauto.
++ intros. destruct H. unfold reflectsconf in *.
+  unfold isANF. exists (Comp x). cbn. unfold getECCAconf.
+  
+
+
+
+
+Definition open_val {V: nat} (v: @ECCAval (S V)) : @ECCAval V :=
+open 
+
 Definition reflect_Prop_val ( e : ECCAexp) : Option (isVal e). *)
 
 Coercion Val: ECCAval >-> ECCAcomp. 
