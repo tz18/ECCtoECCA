@@ -16,7 +16,7 @@ Definition close_conf {V: nat} (x: name) (e: @ECCAconf (V)): @ECCAconf (S V) := 
 Notation "! k" := (free k) (at level 10, format "! k").
 
 Open Scope string.
- 
+
 Fixpoint transWork  {V: nat} (e: @ECCexp V) (K: @cont_r V) : @ECCAconf V:=
 (*   let (X, _) := (atom_fresh ns) in
   let Xns    := (add X ns) in
@@ -29,18 +29,32 @@ Fixpoint transWork  {V: nat} (e: @ECCexp V) (K: @cont_r V) : @ECCAconf V:=
     | ECC.Pi A B => (fill_hole_r (Val (Pi (transWork A rHole) (transWork B rHole))) K)
     | ECC.Abs A e => (fill_hole_r (Val (Abs (transWork A rHole) (transWork e rHole))) K)
     | ECC.Sig A B => (fill_hole_r (Val (Sig (transWork A rHole) (transWork B rHole))) K)
+    | ECC.Tru => (fill_hole_r (Val (Tru)) K)
+    | ECC.Fls => (fill_hole_r (Val (Fls)) K)
+    | ECC.Bool => (fill_hole_r (Val (Bool)) K)
+    | ECC.Uni U => (fill_hole_r (Val (Uni U)) K)
     | ECC.Let e1 e2 => (@transWork V e1 (@rLetHole V
                           (@transWork (S V) e2 (wk_cont K))))
     | ECC.App e1 e2 =>
-        (@transWork (V) e1 (rLetHole (close_conf ("X1") (
-            ((@transWork (V) (e2) (rLetHole (close_conf ("X2") 
-                ((fill_hole_r (App (@Id ((V)) (!"X1"))
+      (@transWork (V) e1 (rLetHole (close_conf ("X1")
+         (@transWork (V) (e2) (rLetHole (close_conf ("X2") 
+                (fill_hole_r (App (@Id ((V)) (!"X1"))
                                   (@Id ((V)) (!"X2")))
-                              (K)))))))))))
+                              K)))))))
+    | ECC.Pair e1 e2 A =>
+      (@transWork (V) e1 (rLetHole (close_conf ("X1")
+         (@transWork (V) (e2) (rLetHole (close_conf ("X2")
+                (fill_hole_r (Pair (@Id ((V)) (!"X1"))
+                                   (@Id ((V)) (!"X2"))
+                                   (transWork A rHole))
+                          K)))))))
+    | ECC.Fst e =>
+      (@transWork (V) e (rLetHole (close_conf ("X1")
+                                              (fill_hole_r (Fst (@Id ((V)) (!"X1"))) K))))
+    | ECC.Snd e =>
+      (@transWork (V) e (rLetHole (close_conf ("X1")
+         (fill_hole_r (Snd (@Id ((V)) (!"X1"))) K))))
     
-    | ECC.Tru => (fill_hole_r (Val (Tru)) K)
-    | ECC.Fls => (fill_hole_r (Val (Fls)) K)
-    | _ => (Val Tru)
 end
 .
 
@@ -119,4 +133,4 @@ end.
 
 Compute trans (LET X := Y in LET Y := type 1 in X)%ECC.
 (* Compute trans (fst (<ECC.Tru , ECC.Fls> as 
-                            (Si X : ECC.Bool .. (ECC.If X ECC.Bool (P Y : ECC.Bool -> ECC.Bool))))). *)
+                            (Si X : ECC.Bool .. (ECC.If X ECC.Bool (P Y : ECC.Bool -> ECC.Bool))))). *) *)
