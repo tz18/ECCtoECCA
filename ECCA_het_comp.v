@@ -53,8 +53,8 @@ Proof.
 dependent induction M; try auto. 
 + simpl. apply technical_1.
 + simpl. destruct K.
-  - simpl. induction het_compose_r.
-    * unfold fill_hole in IHM. simpl in IHM. (* 
+  - simpl. Admitted. (* dependent induction het_compose_r.
+    * unfold fill_hole in IHM. simpl in IHM.  
     *
   -
 cut (G |- (eLet x A (het_compose_r K M)) =e=
@@ -78,21 +78,20 @@ fill_hole
       (flattenECCAconf M))
    (unrestrict_cont K)
            ))%ECCA. *)
-Admitted.
+
 
 
 (*
 Oof, fails in the first case when trying to fold transWork, can't seem to figure out the 
 implicit parameter :,( *)
-
+Require Import String.
 Lemma compositionality (e : ECCexp) (K K' : cont_r):
   het_compose_r K' (transWork e K) =
   (transWork e (@cont_compose 0 K' K)).
 Proof.
   intros. induction e.
-  all: unfold transWork; simpl.
-  all: try (destruct K; destruct K'; simpl; reflexivity).
-  - fold transWork.
+  1,3,2,4,7,11,12,13: try (unfold transWork; destruct K; destruct K'; simpl; reflexivity).
+  - fold (@transWork V).
   - fold transWork.
     rewrite (IHe1 (add x ns) (rLetHole x (transWork (add x0 (add x ns)) e2
                                                (rLetHole x0 (fill_hole_r (App x x0) K)))) K').
