@@ -19,12 +19,10 @@ Inductive ECCA_RedR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
     ECCA_RedR g (eSnd (ePair e1 e2 A)) e2
   | R_Let (g: ECCAenv) (e1 e2: ECCAexp) :
     ECCA_RedR g (eLet e1 e2) (bind e1 e2)  
-(*   | R_IfTru (g: ECCAenv) (e1 e2: ECCAexp) :
+  | R_IfTru (g: ECCAenv) (e1 e2: ECCAexp) :
     ECCA_RedR g (eIf eTru e1 e2) e1
   | R_IfFls (g: ECCAenv) (e1 e2: ECCAexp) :
     ECCA_RedR g (eIf eFls e1 e2) e2
-  | R_Subst (g: ECCAenv) (e e': ECCAexp) :
-    ECCA_RedR g (eSubst e e e') e' *)
 .
 Hint Constructors ECCA_RedR.
 Bind Scope ECCA_scope with ECCA_RedR.
@@ -73,16 +71,11 @@ Inductive ECCA_RedClosR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
   | R_CongSnd (g: ECCAenv) (V V': ECCAexp) :
       ECCA_RedClosR g V V' ->
       ECCA_RedClosR g (eSnd V) (eSnd V')
-(*   | R_CongIf (g: ECCAenv) (e e' e1 e1' e2 e2': ECCAexp) :
+  | R_CongIf (g: ECCAenv) (e e' e1 e1' e2 e2': ECCAexp) :
       ECCA_RedClosR g e e' ->
       ECCA_RedClosR g e1 e1' ->
       ECCA_RedClosR g e2 e2' ->
       ECCA_RedClosR g (eIf e e1 e2) (eIf e' e1' e2')
-  | R_CongSubst (g: ECCAenv) (e1 e1' e2 e2' e e': ECCAexp):
-      ECCA_RedClosR g e1 e1' ->
-      ECCA_RedClosR g e2 e2' ->
-      ECCA_RedClosR g e e' ->
-      ECCA_RedClosR g (eSubst e1 e2 e) (eSubst e1' e2' e') *)
 .
 Notation "g '|-' e1 '=r>' e2":= (ECCA_RedClosR g e1 e2) (at level 250, e1 at level 99): ECCA_scope.
 (* TODO: rewrite with notation for readability *)
