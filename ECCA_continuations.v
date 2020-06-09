@@ -20,7 +20,7 @@ Inductive cont_r {V: nat}: Type :=
 Hint Constructors cont_r.
 Bind Scope ECCA_scope with cont_r.
 
-Fixpoint unrestrict_cont {V: nat}(k: @cont_r V):=
+Fixpoint unrestrict_cont {V: nat}(k: @cont_r V): @cont V:=
 match k with
   | rHole => Hole
   | rLetHole B => LetHole (flattenECCAconf B)

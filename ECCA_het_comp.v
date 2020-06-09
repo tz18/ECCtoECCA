@@ -25,16 +25,16 @@ Definition cont_compose {V: nat} (K : cont_r) (K' : cont_r) : @cont_r V :=
 
 Notation "K1 '<<' K2 '>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
 
-(* This is a little more understandable 
+(* This is a little more understandable  *)
 
 Lemma technical_1 (K : cont_r) (e : ECCAcomp) (G : ECCAenv) :
 (G |- (flattenECCAconf (fill_hole_r e K)) =e=
  (fill_hole (flattenECCAcomp e)
    (unrestrict_cont K)))%ECCA.
 Proof. 
-  induction K; auto.
+  induction K; cbn; eauto.
 Qed.
-*)
+
 Open Scope ECCA_scope.
 
 Coercion flattenECCAconf: ECCAconf >-> ECCAexp.
@@ -46,10 +46,11 @@ Proof.
   intros. destruct K'; simpl; reflexivity.
 Qed. 
 
+Require Import Coq.Program.Equality.
 Lemma naturality {V: nat} (K : cont_r) (M : ECCAconf) (G : ECCAenv) : 
   (ctx_empty |- (het_compose_r K M) =e= (fill_hole M (unrestrict_cont K)))%ECCA.
 Proof.
-induction M; try auto. 
+dependent induction M; try auto. 
 + simpl. apply technical_1.
 + simpl. destruct K.
   - simpl. induction het_compose_r.
