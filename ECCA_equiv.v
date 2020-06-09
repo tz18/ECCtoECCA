@@ -10,14 +10,17 @@ Inductive ECCA_Equiv: ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
       ECCA_RedClosR g e1 (eAbs A e) ->
       ECCA_RedClosR g e2 e2' ->
 (*       conf_to_val e2' = Some v2' -> *)
-      ECCA_Equiv (g & x ~ Assum A) (open x e) (eApp e2' (eId (free x))) ->
+      ECCA_Equiv (ctx_cons g x (Assum A)) (open x e) (eApp e2' (eId (free x))) ->
       ECCA_Equiv g e1 e2 
    | aE_EquivIta2 (g: ECCAenv) (e e1 e1' e2 A : ECCAexp) (x: name) :
       ECCA_RedClosR g e1 e1' ->
       ECCA_RedClosR g e2 (eAbs A e) ->
 (*       conf_to_val e1' = Some v1' -> *)
-      ECCA_Equiv (g & x ~ Assum A) (open x e) (eApp e1' (eId (free x))) -> (* changed order here *)
-      ECCA_Equiv g e1 e2 
+      ECCA_Equiv (ctx_cons g x (Assum A)) (open x e) (eApp e1' (eId (free x))) -> (* changed order here *)
+      ECCA_Equiv g e1 e2
+   | aE_Reflect (g : ECCAenv) (x : atom) (e1 e2 : ECCAexp):
+       (has g x (Eq e1 e2)) \/ (has g x (Eq e2 e1)) ->
+       ECCA_Equiv g e1 e2
 (*   | aE_EquivAlpha (g: ECCAenv) (e1 e2: ECCAexp):
       ECCA_Aeq e1 e2 ->
       ECCA_Equiv g e1 e2 *)

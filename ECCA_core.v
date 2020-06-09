@@ -25,14 +25,13 @@ with
 ECCAconf {V: nat}: Type :=
   | Comp (e: ECCAcomp)
   | Let (A: ECCAcomp) (B: @ECCAconf (S V))
-(*   | If (v: ECCAval) (m1 m2: ECCAconf) *)
+  | If (v: ECCAval) (m1 m2: ECCAconf)
 with
 ECCAcomp {V: nat}: Type :=
   | App (v1 v2: ECCAval)
   | Val (v: ECCAval)
   | Fst (v: ECCAval)
   | Snd (v: ECCAval)
-(*   | Subst (x arg body: ECCAval) *)
 .
 
 (* Mutual induction Scheme *)
@@ -84,7 +83,7 @@ Inductive ECCAexp {V: nat}: Type :=
   | eFls
   | eBool
   | eLet (A: ECCAexp) (B: @ECCAexp (S V))
-(*   | eIf (v: ECCAexp) (m1 m2: ECCAexp) *)
+  | eIf (v: ECCAexp) (e1 e2: ECCAexp) 
   | eApp (v1 v2: ECCAexp)
   | eFst (v: ECCAexp)
   | eSnd (v: ECCAexp)
@@ -121,6 +120,8 @@ Module ECCATerm <: Term.
         eApp (kleisli f V e1) (kleisli f V e2)
       | ePair e1 e2 A =>
         ePair (kleisli f V e1) (kleisli f V e2) (kleisli f V A)
+      | eIf v e1 e2 =>
+        eIf (kleisli f V v) (kleisli f V e1) (kleisli f V e2)
       | eFst e => eFst (kleisli f V e)
       | eSnd e => eSnd (kleisli f V e)
       | eUni U => eUni U
@@ -217,7 +218,7 @@ with flattenECCAconf {V: nat}  (e: @ECCAconf V): @ECCAexp V:=
 match e with
   | Comp e => flattenECCAcomp e
   | Let A B => eLet (flattenECCAcomp A) (flattenECCAconf B)
-(*   | If v m1 m2 => eIf (flattenECCAval v) (flattenECCAconf m1) (flattenECCAconf m2) *)
+  | If v m1 m2 => eIf (flattenECCAval v) (flattenECCAconf m1) (flattenECCAconf m2)
 end.
 
 Fixpoint getECCAconf {V: nat} (e: @ECCAexp V) : option (@ECCAconf V) :=
@@ -230,20 +231,20 @@ match e with
           end
         | _ => None
         end
-(*   | eIf v m1 m2 =>
+  | eIf v m1 m2 =>
       let m1 := (getECCAconf m1) in
       let m2 := (getECCAconf m2) in
-      let v  := (getECCAval v) in
+      let v  := (getECCAconf v) in
       match m1 with
         | Some m1 => match m2 with
           | Some m2 => match v with 
-            | Some v => Some (If v m1 m2)
-            | None => None
+            | Some (Comp (Val v)) => Some (If v m1 m2)
+            | _ => None
             end
-          | None => None
+          | _ => None
           end
-        | None => None
-        end *)
+        | _ => None
+        end 
 (* Computations are also configurations *)
   (* should be just this but gah gah gah cannot guess decreasing argument of fix:
     | _ => match (getECCAcomp e) with
@@ -367,7 +368,7 @@ Coercion Comp: ECCAcomp >-> ECCAconf.
 Inductive ctxmem:=
 | Assum (A: @ECCAexp 0)
 | Def (e: @ECCAexp 0) (A: @ECCAexp 0)
-(* | Eq (e1: @ECCAexp 0) (e2: @ECCAexp 0) *)
+| Eq (e1: @ECCAexp 0) (e2: @ECCAexp 0) 
 .
 
 Definition ECCAenv:= @context (@ctxmem).
@@ -380,6 +381,7 @@ Inductive assumes (g: ECCAenv) (x: atom) (A: ECCAexp) :=
   (has g x (Def e A)) ->
   assumes g x A
 .
+
 
 (* (*Defining "g,g'|-"
   Append environment g to environment g'*)

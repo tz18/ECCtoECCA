@@ -2,12 +2,25 @@ Require Import ECC.
 Require Import ECCA_core ECCA_typing.
 Require Import translator.
 Require Import ECCA_continuations.
+Require Import String.
 
-Fixpoint het_compose_r {V: nat} (K : cont_r) (M : @ECCAconf V) : ECCAconf :=
+Fixpoint het_compose_r {V: nat} (K : @cont_r V) (M : @ECCAconf V) {struct M} : ECCAconf :=
   match M with
   | Comp e => fill_hole_r e K
   | Let N M' => Let N (@het_compose_r (S V) (wk_cont K) M')
-  end.
+  | If V1 M1 M2 => If V1
+                     (conf_subst (fill_hole_r (Val (Id (!"x"))) K) M1 "x")
+                     (conf_subst (fill_hole_r (Val (Id (!"x"))) K) M2 "x")
+  end
+with conf_subst {V: nat} (M M' : ECCAconf) (x: name): ECCAconf :=
+       let K := (rLetHole (close_conf x M)) in 
+       match M' with
+       | Comp e => fill_hole_r e K
+       | Let N M'' => Let N (@het_compose_r (S V) (wk_cont K) M'')
+       | If V1 M1 M2 => If V1
+                           (conf_subst (fill_hole_r (Val (Id (!"x"))) K) M1 "x")
+                           (conf_subst (fill_hole_r (Val (Id (!"x"))) K) M2 "x")
+       end.
 
 Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.
 
@@ -17,7 +30,7 @@ Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.
   | Let x N M' => Let x N (het_compose K M')
   end. *)
 
-Definition cont_compose {V: nat} (K : cont_r) (K' : cont_r) : @cont_r V :=
+Definition cont_compose {V: nat} (K : @cont_r V) (K' : @cont_r V) : @cont_r V :=
   match K' with
   | rHole => K
   | rLetHole M => rLetHole (het_compose_r (wk_cont K) M)
@@ -53,7 +66,9 @@ Proof.
 dependent induction M; try auto. 
 + simpl. apply technical_1.
 + simpl. destruct K.
-  - simpl. Admitted. (* dependent induction het_compose_r.
+- unfold fill_hole. Admitted.
+
+    (* dependent induction het_compose_r.
     * unfold fill_hole in IHM. simpl in IHM.  
     *
   -
@@ -79,19 +94,18 @@ fill_hole
    (unrestrict_cont K)
            ))%ECCA. *)
 
-
-
-(*
-Oof, fails in the first case when trying to fold transWork, can't seem to figure out the 
-implicit parameter :,( *)
 Require Import String.
-Lemma compositionality (e : ECCexp) (K K' : cont_r):
+Lemma compositionality {V: nat} (e : ECCexp) (K K' : @cont_r V):
   het_compose_r K' (transWork e K) =
-  (transWork e (@cont_compose 0 K' K)).
+  (transWork e (@cont_compose V K' K)).
 Proof.
   intros. induction e.
   1,3,2,4,7,11,12,13: try (unfold transWork; destruct K; destruct K'; simpl; reflexivity).
-  - fold (@transWork V).
+  - unfold transWork. fold (@transWork V). fold (@transWork V).
+    rewrite (IHe1 (rLetHole (close_conf "X1"
+      (transWork e2 (rLetHole (close_conf "X2" (fill_hole_r (App (Id (!"X1")) (Id (!"X2"))) K)))))) K').
+    simpl.
+    rewrite (IHe2 (rLetHole (close_conf "X2" (fill_hole_r (App (Id (!"X1")) (Id (!"X2"))) K))) (wk_cont K')).
   - fold transWork.
     rewrite (IHe1 (add x ns) (rLetHole x (transWork (add x0 (add x ns)) e2
                                                (rLetHole x0 (fill_hole_r (App x x0) K)))) K').

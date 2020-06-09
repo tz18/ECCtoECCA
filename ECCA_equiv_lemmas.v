@@ -20,6 +20,9 @@ unfold Symmetric. intros. inversion H.
   + apply H1.
   + apply H0.
   + apply H2.
+- subst. eapply aE_Reflect. destruct H0.
+  + apply or_intror. apply h.
+  + apply or_introl. apply h.
 Qed.
 
 Lemma equiv_trans (g: ECCAenv): Transitive (ECCA_Equiv g).
@@ -35,6 +38,16 @@ unfold Transitive. intros. induction H; induction H0; subst.
 (*need more church rosser stuff for the eta-equivalence cases.*)
 Admitted.
 
+(* need to prove that substitution (bind?) respects equivalence, ie if e1 \equiv e2 then B[x:=e] \equiv B[x:=e2]*)
+Lemma if_eta_1 (g: ECCAenv) (x: name) (v m1 m2 m: ECCAexp):
+  (ECCA_Equiv g (eIf v m1 m2) m) ->
+  (ECCA_Equiv (ctx_cons g x (Eq v eTru)) m1 m).
+Admitted.
+
+Lemma if_eta_2 (g: ECCAenv) (x: name) (v m1 m2 m: ECCAexp):
+  (ECCA_Equiv g (eIf v m1 m2) m) ->
+  (ECCA_Equiv (ctx_cons g x (Eq v eFls)) m2 m).
+Admitted.
 
 Instance ECCA_Equiv_equiv (g: ECCAenv) : Equivalence (ECCA_Equiv g).
 Proof.
