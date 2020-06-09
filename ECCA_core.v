@@ -382,6 +382,11 @@ Inductive assumes (g: ECCAenv) (x: atom) (A: ECCAexp) :=
   assumes g x A
 .
 
+Lemma ctx_has (g: ECCAenv) (x: name) (a: ctxmem):
+  (has (ctx_cons g x a) (free x) a).
+Proof.
+  unfold has. rewrite rw_closev_same. unfold bindv. auto.
+Qed.
 
 (* (*Defining "g,g'|-"
   Append environment g to environment g'*)
