@@ -61,6 +61,8 @@ Proof. apply ECCA_val_conf_comp_comb.
   cbn. auto.
 + intros. unfold invertscomp, invertsconf in *. apply helper_comp in H.
   cbn. rewrite H. rewrite H0. auto.
++ intros. unfold invertsconf, invertsval, invertscomp in *. cbn.
+  apply helper_val in H. rewrite H. rewrite H0. rewrite H1. auto.
 + intros. unfold invertscomp, invertsval in *. apply helper_val in H.
   apply helper_val in H0. unfold getECCAcomp.
   cbn. rewrite H. rewrite H0. auto.
@@ -87,14 +89,203 @@ Proof. repeat split. all: intros; exists e; apply get_inverts_flatten.
 Qed.
 
 Lemma wk_preserves_ANF {V: nat}:
-forall (e: @ECCAexp V),
-isANF e ->
-isANF (wk e)
+forall (e: @ECCAexp V), (isVal e -> isVal (wk e))
+/\ (isANF e -> isANF (wk e)) /\ (isComp e -> isComp (wk e)).
+Proof. induction e.
++ repeat split.
+  - intros.
+    cbn. unfold isVal. exists (Id (wkv x)). auto.
+  - intros. unfold isANF.
+    cbn. exists (Comp (Val (Id (wkv x)))). auto.
+  - intros.
+    unfold isComp. cbn.
+    exists (Val (Id (wkv x))). auto.
++ repeat split; cbv; eauto.
++ intros. unfold isANF, isVal, isComp in *. 
+  try destruct IHe1, IHe2.
+  destruct H0, H2.
+  repeat split; intros.
+  1: unfold getECCAval; unfold getECCAval in H5.
+  3: unfold getECCAcomp; unfold getECCAcomp in H5. 
+  all:  destruct H5; cbn in H5;
+    destruct getECCAconf eqn:Heq1 in H5; try discriminate;
+    destruct getECCAconf eqn:Heq2 in H5; try discriminate;
+    cbn; destruct H0; eauto; destruct H2; eauto;
+    cbn in H0, H2; rewrite H0, H2;
+    eauto.
++ intros. unfold isANF, isVal, isComp in *. 
+  try destruct IHe1, IHe2.
+  destruct H0, H2.
+  repeat split; intros.
+  1: unfold getECCAval; unfold getECCAval in H5.
+  3: unfold getECCAcomp; unfold getECCAcomp in H5. 
+  all:  destruct H5; cbn in H5;
+    destruct getECCAconf eqn:Heq1 in H5; try discriminate;
+    destruct getECCAconf eqn:Heq2 in H5; try discriminate;
+    cbn; destruct H0; eauto; destruct H2; eauto;
+    cbn in H0, H2; rewrite H0, H2;
+    eauto.
++ intros. unfold isANF, isVal, isComp in *. 
+  try destruct IHe1, IHe2.
+  destruct H0, H2.
+  repeat split; intros.
+  1: unfold getECCAval; unfold getECCAval in H5.
+  3: unfold getECCAcomp; unfold getECCAcomp in H5. 
+  all:  destruct H5; cbn in H5;
+    destruct getECCAconf eqn:Heq1 in H5; try discriminate;
+    destruct getECCAconf eqn:Heq2 in H5; try discriminate;
+    cbn; destruct H0; eauto; destruct H2; eauto;
+    cbn in H0, H2; rewrite H0, H2;
+    eauto.
++ intros. unfold isANF, isVal, isComp in *. 
+  try destruct IHe1, IHe2, IHe3.
+  destruct H0, H2, H4.
+  repeat split; intros.
+  1: unfold getECCAval in H8.
+  3: unfold getECCAcomp in H8.
+  all:
+    cbn in H8; destruct H8; 
+    destruct getECCAconf eqn:? in H8; try discriminate;
+    destruct e eqn:? in H8; try discriminate;
+    destruct e0 eqn:? in H8; try discriminate;
+    subst;
+    destruct getECCAconf eqn:? in H8; try discriminate;
+    destruct e eqn:? in H8; try discriminate;
+    destruct e0 eqn:? in H8; try discriminate;
+    subst;
+    destruct getECCAconf eqn:? in H8; try discriminate.
+  1: unfold getECCAval. 
+  3: unfold getECCAcomp. 
+  all:
+    cbn;
+    unfold getECCAval in H; destruct H; try rewrite Heqo; eauto;
+    destruct getECCAconf eqn:? in H ; try discriminate;
+    destruct e0 eqn:? in H ; try discriminate;
+    destruct e4 eqn:? in H ; try discriminate;
+    subst; cbn in Heqo2; rewrite Heqo2;
+
+    unfold getECCAval in H1; destruct H1; try rewrite Heqo0; eauto;
+    destruct getECCAconf eqn:? in H1; try discriminate;
+    destruct e0 eqn:? in H1; try discriminate;
+    destruct e4 eqn:? in H1; try discriminate;
+    subst; cbn in Heqo3; rewrite Heqo3;
+
+    destruct H4; eauto; cbn in H4; rewrite H4; eauto.
++ repeat split; intros; cbn; (unfold isVal || unfold isANF || unfold isComp); cbn; eauto.
++ repeat split; intros; cbn; (unfold isVal || unfold isANF || unfold isComp); cbn; eauto.
++ repeat split; intros; cbn; (unfold isVal || unfold isANF || unfold isComp); cbn; eauto.
++ repeat split; intros; 
+  destruct IHe1, IHe2; 
+  destruct H1, H3;
+  unfold isANF, isVal, isComp in *. 
+  - unfold isVal; unfold getECCAval; cbn. 
+    destruct H. unfold getECCAval in H. cbn in H.
+    destruct getECCAconf eqn:? in H; try discriminate.
+    destruct e eqn:? in H; try discriminate.
+    destruct getECCAconf eqn:? in H; try discriminate.
+  - cbn. 
+    destruct H. cbn in H.
+    destruct getECCAconf eqn:? in H; try discriminate.
+    destruct e eqn:? in H; try discriminate.
+    subst.
+    destruct getECCAconf eqn:? in H; try discriminate.
+   
+    unfold getECCAcomp in H4. rewrite Heqo in H4. 
+    destruct H4; eauto. 
+    destruct getECCAconf eqn:? in H4; try discriminate.
+    destruct e3 eqn:? in H4; try discriminate. subst.
+    cbn in Heqo1. rewrite Heqo1.
+
+    rewrite Heqo0 in H3. destruct H3; eauto.
+    cbn in H3. rewrite H3. eauto.
+  - unfold isComp; unfold getECCAcomp; cbn. 
+    destruct H. unfold getECCAcomp in H. cbn in H.
+    destruct getECCAconf eqn:? in H; try discriminate.
+    destruct e eqn:? in H; try discriminate.
+    destruct getECCAconf eqn:? in H; try discriminate.
++ repeat split; intros; destruct IHe1, IHe2, IHe3; destruct H1, H3, H5;
+    unfold isANF, isVal, isComp in *. 
+  1: unfold getECCAval; unfold getECCAval in H.
+  3: unfold getECCAcomp; unfold getECCAcomp in H.
+  all: cbn.
+  all:  destruct H; unfold getECCAval in H; cbn in H;
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct e4 eqn:? in H; try discriminate;
+    destruct e5 eqn:? in H; try discriminate.
+  - subst.
+    rewrite Heqo in H3. destruct H3; eauto.
+    cbn in H3. rewrite H3.
+    rewrite Heqo0 in H5. destruct H5; eauto.
+    cbn in H5. rewrite H5.
+    unfold getECCAval in H0. rewrite Heqo1 in H0. destruct H0; eauto.
+    destruct getECCAconf eqn:? in H0; try discriminate. 
+    destruct e4 eqn:? in H0; try discriminate.
+    destruct e5 eqn:? in H0; try discriminate.
+    subst.
+    cbn in Heqo2. rewrite Heqo2. eauto.
++ repeat split; intros; destruct IHe1, IHe2; destruct H1, H3;
+  unfold isANF, isVal, isComp in *.
+  3: unfold getECCAcomp in H; unfold getECCAcomp.
+  1: unfold getECCAval in H.
+  all: destruct H; cbn in H;
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct e eqn:? in H; try discriminate;
+    destruct e0 eqn:? in H; try discriminate;
+    subst;
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct e eqn:? in H; try discriminate;
+    destruct e0 eqn:? in H; try discriminate.
+  all:
+    subst; cbn;
+    unfold getECCAval in H0; rewrite Heqo in H0;  destruct H0; eauto; 
+    destruct getECCAconf eqn:? in H0; try discriminate; 
+    destruct e eqn:? in H0; try discriminate;
+    destruct e0 eqn:? in H0; try discriminate; subst;
+    cbn in Heqo1; rewrite Heqo1;
+    unfold getECCAval in H2; rewrite Heqo0 in H2;  destruct H2; eauto; 
+    destruct getECCAconf eqn:? in H2; try discriminate; 
+    destruct e eqn:? in H2; try discriminate;
+    destruct e0 eqn:? in H2; try discriminate; subst;
+    cbn in Heqo2; rewrite Heqo2; eauto.
++ repeat split; intros; destruct IHe; destruct H1;
+  unfold isANF, isVal, isComp in *.
+  1: unfold getECCAval in H; unfold getECCAval.
+  3: unfold getECCAcomp in H; unfold getECCAcomp.
+  all: cbn in H; destruct H; 
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct e0 eqn:? in H; try discriminate;
+    destruct e1 eqn:? in H; try discriminate.
+  all: subst; cbn; unfold getECCAval in H0; rewrite Heqo in H0; destruct H0; eauto;
+    destruct getECCAconf eqn:? in H0; try discriminate;
+    destruct e0 eqn:? in H0; try discriminate;
+    destruct e1 eqn:? in H0; try discriminate;
+    subst; cbn in Heqo0; rewrite Heqo0; eauto.
++ repeat split; intros; destruct IHe; destruct H1;
+  unfold isANF, isVal, isComp in *.
+  1: unfold getECCAval in H; unfold getECCAval.
+  3: unfold getECCAcomp in H; unfold getECCAcomp.
+  all: cbn in H; destruct H; 
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct e0 eqn:? in H; try discriminate;
+    destruct e1 eqn:? in H; try discriminate.
+  all: subst; cbn; unfold getECCAval in H0; rewrite Heqo in H0; destruct H0; eauto;
+    destruct getECCAconf eqn:? in H0; try discriminate;
+    destruct e0 eqn:? in H0; try discriminate;
+    destruct e1 eqn:? in H0; try discriminate;
+    subst; cbn in Heqo0; rewrite Heqo0; eauto.
+Defined.
+
+Definition wk_conf {V: nat}(N: @ECCAconf V):=
+getECCAconf (wk (flattenECCAconf N))
+(*  | Some e => e
+    | None => discriminate 
+ end
+*)
 .
-Proof. intros. induction e.
-+ unfold isANF; cbn; eauto.
-+ unfold isANF; cbn; eauto.
-+ unfold isANF in *. 
 
+Check wk_conf. 
+(* How do we unbox this result given that we have proven it is never None? *)
+Compute getECCAval (wk (flattenECCAval (Tru))).
 
-  
