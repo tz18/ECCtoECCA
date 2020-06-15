@@ -16,7 +16,7 @@ match getECCAconf (flattenECCAval v1) with
 -> getECCAconf(flattenECCAval v1) = Some (Comp (Val v1)).
 Proof. intros. destruct (getECCAconf (flattenECCAval v1)); try discriminate.
 + destruct e; try discriminate. destruct e; try discriminate. inversion H. reflexivity.
-Qed.
+Defined.
 
 (* TODO: should write an LTAC tactic that does this: simplifies equalities involving match *)
 (* Ltac simplmatcheq:=
@@ -35,7 +35,7 @@ match getECCAconf (flattenECCAcomp v1) with
 -> getECCAconf(flattenECCAcomp v1) = Some (Comp v1).
 Proof. intros. destruct (getECCAconf (flattenECCAcomp v1)); try discriminate.
 + destruct e; try discriminate. destruct e; try discriminate; inversion H; reflexivity.
-Qed.
+Defined.
 
 Lemma get_inverts_flatten {V: nat}: 
    (forall (e: @ECCAval V), invertsval e) 
@@ -72,7 +72,7 @@ Proof. apply ECCA_val_conf_comp_comb.
   unfold getECCAcomp; cbn; rewrite H; auto.
 + intros; unfold invertscomp, invertsval in *; apply helper_val in H;
   unfold getECCAcomp; cbn; rewrite H; auto.
-Qed.
+Defined.
 
 Definition reflectsval {V: nat} (e: @ECCAval V):=
 isVal (flattenECCAval e).
@@ -86,11 +86,25 @@ Lemma flatten_is_ANF {V: nat}:
 /\ (forall (e: @ECCAconf V), reflectsconf e)
 /\ (forall (e: @ECCAcomp V), reflectscomp e).
 Proof. repeat split. all: intros; exists e; apply get_inverts_flatten.
-Qed.
+Defined.
+
+Corollary flatten_conf_is_ANF {V: nat}:
+(forall (e: @ECCAconf V), isANF (flattenECCAconf e)).
+Proof. apply flatten_is_ANF. Defined.
+
+Corollary flatten_val_is_ANF {V: nat}:
+(forall (e: @ECCAval V), isVal (flattenECCAval e)).
+Proof. apply flatten_is_ANF. Defined.
+
+Corollary flatten_comp_is_ANF {V: nat}:
+(forall (e: @ECCAcomp V), isComp (flattenECCAcomp e)).
+Proof. apply flatten_is_ANF. Defined.
 
 Lemma wk_preserves_ANF {V: nat}:
-forall (e: @ECCAexp V), (isVal e -> isVal (wk e))
-/\ (isANF e -> isANF (wk e)) /\ (isComp e -> isComp (wk e)).
+forall (e: @ECCAexp V), 
+(isVal e -> isVal (wk e))
+/\ (isANF e -> isANF (wk e)) 
+/\ (isComp e -> isComp (wk e)).
 Proof. induction e.
 + repeat split.
   - intros.
@@ -277,15 +291,46 @@ Proof. induction e.
     subst; cbn in Heqo0; rewrite Heqo0; eauto.
 Defined.
 
-Definition wk_conf {V: nat}(N: @ECCAconf V):=
-getECCAconf (wk (flattenECCAconf N))
-(*  | Some e => e
-    | None => discriminate 
- end
-*)
-.
+Corollary wk_preserves_conf {V: nat}: 
+forall (e: @ECCAexp V), (isANF e -> isANF (wk e)).
+Proof. apply wk_preserves_ANF. Defined.
 
-Check wk_conf. 
-(* How do we unbox this result given that we have proven it is never None? *)
-Compute getECCAval (wk (flattenECCAval (Tru))).
+Corollary wk_preserves_val {V: nat}: 
+forall (e: @ECCAexp V), (isVal e -> isVal (wk e)).
+Proof. apply wk_preserves_ANF. Defined.
 
+Corollary wk_preserves_comp {V: nat}: 
+forall (e: @ECCAexp V), (isComp e -> isComp (wk e)).
+Proof. apply wk_preserves_ANF. Defined.
+
+(* How do we unbox this result given that we have proven it is never None? Three ways!*)
+
+
+(* Definition unoption_neq {T: Type}(e: option T) : e <> None -> T.
+Proof.
+intros. destruct e.
+exact t.
+contradiction.
+Defined.
+
+thanks to pgiarrusso in freenode/#coq
+
+Definition unoption_sig {T: Type}(o: option T): {n: T | o = Some n } -> T.
+Proof. intros.
+destruct X. exact x.
+Defined. *)
+
+Definition unoption_ex {T: Type}(o : option T) : (exists (n : T), o = Some n) -> T.
+Proof. intros.
+destruct o.
+exact t.
+exfalso. destruct H. discriminate.
+Defined.
+
+Compute (unoption_ex (getECCAval (wk (flattenECCAval (Tru))))) ((wk_preserves_val (flattenECCAval (Tru))) (flatten_val_is_ANF Tru)).
+Definition wk_val {V: nat}(e: @ECCAval V) :=
+(unoption_ex (getECCAval (wk (flattenECCAval (e))))) ((wk_preserves_val (flattenECCAval e)) (flatten_val_is_ANF e)).
+Definition wk_comp {V: nat}(e: @ECCAcomp V):=
+(unoption_ex (getECCAcomp (wk (flattenECCAcomp (e))))) ((wk_preserves_comp (flattenECCAcomp e)) (flatten_comp_is_ANF e)).
+Definition wk_conf {V: nat}(e: @ECCAconf V):=
+(unoption_ex (getECCAconf (wk (flattenECCAconf (e))))) ((wk_preserves_conf (flattenECCAconf e)) (flatten_conf_is_ANF e)).
