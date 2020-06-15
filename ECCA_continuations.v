@@ -74,3 +74,10 @@ match k with
 | rHole => rHole
 | rLetHole B => rLetHole (wk_conf B)
 end.  
+
+Definition close_cont {V: nat} (x: name) (k: @cont_r V): @cont_r (S V)
+:=
+match k with
+| rHole => rHole
+| rLetHole B => rLetHole (close_conf x B)
+end.  

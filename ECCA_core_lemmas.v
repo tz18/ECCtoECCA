@@ -1,5 +1,30 @@
 Require Import ECCA_core.
 
+(* How do we unbox this result given that we have proven it is never None? Three ways!*)
+
+
+(* Definition unoption_neq {T: Type}(e: option T) : e <> None -> T.
+Proof.
+intros. destruct e.
+exact t.
+contradiction.
+Defined.
+
+thanks to pgiarrusso in freenode/#coq
+
+Definition unoption_sig {T: Type}(o: option T): {n: T | o = Some n } -> T.
+Proof. intros.
+destruct X. exact x.
+Defined. *)
+
+Definition unoption_ex {T: Type}(o : option T) : (exists (n : T), o = Some n) -> T.
+Proof. intros.
+destruct o.
+exact t.
+exfalso. destruct H. discriminate.
+Defined.
+
+
 Definition invertsval {V: nat} (e: @ECCAval V) :=
 getECCAval (flattenECCAval e) = Some e.
 Definition invertsconf {V: nat} (e: @ECCAconf V) :=
@@ -303,30 +328,6 @@ Corollary wk_preserves_comp {V: nat}:
 forall (e: @ECCAexp V), (isComp e -> isComp (wk e)).
 Proof. apply wk_preserves_ANF. Defined.
 
-(* How do we unbox this result given that we have proven it is never None? Three ways!*)
-
-
-(* Definition unoption_neq {T: Type}(e: option T) : e <> None -> T.
-Proof.
-intros. destruct e.
-exact t.
-contradiction.
-Defined.
-
-thanks to pgiarrusso in freenode/#coq
-
-Definition unoption_sig {T: Type}(o: option T): {n: T | o = Some n } -> T.
-Proof. intros.
-destruct X. exact x.
-Defined. *)
-
-Definition unoption_ex {T: Type}(o : option T) : (exists (n : T), o = Some n) -> T.
-Proof. intros.
-destruct o.
-exact t.
-exfalso. destruct H. discriminate.
-Defined.
-
 Compute (unoption_ex (getECCAval (wk (flattenECCAval (Tru))))) ((wk_preserves_val (flattenECCAval (Tru))) (flatten_val_is_ANF Tru)).
 Definition wk_val {V: nat}(e: @ECCAval V) :=
 (unoption_ex (getECCAval (wk (flattenECCAval (e))))) ((wk_preserves_val (flattenECCAval e)) (flatten_val_is_ANF e)).
@@ -334,3 +335,215 @@ Definition wk_comp {V: nat}(e: @ECCAcomp V):=
 (unoption_ex (getECCAcomp (wk (flattenECCAcomp (e))))) ((wk_preserves_comp (flattenECCAcomp e)) (flatten_comp_is_ANF e)).
 Definition wk_conf {V: nat}(e: @ECCAconf V):=
 (unoption_ex (getECCAconf (wk (flattenECCAconf (e))))) ((wk_preserves_conf (flattenECCAconf e)) (flatten_conf_is_ANF e)).
+
+Lemma close_preserves_ANF {V: nat} (x: name):
+forall (e: @ECCAexp V), 
+(isVal e -> isVal (close x e))
+/\ (isANF e -> isANF (close x e)) 
+/\ (isComp e -> isComp (close x e)).
+Proof. induction e.
++ repeat split.
+  - intros.
+    cbn. unfold isVal. exists (Id (closev x x0)). auto.
+  - intros. unfold isANF.
+    cbn. exists (Comp (Val (Id (closev x x0)))). auto.
+  - intros.
+    unfold isComp. cbn.
+    exists (Val (Id (closev x x0))). auto.
++ repeat split; cbv; eauto.
++ intros. unfold isANF, isVal, isComp in *. 
+  try destruct IHe1, IHe2.
+  destruct H0, H2.
+  repeat split; intros.
+  1: unfold getECCAval; unfold getECCAval in H5.
+  3: unfold getECCAcomp; unfold getECCAcomp in H5. 
+  all:  destruct H5; cbn in H5;
+    destruct getECCAconf eqn:Heq1 in H5; try discriminate;
+    destruct getECCAconf eqn:Heq2 in H5; try discriminate;
+    cbn; destruct H0; eauto; destruct H2; eauto;
+    cbn in H0, H2; rewrite H0, H2;
+    eauto.
++ intros. unfold isANF, isVal, isComp in *. 
+  try destruct IHe1, IHe2.
+  destruct H0, H2.
+  repeat split; intros.
+  1: unfold getECCAval; unfold getECCAval in H5.
+  3: unfold getECCAcomp; unfold getECCAcomp in H5. 
+  all:  destruct H5; cbn in H5;
+    destruct getECCAconf eqn:Heq1 in H5; try discriminate;
+    destruct getECCAconf eqn:Heq2 in H5; try discriminate;
+    cbn; destruct H0; eauto; destruct H2; eauto;
+    cbn in H0, H2; rewrite H0, H2;
+    eauto.
++ intros. unfold isANF, isVal, isComp in *. 
+  try destruct IHe1, IHe2.
+  destruct H0, H2.
+  repeat split; intros.
+  1: unfold getECCAval; unfold getECCAval in H5.
+  3: unfold getECCAcomp; unfold getECCAcomp in H5. 
+  all:  destruct H5; cbn in H5;
+    destruct getECCAconf eqn:Heq1 in H5; try discriminate;
+    destruct getECCAconf eqn:Heq2 in H5; try discriminate;
+    cbn; destruct H0; eauto; destruct H2; eauto;
+    cbn in H0, H2; rewrite H0, H2;
+    eauto.
++ intros. unfold isANF, isVal, isComp in *. 
+  try destruct IHe1, IHe2, IHe3.
+  destruct H0, H2, H4.
+  repeat split; intros.
+  1: unfold getECCAval in H8.
+  3: unfold getECCAcomp in H8.
+  all:
+    cbn in H8; destruct H8; 
+    destruct getECCAconf eqn:? in H8; try discriminate;
+    destruct e eqn:? in H8; try discriminate;
+    destruct e0 eqn:? in H8; try discriminate;
+    subst;
+    destruct getECCAconf eqn:? in H8; try discriminate;
+    destruct e eqn:? in H8; try discriminate;
+    destruct e0 eqn:? in H8; try discriminate;
+    subst;
+    destruct getECCAconf eqn:? in H8; try discriminate.
+  1: unfold getECCAval. 
+  3: unfold getECCAcomp. 
+  all:
+    cbn;
+    unfold getECCAval in H; destruct H; try rewrite Heqo; eauto;
+    destruct getECCAconf eqn:? in H ; try discriminate;
+    destruct e0 eqn:? in H ; try discriminate;
+    destruct e4 eqn:? in H ; try discriminate;
+    subst; cbn in Heqo2; rewrite Heqo2;
+
+    unfold getECCAval in H1; destruct H1; try rewrite Heqo0; eauto;
+    destruct getECCAconf eqn:? in H1; try discriminate;
+    destruct e0 eqn:? in H1; try discriminate;
+    destruct e4 eqn:? in H1; try discriminate;
+    subst; cbn in Heqo3; rewrite Heqo3;
+
+    destruct H4; eauto; cbn in H4; rewrite H4; eauto.
++ repeat split; intros; cbn; (unfold isVal || unfold isANF || unfold isComp); cbn; eauto.
++ repeat split; intros; cbn; (unfold isVal || unfold isANF || unfold isComp); cbn; eauto.
++ repeat split; intros; cbn; (unfold isVal || unfold isANF || unfold isComp); cbn; eauto.
++ repeat split; intros; 
+  destruct IHe1, IHe2; 
+  destruct H1, H3;
+  unfold isANF, isVal, isComp in *. 
+  - unfold isVal; unfold getECCAval; cbn. 
+    destruct H. unfold getECCAval in H. cbn in H.
+    destruct getECCAconf eqn:? in H; try discriminate.
+    destruct e eqn:? in H; try discriminate.
+    destruct getECCAconf eqn:? in H; try discriminate.
+  - cbn. 
+    destruct H. cbn in H.
+    destruct getECCAconf eqn:? in H; try discriminate.
+    destruct e eqn:? in H; try discriminate.
+    subst.
+    destruct getECCAconf eqn:? in H; try discriminate.
+   
+    unfold getECCAcomp in H4. rewrite Heqo in H4. 
+    destruct H4; eauto. 
+    destruct getECCAconf eqn:? in H4; try discriminate.
+    destruct e3 eqn:? in H4; try discriminate. subst.
+    cbn in Heqo1. rewrite Heqo1.
+
+    rewrite Heqo0 in H3. destruct H3; eauto.
+    cbn in H3. rewrite H3. eauto.
+  - unfold isComp; unfold getECCAcomp; cbn. 
+    destruct H. unfold getECCAcomp in H. cbn in H.
+    destruct getECCAconf eqn:? in H; try discriminate.
+    destruct e eqn:? in H; try discriminate.
+    destruct getECCAconf eqn:? in H; try discriminate.
++ repeat split; intros; destruct IHe1, IHe2, IHe3; destruct H1, H3, H5;
+    unfold isANF, isVal, isComp in *. 
+  1: unfold getECCAval; unfold getECCAval in H.
+  3: unfold getECCAcomp; unfold getECCAcomp in H.
+  all: cbn.
+  all:  destruct H; unfold getECCAval in H; cbn in H;
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct e4 eqn:? in H; try discriminate;
+    destruct e5 eqn:? in H; try discriminate.
+  - subst.
+    rewrite Heqo in H3. destruct H3; eauto.
+    cbn in H3. rewrite H3.
+    rewrite Heqo0 in H5. destruct H5; eauto.
+    cbn in H5. rewrite H5.
+    unfold getECCAval in H0. rewrite Heqo1 in H0. destruct H0; eauto.
+    destruct getECCAconf eqn:? in H0; try discriminate. 
+    destruct e4 eqn:? in H0; try discriminate.
+    destruct e5 eqn:? in H0; try discriminate.
+    subst.
+    cbn in Heqo2. rewrite Heqo2. eauto.
++ repeat split; intros; destruct IHe1, IHe2; destruct H1, H3;
+  unfold isANF, isVal, isComp in *.
+  3: unfold getECCAcomp in H; unfold getECCAcomp.
+  1: unfold getECCAval in H.
+  all: destruct H; cbn in H;
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct e eqn:? in H; try discriminate;
+    destruct e0 eqn:? in H; try discriminate;
+    subst;
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct e eqn:? in H; try discriminate;
+    destruct e0 eqn:? in H; try discriminate.
+  all:
+    subst; cbn;
+    unfold getECCAval in H0; rewrite Heqo in H0;  destruct H0; eauto; 
+    destruct getECCAconf eqn:? in H0; try discriminate; 
+    destruct e eqn:? in H0; try discriminate;
+    destruct e0 eqn:? in H0; try discriminate; subst;
+    cbn in Heqo1; rewrite Heqo1;
+    unfold getECCAval in H2; rewrite Heqo0 in H2;  destruct H2; eauto; 
+    destruct getECCAconf eqn:? in H2; try discriminate; 
+    destruct e eqn:? in H2; try discriminate;
+    destruct e0 eqn:? in H2; try discriminate; subst;
+    cbn in Heqo2; rewrite Heqo2; eauto.
++ repeat split; intros; destruct IHe; destruct H1;
+  unfold isANF, isVal, isComp in *.
+  1: unfold getECCAval in H; unfold getECCAval.
+  3: unfold getECCAcomp in H; unfold getECCAcomp.
+  all: cbn in H; destruct H; 
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct e0 eqn:? in H; try discriminate;
+    destruct e1 eqn:? in H; try discriminate.
+  all: subst; cbn; unfold getECCAval in H0; rewrite Heqo in H0; destruct H0; eauto;
+    destruct getECCAconf eqn:? in H0; try discriminate;
+    destruct e0 eqn:? in H0; try discriminate;
+    destruct e1 eqn:? in H0; try discriminate;
+    subst; cbn in Heqo0; rewrite Heqo0; eauto.
++ repeat split; intros; destruct IHe; destruct H1;
+  unfold isANF, isVal, isComp in *.
+  1: unfold getECCAval in H; unfold getECCAval.
+  3: unfold getECCAcomp in H; unfold getECCAcomp.
+  all: cbn in H; destruct H; 
+    destruct getECCAconf eqn:? in H; try discriminate;
+    destruct e0 eqn:? in H; try discriminate;
+    destruct e1 eqn:? in H; try discriminate.
+  all: subst; cbn; unfold getECCAval in H0; rewrite Heqo in H0; destruct H0; eauto;
+    destruct getECCAconf eqn:? in H0; try discriminate;
+    destruct e0 eqn:? in H0; try discriminate;
+    destruct e1 eqn:? in H0; try discriminate;
+    subst; cbn in Heqo0; rewrite Heqo0; eauto.
+Defined.
+
+Corollary close_preserves_conf {V: nat} (x: name): 
+forall (e: @ECCAexp V), (isANF e -> isANF (close x e)).
+Proof. apply close_preserves_ANF. Defined.
+
+Corollary close_preserves_val {V: nat} (x: name): 
+forall (e: @ECCAexp V), (isVal e -> isVal (close x e)).
+Proof. apply close_preserves_ANF. Defined.
+
+Corollary close_preserves_comp {V: nat} (x: name): 
+forall (e: @ECCAexp V), (isComp e -> isComp (close x e)).
+Proof. apply close_preserves_ANF. Defined.
+
+Definition close_val {V: nat}(x: name)(e: @ECCAval V) :=
+(unoption_ex (getECCAval (close x (flattenECCAval (e))))) ((close_preserves_val x (flattenECCAval e)) (flatten_val_is_ANF e)).
+Definition close_comp {V: nat}(x: name)(e: @ECCAcomp V):=
+(unoption_ex (getECCAcomp (close x (flattenECCAcomp (e))))) ((close_preserves_comp x (flattenECCAcomp e)) (flatten_comp_is_ANF e)).
+Definition close_conf {V: nat}(x: name)(e: @ECCAconf V):=
+(unoption_ex (getECCAconf (close x (flattenECCAconf (e))))) ((close_preserves_conf x (flattenECCAconf e)) (flatten_conf_is_ANF e)).
+
+

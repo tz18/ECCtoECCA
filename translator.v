@@ -2,14 +2,15 @@ Require Import Atom.
 Require Import ECC.
 Require Import ECCA_core ECCA_core_lemmas ECCA_typing ECCA_continuations.
 Require Import String.
-Parameter close_cont: forall {V: nat}, (name) -> @cont_r (S V) -> @cont_r (V).
+(* Parameter close_cont: forall {V: nat}, (name) -> @cont_r (S V) -> @cont_r (V).
 (* Parameter close_conf: forall {V: nat}, (name) -> @ECCAconf (S V) -> @ECCAconf (V).
  *)
 Parameter unwrap : forall {V : nat}, option (@ECCAconf V) -> @ECCAconf V.
+ *)
 Check close.
 Check close "x".
-Definition close_conf {V: nat} (x: name) (e: @ECCAconf (V)): @ECCAconf (S V) := (unwrap (getECCAconf (close x (flattenECCAconf e)))).
-
+(* Definition close_conf {V: nat} (x: name) (e: @ECCAconf (V)): @ECCAconf (S V) := (unwrap (getECCAconf (close x (flattenECCAconf e)))).
+ *)
 
 Notation "! k" := (free k) (at level 10, format "! k").
 
@@ -62,13 +63,12 @@ Definition example:=
 Definition example2:=
 (@ECC.Abs 0 ECC.Fls (ECC.ECCRen.close "x1" (ECC.Id (free "x1")))).
 
-(* 
 Compute example.
 
 Definition ex2 := @ECC.App 0 example example2.
 
 Compute ex2.
-Eval cbn in transWork ex2 rHole.
+Compute transWork ex2 rHole.
 Goal False.
 Proof.
 remember (transWork ex2 rHole).

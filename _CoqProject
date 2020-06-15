@@ -1,20 +1,24 @@
 -R . Top
+ShiftedNames/Morph.v
+ShiftedNames/Var.v
+ShiftedNames/Context.v
+ShiftedNames/Relative.v
 Atom.v
 ECC.v
-ECCA_continuations.v
 ECCA_core.v
 ECCA_core_lemmas.v
-ECCA_equiv.v
-ECCA_equiv_lemmas.v
-ECCA_het_comp.v
-ECCA_key_lemmas.v
 ECCA_reduction.v
 ECCA_reduction_lemmas.v
+ECCA_equiv.v
+ECCA_equiv_lemmas.v
 ECCA_subst.v
 ECCA_subst_lemmas.v
-ECCA_trans_preservation.v
 ECCA_typing.v
+ECCA_continuations.v
 translator.v
+ECCA_trans_preservation.v
+ECCA_het_comp.v
+ECCA_key_lemmas.v
 Metalib/AssocList.v
 Metalib/CoqEqDec.v
 Metalib/CoqFSetDecide.v
@@ -33,8 +37,4 @@ Metalib/Metatheory.v
 Metalib/MetatheoryAtom.v
 Metalib/MSetExtra.v
 Metalib/MSetWeakNotin.v
-ShiftedNames/Context.v
-ShiftedNames/Relative.v
-ShiftedNames/Morph.v
-ShiftedNames/Var.v
 
