@@ -2,15 +2,6 @@ Require Import Atom.
 Require Import ECC.
 Require Import ECCA_core ECCA_core_lemmas ECCA_typing ECCA_continuations.
 Require Import String.
-(* Parameter close_cont: forall {V: nat}, (name) -> @cont_r (S V) -> @cont_r (V).
-(* Parameter close_conf: forall {V: nat}, (name) -> @ECCAconf (S V) -> @ECCAconf (V).
- *)
-Parameter unwrap : forall {V : nat}, option (@ECCAconf V) -> @ECCAconf V.
- *)
-Check close.
-Check close "x".
-(* Definition close_conf {V: nat} (x: name) (e: @ECCAconf (V)): @ECCAconf (S V) := (unwrap (getECCAconf (close x (flattenECCAconf e)))).
- *)
 
 Notation "! k" := (free k) (at level 10, format "! k").
 
@@ -49,11 +40,13 @@ Fixpoint transWork  {V: nat} (e: @ECCexp V) (K: @cont_r V) : @ECCAconf V:=
                           K)))))))
     | ECC.Fst e =>
       (@transWork (V) e (rLetHole (close_conf ("X1")
-                                              (fill_hole_r (Fst (@Id ((V)) (!"X1"))) K))))
+         (fill_hole_r (Fst (@Id ((V)) (!"X1"))) K))))
     | ECC.Snd e =>
       (@transWork (V) e (rLetHole (close_conf ("X1")
          (fill_hole_r (Snd (@Id ((V)) (!"X1"))) K))))
-    
+    | ECC.If e e1 e2 =>
+      (@transWork (V) e (rLetHole (close_conf ("X1")
+         (If (@Id ((V)) (!"X1")) (@transWork V e1 K) (@transWork V e2 K)))))
 end
 .
 
@@ -84,4 +77,4 @@ match g with
 | ctxempty => ctxempty
 | ECC.Assum g x A => Assum (transEnv g) x (flattenECCAconf (trans A))
 | ECC.Def g x v => Def (transEnv g) x (flattenECCAconf (trans v))
-end.
+end. *)

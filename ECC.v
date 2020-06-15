@@ -14,7 +14,7 @@ Inductive ECCexp {V: nat}: Type :=
   | Pair (e1 e2 A: ECCexp)
   | Fst (e: ECCexp)
   | Snd (e: ECCexp)
-(*   | If (e e1 e2: ECCexp) *)
+  | If (e e1 e2: ECCexp)
   | Tru
   | Fls
   | Bool
@@ -46,7 +46,7 @@ Module ECCTerm <: Term.
       | Tru => Tru
       | Fls => Fls
       | Bool => Bool
-      (*   | If (e e1 e2: ECCexp) *)
+      | If e e1 e2 => If (kleisli f V e) (kleisli f V e1) (kleisli f V e2)
       end.
 
   Lemma left_identity :
@@ -136,11 +136,11 @@ Inductive ECC_RedR : ECCenv -> ECCexp -> ECCexp -> Prop :=
   | R_Snd (g: ECCenv) (e1 e2 A: ECCexp) :
     ECC_RedR g (Snd (Pair e1 e2 A)) e2
   | R_Let (g: ECCenv) (e1 e2: ECCexp) :
-    ECC_RedR g (Let e1 e2) (bind e1 e2)  (*or here?*)
-(*   | R_IfTru (g: ECCenv) (e1 e2: ECCexp) :
+      ECC_RedR g (Let e1 e2) (bind e1 e2)  (*or here?*)
+  | R_IfTru (g: ECCenv) (e1 e2: ECCexp) :
     ECC_RedR g (If Tru e1 e2) e1
   | R_IfFls (g: ECCenv) (e1 e2: ECCexp) :
-    ECC_RedR g (If Fls e1 e2) e2 *)
+    ECC_RedR g (If Fls e1 e2) e2 
 .
 
 Hint Constructors ECC_RedR.
@@ -187,11 +187,11 @@ Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCexp -> Prop :=
   | R_CongSnd (g: ECCenv) (V V': ECCexp) :
       ECC_RedClosR g V V' ->
       ECC_RedClosR g (Snd V) (Snd V')
-(*   | R_CongIf (g: ECCenv) (e e' e1 e1' e2 e2': ECCexp) :
+  | R_CongIf (g: ECCenv) (e e' e1 e1' e2 e2': ECCexp) :
       ECC_RedClosR g e e' ->
       ECC_RedClosR g e1 e1' ->
       ECC_RedClosR g e2 e2' ->
-      ECC_RedClosR g (If e e1 e2) (If e' e1' e2') *)
+      ECC_RedClosR g (If e e1 e2) (If e' e1' e2') 
 .
 
 Hint Constructors ECC_RedClosR.
@@ -297,12 +297,12 @@ Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
 | T_False (g: ECCenv):
   ECC_Env_WF g ->
   (ECC_has_type g (Fls) (Bool))
-(* | T_If (g: ECCenv) (B U e e1 e2: ECCexp) (x: name):
-  (ECC_has_type (Assum g x (Bool)) B U) ->
+| T_If (g: ECCenv) (B: @ECCexp 1) (U e e1 e2: ECCexp) (x: name):
+  (ECC_has_type (g & x ~ Assum Bool) (open x B) U) ->
   (ECC_has_type g e (Bool)) ->
-  (ECC_has_type g e1 (subst x (Tru) B)) ->
-  (ECC_has_type g e2 (subst x (Fls) B)) ->
-  (ECC_has_type g (If e e1 e2) (subst x e B)) *)
+  (ECC_has_type g e1 (bind (Tru) B)) ->
+  (ECC_has_type g e2 (bind (Fls) B)) ->
+  (ECC_has_type g (If e e1 e2) (bind e B))
 | T_Conv (g: ECCenv) (e A B U: ECCexp) :
   (ECC_has_type g e A) ->
   (ECC_has_type g B U) ->
