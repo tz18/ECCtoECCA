@@ -1,4 +1,5 @@
 Require Export ECCA_typing.
+Require Import ECCA_core_lemmas.
 
 (*===========================
   ==--Continuation Typing--==
@@ -66,3 +67,10 @@ Hint Constructors ECCA_cont_has_type.
 Lemma fill_with_hole_is_id {V: nat}(e: @ECCAexp V): fill_hole e Hole = e.
 Proof.
 eauto. Qed.
+
+Definition wk_cont {V: nat} (k: @cont_r V): @cont_r (S V)
+:=
+match k with
+| rHole => rHole
+| rLetHole B => rLetHole (wk_conf B)
+end.  

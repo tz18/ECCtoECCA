@@ -1,9 +1,7 @@
 Require Import Atom.
 Require Import ECC.
-Require Import ECCA_core ECCA_typing ECCA_continuations.
+Require Import ECCA_core ECCA_core_lemmas ECCA_typing ECCA_continuations.
 Require Import String.
-Parameter wk_conf: forall {V: nat}, @ECCAconf V -> @ECCAconf (S V).
-Parameter wk_cont: forall {V: nat}, @cont_r V -> @cont_r (S V).
 Parameter close_cont: forall {V: nat}, (name) -> @cont_r (S V) -> @cont_r (V).
 (* Parameter close_conf: forall {V: nat}, (name) -> @ECCAconf (S V) -> @ECCAconf (V).
  *)

@@ -3,6 +3,7 @@ Atom.v
 ECC.v
 ECCA_continuations.v
 ECCA_core.v
+ECCA_core_lemmas.v
 ECCA_equiv.v
 ECCA_equiv_lemmas.v
 ECCA_het_comp.v
