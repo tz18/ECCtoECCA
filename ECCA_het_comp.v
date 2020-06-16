@@ -1,5 +1,5 @@
 Require Import ECC.
-Require Import ECCA_core ECCA_typing.
+Require Import ECCA_core ECCA_core_lemmas ECCA_typing.
 Require Import translator.
 Require Import ECCA_continuations.
 Require Import String.
@@ -59,6 +59,29 @@ Proof.
   intros. destruct K'; simpl; reflexivity.
 Qed. 
 
+
+(* Lemma conf_subst_x {V: nat} (M: ECCAconf) (x: name) :
+  (@conf_subst V (Id (!"x")) M "x") = M.
+Proof.
+  induction M; unfold conf_subst.
+  - shelve.
+  - fold (@het_compose_r (S V)). unfold wk_cont.*)
+                                        
+
+Lemma cont_compose_empty_hole {V: nat} (M: ECCAconf) :
+  (@het_compose_r V rHole M) = M.
+Proof.
+  induction M; unfold het_compose_r.
+  - auto.
+  - fold (@het_compose_r (S V)). unfold wk_cont. rewrite IHM. auto.
+  - fold (@conf_subst V). unfold fill_hole_r.
+    cut ((conf_subst (Id (!"x")) M1 "x") = M1).
+    + cut ((conf_subst (Id (!"x")) M2 "x") = M2).
+      * intros. rewrite H. rewrite H0. auto.
+      * shelve.
+    + shelve.
+Admitted.
+
 Require Import Coq.Program.Equality.
 Lemma naturality {V: nat} (K : cont_r) (M : ECCAconf) (G : ECCAenv) : 
   (ctx_empty |- (het_compose_r K M) =e= (fill_hole M (unrestrict_cont K)))%ECCA.
@@ -66,7 +89,9 @@ Proof.
 dependent induction M; try auto. 
 + simpl. apply technical_1.
 + simpl. destruct K.
-- unfold fill_hole. Admitted.
+- unfold fill_hole. unfold wk_cont. rewrite (cont_compose_empty_hole M).
+  apply aE_Equiv with (e:=eLet A M); apply R_Refl.
+- unfold fill_hole. unfold wk_cont. Admitted.
 
     (* dependent induction het_compose_r.
     * unfold fill_hole in IHM. simpl in IHM.  
@@ -102,15 +127,13 @@ Proof.
   intros. induction e.
   1,3,2,4,7,11,12,13: try (unfold transWork; destruct K; destruct K'; simpl; reflexivity).
   - unfold transWork. fold (@transWork V). fold (@transWork V).
+    rewrite (IHe1 (rLetHole (close_conf "X1" (If (Id (!"X1")) (transWork e2 K) (transWork e3 K)))) K').
+    simpl. shelve.
+  - unfold transWork. fold (@transWork V). fold (@transWork V).
     rewrite (IHe1 (rLetHole (close_conf "X1"
-      (transWork e2 (rLetHole (close_conf "X2" (fill_hole_r (App (Id (!"X1")) (Id (!"X2"))) K)))))) K').
+             (transWork e2 (rLetHole (close_conf "X2" (fill_hole_r (App (Id (!"X1")) (Id (!"X2"))) K)))))) K').
     simpl.
-    rewrite (IHe2 (rLetHole (close_conf "X2" (fill_hole_r (App (Id (!"X1")) (Id (!"X2"))) K))) (wk_cont K')).
-  - fold transWork.
-    rewrite (IHe1 (add x ns) (rLetHole x (transWork (add x0 (add x ns)) e2
-                                               (rLetHole x0 (fill_hole_r (App x x0) K)))) K').
-    simpl.
-    rewrite (IHe2 (add x0 (add x ns)) (rLetHole x0 (fill_hole_r (App x x0) K)) K'). simpl.
+    rewrite <-  (IHe2 (rLetHole (close_conf "X2" (fill_hole_r (App (Id (!"X1")) (Id (!"X2"))) K))) (wk_cont K')). simpl.
     rewrite (cont_compose_fill_het_compose K' K (App x x0)).
     reflexivity.
   - fold transWork.
