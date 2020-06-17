@@ -9,18 +9,9 @@ Fixpoint het_compose_r {V: nat} (K : @cont_r V) (M : @ECCAconf V) {struct M} : E
   | Comp e => fill_hole_r e K
   | Let N M' => Let N (@het_compose_r (S V) (wk_cont K) M')
   | If V1 M1 M2 => If V1
-                     (conf_subst (fill_hole_r (Val (Id (!"x"))) K) M1 "x")
-                     (conf_subst (fill_hole_r (Val (Id (!"x"))) K) M2 "x")
-  end
-with conf_subst {V: nat} (M M' : ECCAconf) (x: name): ECCAconf :=
-       let K := (rLetHole (close_conf x M)) in 
-       match M' with
-       | Comp e => fill_hole_r e K
-       | Let N M'' => Let N (@het_compose_r (S V) (wk_cont K) M'')
-       | If V1 M1 M2 => If V1
-                           (conf_subst (fill_hole_r (Val (Id (!"x"))) K) M1 "x")
-                           (conf_subst (fill_hole_r (Val (Id (!"x"))) K) M2 "x")
-       end.
+                      (het_compose_r K M1)
+                      (het_compose_r K M2)
+  end.
 
 Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.
 
@@ -59,28 +50,14 @@ Proof.
   intros. destruct K'; simpl; reflexivity.
 Qed. 
 
-
-(* Lemma conf_subst_x {V: nat} (M: ECCAconf) (x: name) :
-  (@conf_subst V (Id (!"x")) M "x") = M.
-Proof.
-  induction M; unfold conf_subst.
-  - shelve.
-  - fold (@het_compose_r (S V)). unfold wk_cont.*)
-                                        
-
 Lemma cont_compose_empty_hole {V: nat} (M: ECCAconf) :
   (@het_compose_r V rHole M) = M.
 Proof.
   induction M; unfold het_compose_r.
   - auto.
   - fold (@het_compose_r (S V)). unfold wk_cont. rewrite IHM. auto.
-  - fold (@conf_subst V). unfold fill_hole_r.
-    cut ((conf_subst (Id (!"x")) M1 "x") = M1).
-    + cut ((conf_subst (Id (!"x")) M2 "x") = M2).
-      * intros. rewrite H. rewrite H0. auto.
-      * shelve.
-    + shelve.
-Admitted.
+  - fold (@het_compose_r V). rewrite IHM1. rewrite IHM2. auto.
+Qed.
 
 Require Import Coq.Program.Equality.
 Lemma naturality (K : cont_r) (M : ECCAconf) (G : ECCAenv) :
@@ -90,9 +67,12 @@ Proof.
   intros. induction H; destruct K.
   + simpl. apply aE_Equiv with (e:=e); apply R_Refl.
   + simpl. apply aE_Equiv with (e:= eLet e B); apply R_Refl.
+  + simpl. rewrite (cont_compose_empty_hole m).
+    apply aE_Equiv with (e:= eLet n m); apply R_Refl.
   + simpl. admit.
-  + simpl. admit.
-  + simpl. admit.
+  + simpl. rewrite (cont_compose_empty_hole m1).
+    rewrite (cont_compose_empty_hole m2).
+    apply aE_Equiv with (e:= eIf (flattenECCAval v) m1 m2); apply R_Refl.
   + simpl. admit.
 
  (*   
