@@ -365,28 +365,29 @@ Coercion Comp: ECCAcomp >-> ECCAconf.
 =====================================
 *)
 
-Inductive ctxmem:=
-| Assum (A: @ECCAexp 0)
-| Def (e: @ECCAexp 0) (A: @ECCAexp 0)
-| Eq (e1: @ECCAexp 0) (e2: @ECCAexp 0) 
+Inductive ctxmem {V: nat} :=
+| Assum (A: @ECCAexp V)
+| Def (e: @ECCAexp V) (A: @ECCAexp V)
+| Eq (e1: @ECCAexp V) (e2: @ECCAexp V) 
 .
 
-Definition ECCAenv:= @context (@ctxmem).
+Definition ECCAenv {V: nat} := @context (@ctxmem V).
 
-Inductive assumes (g: ECCAenv) (x: atom) (A: ECCAexp) :=
+Inductive assumes {V: nat} (g: ECCAenv) (x: atom) (A: @ECCAexp V) :=
 | ass :
   (has g x (Assum A)) ->
   assumes g x A
-| def (e: @ECCAexp 0):
+| def (e: @ECCAexp V):
   (has g x (Def e A)) ->
   assumes g x A
 .
 
-Lemma ctx_has (g: ECCAenv) (x: name) (a: ctxmem):
+Lemma ctx_has {V: nat} (g: @ECCAenv V) (x: name) (a: ctxmem):
   (has (ctx_cons g x a) (free x) a).
 Proof.
   unfold has. rewrite rw_closev_same. unfold bindv. auto.
 Qed.
+
 
 (* (*Defining "g,g'|-"
   Append environment g to environment g'*)

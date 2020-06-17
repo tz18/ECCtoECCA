@@ -83,9 +83,19 @@ Proof.
 Admitted.
 
 Require Import Coq.Program.Equality.
-Lemma naturality {V: nat} (K : cont_r) (M : ECCAconf) (G : ECCAenv) : 
-  (ctx_empty |- (het_compose_r K M) =e= (fill_hole M (unrestrict_cont K)))%ECCA.
+Lemma naturality (K : cont_r) (M : ECCAconf) (G : ECCAenv) :
+  (@ECCA_conf_wf 0 G M) ->
+  (G |- (het_compose_r K M) =e= (fill_hole M (unrestrict_cont K)))%ECCA.
 Proof.
+  intros. induction H; destruct K.
+  + simpl. apply aE_Equiv with (e:=e); apply R_Refl.
+  + simpl. apply aE_Equiv with (e:= eLet e B); apply R_Refl.
+  + simpl. admit.
+  + simpl. admit.
+  + simpl. admit.
+  + simpl. admit.
+
+ (*   
 dependent induction M; try auto. 
 + simpl. apply technical_1.
 + simpl. destruct K.
@@ -93,10 +103,6 @@ dependent induction M; try auto.
   apply aE_Equiv with (e:=eLet A M); apply R_Refl.
 - unfold fill_hole. unfold wk_cont. Admitted.
 
-    (* dependent induction het_compose_r.
-    * unfold fill_hole in IHM. simpl in IHM.  
-    *
-  -
 cut (G |- (eLet x A (het_compose_r K M)) =e=
             (subst x A (het_compose_r K M)))%ECCA. 
 (* property of substitution *)
