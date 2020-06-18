@@ -31,7 +31,7 @@ Bind Scope ECCA_scope with ECCA_RedR.
 
 (* Reflective Transitive Closure of step*)
 Inductive ECCA_RedClosR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
-  | R_RedR (g g': ECCAenv) (e e': ECCAexp): (* maybe don't need this one? it follows from refl + trans*)
+  | R_RedR (g: ECCAenv) (e e': ECCAexp): (* maybe don't need this one? it follows from refl + trans*)
       ECCA_RedR g e e' ->
       ECCA_RedClosR g e e'
   | R_Refl (g: ECCAenv) (e: ECCAexp):
@@ -40,10 +40,10 @@ Inductive ECCA_RedClosR : ECCAenv -> ECCAexp -> ECCAexp -> Prop :=
       ECCA_RedClosR g e e' ->
       ECCA_RedClosR g e' e'' ->
       ECCA_RedClosR g e e''
-  | R_CongLet (g: ECCAenv) (e: ECCAexp) (e1 e2 A: ECCAexp) (x: name) :
-(* FIXME: Why don't we reduce e? *)
+  | R_CongLet (g: ECCAenv) (e e': ECCAexp) (e1 e2 A: ECCAexp) (x: name) :
+      ECCA_RedClosR g e e' ->
       ECCA_RedClosR (g & x ~ Def e A) (open x e1) (open x e2) -> (*FIXME: where does A come from *)
-      ECCA_RedClosR g (eLet e e1) (eLet e e2) 
+      ECCA_RedClosR g (eLet e e1) (eLet e' e2) 
   | R_CongLam1 (g: ECCAenv) (A: ECCAexp) (A' e e': ECCAexp) (x: name)   :
       ECCA_RedClosR g A A' ->
       ECCA_RedClosR (g & x ~ Assum A) (open x e) (open x e') ->

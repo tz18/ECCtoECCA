@@ -203,9 +203,6 @@ ECCAcomp {V: nat}: Type :=
   | Snd (v: ECCAval)
 .*)
 
-Check open.
-Parameter open_conf: name -> @ECCAconf 1 -> @ECCAconf 0.
-
 Inductive ECCA_val_wf {V: nat}: @ECCAenv 0 -> ECCAval -> Prop :=
 | wf_val_Id (g: ECCAenv) (A: ECCAexp) (x: atom):
     (assumes g x A) -> (* this needs adjustment *)

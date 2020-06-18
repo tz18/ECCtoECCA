@@ -61,7 +61,7 @@ Proof.
       eapply equiv_trans. apply equiv_sym in H0. apply H0.
       assumption.
     + apply aE_Equiv with (e:=m1).
-      * apply R_RedR. assumption. apply R_IfTru.
+      * apply R_RedR. auto.
       * apply R_Refl.
   - cut (ECCA_Equiv (ctx_cons g x (Eq v eTru)) v eTru).
     + intros. apply if_equiv. assumption.
@@ -83,7 +83,7 @@ Proof.
       eapply equiv_trans. apply equiv_sym in H0. apply H0.
       assumption.
     + apply aE_Equiv with (e:=m2).
-      * apply R_RedR. assumption. apply R_IfFls.
+      * apply R_RedR. auto.
       * apply R_Refl.
   - cut (ECCA_Equiv (ctx_cons g x (Eq v eFls)) v eFls).
     + intros. apply if_equiv. assumption.
