@@ -85,17 +85,19 @@ Proof.
     - fold (@flattenECCAconf (S (0+0)) (het_compose_r (wk_cont K) m)).
       fold (@flattenECCAcomp (0+0) n).
       assert ((bind (@flattenECCAcomp (0+0) n) (het_compose_r (wk_cont K) m)) = (het_compose_r K (bind_conf n m))).
-      Focus 2.
-    - cbn. cbn in H2. rewrite H2. fold (@unrestrict_cont 0 K).
-      destruct K.
-      simpl. erewrite cont_compose_empty_hole. eapply R_RedR. erewrite bind_coerce. eapply R_Let.
-      simpl. eapply R_Trans. eapply R_CongLet. eapply R_RedR. eapply R_Let.
-      Focus 2.
-      eapply R_Trans. eapply R_RedR. eapply R_Let. instantiate (1:=B). cbn in *. 
-      eauto.
-    - assert ((@bind n (0 + 0) (het_compose_r (@wk_cont (0 + 0) K) m)) = (@bind n 0 (het_compose_r (@wk_cont (0 + 0) K) m))); auto. rewrite <- H3.  rewrite H2.
-    - cbn.
-cbn in *.
+      * assert ((@bind n (0 + 0) (het_compose_r (@wk_cont (0 + 0) K) m)) = (@bind n 0 (het_compose_r (@wk_cont (0 + 0) K) m))); auto. admit. (* rewrite <- H3.  rewrite H2. *)
+      * cbn. cbn in H2. rewrite H2. fold (@unrestrict_cont 0 K). destruct K.
+      ++ simpl. rewrite cont_compose_empty_hole. apply R_RedR. rewrite bind_coerce. apply R_Let.
+      ++ simpl. eapply R_Trans.
+        -- eapply R_CongLet. eapply R_RedR. apply R_Let. admit. 
+        -- eapply R_Trans. eapply R_RedR. eapply R_Let. instantiate (1:=B). cbn in *. admit.
+
+ + (* If case *)admit.
+Admitted.
+
+
+
+(* 
 
  destruct K; eauto. rewrite (cont_compose_empty_hole m).
     apply aE_Equiv with (e:= eLet n m); apply R_Refl.
@@ -110,7 +112,7 @@ Check rLetHole. eapply aE_Equiv.
   + simpl. rewrite (cont_compose_empty_hole m1).
     rewrite (cont_compose_empty_hole m2).
     apply aE_Equiv with (e:= eIf (flattenECCAval v) m1 m2); apply R_Refl.
-  + simpl. admit.
+  + simpl. admit. *)
 
  (*   
 dependent induction M; try auto. 
