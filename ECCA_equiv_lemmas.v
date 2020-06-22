@@ -41,11 +41,18 @@ Lemma equiv_weakening (g: ECCAenv) (x: name) (a: ctxmem) (e1 e2: ECCAexp):
   (ECCA_Equiv (ctx_cons g x a) e1 e2).
 Admitted.
 
-Lemma if_equiv (g: ECCAenv) (v v' m1 m1' m2 m2': ECCAexp):
+Lemma if_cong_v_equiv (g: ECCAenv) (v v' m1 m2: ECCAexp):
   (ECCA_Equiv g v v') ->
-  (ECCA_Equiv g m1 m1') ->
-  (ECCA_Equiv g m2 m2') ->
-  (ECCA_Equiv g (eIf v m1 m2) (eIf v' m1' m2')).
+  (ECCA_Equiv g (eIf v m1 m2) (eIf v' m1 m2)).
+Proof.
+  intros. inversion H. 1,2,3: eapply aE_Equiv.
+  - apply R_CongIf. apply H0. apply R_Refl. apply R_Refl.
+  - apply R_CongIf. apply H1. apply R_Refl. apply R_Refl.
+  - apply R_CongIf. apply H0. apply R_Refl. apply R_Refl.
+  - apply R_CongIf. admit. apply R_Refl. apply R_Refl.
+  - apply R_CongIf. apply H0. apply R_Refl. apply R_Refl.
+  - apply R_CongIf. admit. apply R_Refl. apply R_Refl.
+  - admit.
 Admitted.
 
 Lemma if_eta_1 (g: ECCAenv) (x: name) (v m1 m2 m: ECCAexp):
@@ -64,9 +71,7 @@ Proof.
       * apply R_RedR. auto.
       * apply R_Refl.
   - cut (ECCA_Equiv (ctx_cons g x (Eq v eTru)) v eTru).
-    + intros. apply if_equiv. assumption.
-      apply aE_Equiv with (e:=m1); apply R_Refl.
-      apply aE_Equiv with (e:=m2); apply R_Refl.
+    + intros. apply if_cong_v_equiv. assumption.
     + apply aE_Reflect with (x:=(free x)). left. apply ctx_has.
 Qed.
 
@@ -86,9 +91,7 @@ Proof.
       * apply R_RedR. auto.
       * apply R_Refl.
   - cut (ECCA_Equiv (ctx_cons g x (Eq v eFls)) v eFls).
-    + intros. apply if_equiv. assumption.
-      apply aE_Equiv with (e:=m1); apply R_Refl.
-      apply aE_Equiv with (e:=m2); apply R_Refl.
+    + intros. apply if_cong_v_equiv. assumption.
     + apply aE_Reflect with (x:=(free x)). left. apply ctx_has.
 Qed.
 
