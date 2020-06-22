@@ -1,5 +1,6 @@
 Require Import ECC.
 Require Import ECCA_core ECCA_core_lemmas ECCA_typing.
+Require Import ECCA_equiv_lemmas.
 Require Import translator.
 Require Import ECCA_continuations.
 Require Import String.
@@ -71,14 +72,30 @@ Parameter bind_conf : forall {v : nat}, (@ECCAcomp v) -> (@ECCAconf (S v)) -> (@
 Lemma bind_coerce (n :ECCAcomp) (m:ECCAconf) : (flattenECCAconf (bind_conf n m) = (bind n m)).
 Admitted.
 
+Lemma delta_compat (g: ECCAenv) (e: ECCAexp) (e1 e2 A: ECCAexp) (x: name) :
+  ((g & x ~ Def e A) |- (open x e1) =e= (open x e2)) ->
+  (g |- (bind e e1) =e= (bind e e2)).
+Admitted.
+
+(*1. Zeta reduction on the left. 2. IH (rewrite K<<M''>> to K[M] on the left. 
+3. On the right, use K_compat lemma, should have goal K[M][x :=n] \equiv K[M[x := n]] 
+e -> e', then K[e] = K[e'] 
+3. Have goal: Show K[M'][x := n] \equiv K[let x = n in M'] 
+4. need lemma to show K[M][x :=n] \equiv K[M[x := n] *)
+
 Lemma naturality (K : cont_r) (M : ECCAconf) (G : ECCAenv) :
   (@ECCA_conf_wf 0 G M) ->
   (G |- (het_compose_r K M) =e= (fill_hole M (unrestrict_cont K)))%ECCA.
 Proof.
-  intros. destruct H.
+  intros. induction H.
   + destruct K; eauto.
-  + unfold het_compose_r. fold (@het_compose_r (S (0 + 0))). 
-    eapply aE_Equiv.
+  + unfold het_compose_r. fold (@het_compose_r (S (0 + 0))).
+    assert (ECCA_Equiv g (flattenECCAconf (Let n (het_compose_r (wk_cont K) m))) (eLet n (fill_hole (flattenECCAconf m) (unrestrict_cont (wk_cont K))))).
+    * admit.
+    * eapply equiv_trans. apply H2.
+      eapply aE_Equiv. eapply R_RedR. eapply R_Let. destruct K.
+      simpl. eapply R_RedR. apply R_Let. simpl. eapply R_CongLet. fold bind. fold (@kleisli 1). eapply R_RedR. eapply R_Let. fold (@kleisli 1).
+    erewrite compat_let_equiv.
     - eapply R_RedR.
 (* ?e = (bind n (wk_cont K <<m>>)) *)
       apply R_Let.
@@ -89,8 +106,8 @@ Proof.
       * cbn. cbn in H2. rewrite H2. fold (@unrestrict_cont 0 K). destruct K.
       ++ simpl. rewrite cont_compose_empty_hole. apply R_RedR. rewrite bind_coerce. apply R_Let.
       ++ simpl. eapply R_Trans.
-        -- eapply R_CongLet. eapply R_RedR. apply R_Let. admit. 
-        -- eapply R_Trans. eapply R_RedR. eapply R_Let. instantiate (1:=B). cbn in *. admit.
+        -- eapply R_CongLet. eapply R_RedR. apply R_Let. instantiate (1:=B). apply R_Refl. 
+        -- eapply R_Trans. eapply R_RedR. eapply R_Let. cbn in *. rewrite <- H2. admit.
 
  + (* If case *)admit.
 Admitted.
