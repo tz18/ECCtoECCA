@@ -389,12 +389,10 @@ Proof.
 Qed.
 
 
-(* (*Defining "g,g'|-"
+(* Defining "g,g'|-"
   Append environment g to environment g'*)
-Fixpoint appendEnv (g g': ECCAenv) :=
+Fixpoint appendEnv {V:nat} (g g': @ECCAenv V) :=
 match g' with
-| Empty => g
-| Assum g'' x A => Assum (appendEnv g g'') x A
-| Def g'' x A => Def (appendEnv g g'') x A
-| Eq g'' x A => Eq (appendEnv g g'') x A
-end. *)
+| ctx_empty => g
+| g'' & x ~ A => ((appendEnv g g'') & x ~ A)
+end. 
