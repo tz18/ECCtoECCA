@@ -774,3 +774,15 @@ Definition open_comp {V: nat}(x: name)(e: @ECCAcomp (S V)):=
 (unoption_ex (getECCAcomp (open x (flattenECCAcomp (e))))) ((open_preserves_comp x (flattenECCAcomp e)) (flatten_comp_is_ANF e)).
 Definition open_conf {V: nat}(x: name)(e: @ECCAconf (S V)):=
 (unoption_ex (getECCAconf (open x (flattenECCAconf (e))))) ((open_preserves_conf x (flattenECCAconf e)) (flatten_conf_is_ANF e)).
+
+Lemma wk_flatten_equivariant {V: nat} (B: @ECCAconf V):
+flattenECCAconf (wk_conf B) = wk (flattenECCAconf B).
+Admitted.
+
+Lemma open_flatten_equivariant {V: nat} (x: name) (B: @ECCAconf (S V)):
+flattenECCAconf (open_conf x B) = open x (flattenECCAconf B).
+Admitted.
+
+Lemma close_flatten_equivariant {V: nat} (x: name) (B: @ECCAconf V):
+flattenECCAconf (close_conf x B) = close x (flattenECCAconf B).
+Admitted.

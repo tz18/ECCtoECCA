@@ -75,12 +75,10 @@ Lemma bind_commutes_over_fill_hole (g: ECCAenv) (K : cont_r) (n m : ECCAexp) :
 Proof.
   destruct K.
   + simpl. eapply aE_Equiv; apply R_Refl.
-  + simpl.
-    assert (ECCA_Equiv g (eLet (bind n m) B) (bind (bind n m) B)).
-    * eapply aE_Equiv. apply R_RedR. apply R_Let. apply R_Refl.
-    * apply equiv_sym. eapply equiv_trans. apply H. apply equiv_sym.
-      (*don't think bind (bind n m) B = (bind n (bind m B)) *)
-Admitted.
+  + simpl. simpl_term_eq. assert ((bind n (wk_conf B)) = B).
+    * rewrite wk_flatten_equivariant. simpl_term_eq.
+    * rewrite <- H. eauto.
+Qed.
 
 Lemma fill_hole_over_branches (g: ECCAenv) (K : cont_r) (v: ECCAval) (m1 m2 : ECCAconf) :
   (ECCA_Equiv g (eIf v (fill_hole m1 (unrestrict_cont K)) (fill_hole m2 (unrestrict_cont K))) (fill_hole (If v m1 m2) (unrestrict_cont K))).
@@ -91,12 +89,22 @@ Proof.
 (* I think here we need to prove that since v is a val, it is either Tru Fls or some id *)
 Admitted.
 
-
 Lemma IH_naturality_let (g: ECCAenv) (K : cont_r) (n: ECCAcomp) (m : ECCAconf) (A: ECCAexp) (x: name):
   (ECCA_Equiv (g & x ~ Def n A) (het_compose_r K (open_conf x m)) (fill_hole (open_conf x m) (unrestrict_cont K))) ->
   (ECCA_Equiv g (flattenECCAconf (Let n (het_compose_r (wk_cont K) m))) (eLet n (fill_hole (flattenECCAconf m) (unrestrict_cont (wk_cont K))))).
 Proof.
+intros. inversion H.
++ subst. eapply aE_Equiv.
+  - instantiate (1:=e). 
+
 Admitted.
+
+Lemma Let_reduction (g: ECCAenv) (x: name) (n A m e: ECCAexp) :
+(g & x ~ (Def n A) |- open x m =r> e) -> 
+(g |- eLet n m =r> e).
+Proof.
+intros. apply R_RedR. assert (e=bind n (wk e)). simpl_term_eq. rewrite H0. apply R_Let.
+
 
 Lemma IH_naturality_if (g: ECCAenv) (K : cont_r) (v: ECCAval) (m1 m2 : ECCAconf) (y: name):
   (ECCA_Equiv (g & y ~ Eq (flattenECCAval v) eTru) (het_compose_r K m1) (fill_hole m1 (unrestrict_cont K))) ->
