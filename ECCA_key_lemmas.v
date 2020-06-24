@@ -76,7 +76,9 @@ ECCA_has_type (appendEnv g g') (het_compose_r K M) B.
 Proof.
   intros. induction H1.
   - erewrite het_compose_equal_fill_hole. apply Cut_modulo_equivalence with (A := A) (N:=M'). assumption. inversion H. assumption. assumption. apply append_env_weakening with (g':=g') in H0. assumption. apply equiv_sym. apply append_env_equiv_weakening with (g':=g') in H2. assumption.
-  - simpl. Admitted.
+  - simpl. assert (B = bind n (wk (B))). simpl_term_eq. rewrite H3. eapply aT_Let. 
+    + 
+    +
+Admitted.
 
-    
  
