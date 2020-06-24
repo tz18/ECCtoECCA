@@ -68,16 +68,30 @@ Lemma fill_with_hole_is_id {V: nat}(e: @ECCAexp V): fill_hole e Hole = e.
 Proof.
 eauto. Qed.
 
-Definition wk_cont {V: nat} (k: @cont_r V): @cont_r (S V)
+Definition wk_cont_r {V: nat} (k: @cont_r V): @cont_r (S V)
 :=
 match k with
 | rHole => rHole
 | rLetHole B => rLetHole (wk_conf B)
 end.  
 
-Definition close_cont {V: nat} (x: name) (k: @cont_r V): @cont_r (S V)
+Definition close_cont_r {V: nat} (x: name) (k: @cont_r V): @cont_r (S V)
 :=
 match k with
 | rHole => rHole
 | rLetHole B => rLetHole (close_conf x B)
+end.
+
+Definition wk_cont {V: nat} (k: @cont V): @cont (S V)
+:=
+match k with
+| Hole => Hole
+| LetHole B => LetHole (wk B)
+end.  
+
+Definition close_cont {V: nat} (x: name) (k: @cont V): @cont (S V)
+:=
+match k with
+| Hole => Hole
+| LetHole B => LetHole (close x B)
 end.  

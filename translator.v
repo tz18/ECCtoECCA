@@ -24,7 +24,7 @@ Fixpoint transWork  {V: nat} (e: @ECCexp V) (K: @cont_r V) : @ECCAconf V:=
     | ECC.Bool => (fill_hole_r (Val (Bool)) K)
     | ECC.Uni U => (fill_hole_r (Val (Uni U)) K)
     | ECC.Let e1 e2 => (@transWork V e1 (@rLetHole V
-                          (@transWork (S V) e2 (wk_cont K))))
+                          (@transWork (S V) e2 (wk_cont_r K))))
     | ECC.App e1 e2 =>
       (@transWork (V) e1 (rLetHole (close_conf ("X1")
          (@transWork (V) (e2) (rLetHole (close_conf ("X2") 

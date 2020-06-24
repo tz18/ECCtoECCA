@@ -779,6 +779,7 @@ Lemma wk_flatten_equivariant {V: nat} (B: @ECCAconf V):
 flattenECCAconf (wk_conf B) = wk (flattenECCAconf B).
 Admitted.
 
+
 Lemma open_flatten_equivariant {V: nat} (x: name) (B: @ECCAconf (S V)):
 flattenECCAconf (open_conf x B) = open x (flattenECCAconf B).
 Admitted.
@@ -786,3 +787,42 @@ Admitted.
 Lemma close_flatten_equivariant {V: nat} (x: name) (B: @ECCAconf V):
 flattenECCAconf (close_conf x B) = close x (flattenECCAconf B).
 Admitted.
+
+Hint Resolve 
+wk_flatten_equivariant
+open_flatten_equivariant
+close_flatten_equivariant.
+
+Lemma no_comp_from_Let {V: nat}(A: @ECCAexp V)(B: @ECCAexp (S V)) : 
+getECCAcomp (eLet A B) = None
+/\ getECCAval (eLet A B) = None.
+Proof. split;
+(unfold getECCAcomp || unfold getECCAval);
+cbn; destruct (getECCAconf); auto;
+destruct e; auto; destruct getECCAconf; auto.
+Qed.
+
+Lemma no_comp_from_If {V: nat}(A B C : @ECCAexp V) : 
+getECCAcomp (eIf A B C) = None
+/\ getECCAval (eIf A B C) = None.
+Admitted.
+
+Lemma no_val_from_App {V: nat}(A B : @ECCAexp V) : 
+getECCAval (eApp A B) = None.
+Admitted.
+
+Lemma no_val_from_Snd {V: nat}(A: @ECCAexp V) : 
+getECCAval (eSnd A) = None.
+Admitted.
+
+Lemma no_val_from_Fst {V: nat}(A: @ECCAexp V) : 
+getECCAval (eFst A) = None.
+Admitted.
+
+Hint Resolve 
+no_val_from_Fst 
+no_val_from_Snd
+no_val_from_App
+no_comp_from_If
+no_comp_from_Let
+.

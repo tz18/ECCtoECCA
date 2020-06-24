@@ -5,16 +5,16 @@ Require Import translator.
 Require Import ECCA_continuations.
 Require Import String.
 
-Fixpoint het_compose_r {V: nat} (K : @cont_r V) (M : @ECCAconf V) {struct M} : ECCAconf :=
+Fixpoint het_compose {V: nat} (K : @cont V) (M : @ECCAexp V) {struct M} : ECCAexp :=
   match M with
-  | Comp e => fill_hole_r e K
-  | Let N M' => Let N (@het_compose_r (S V) (wk_cont K) M')
-  | If V1 M1 M2 => If V1
-                      (het_compose_r K M1)
-                      (het_compose_r K M2)
+  | eLet N M' => eLet N (@het_compose (S V) (wk_cont K) M')
+  | eIf V1 M1 M2 => eIf V1
+                      (het_compose K M1)
+                      (het_compose K M2)
+  | _ => fill_hole M K
   end.
 
-Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.
+Notation "K '<<' M '>>'" := (het_compose K M) (at level 250): ECCA_scope.
 
 (* Fixpoint het_compose (K : cont_r) (M : ECCAexp) (p : IsANF M) : ECCAconf :=
   match M with
@@ -22,10 +22,10 @@ Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.
   | Let x N M' => Let x N (het_compose K M')
   end. *)
 
-Definition cont_compose {V: nat} (K : @cont_r V) (K' : @cont_r V) : @cont_r V :=
+Definition cont_compose {V: nat} (K : @cont V) (K' : @cont V) : @cont V :=
   match K' with
-  | rHole => K
-  | rLetHole M => rLetHole (het_compose_r (wk_cont K) M)
+  | Hole => K
+  | LetHole M => LetHole (het_compose (wk_cont K) M)
   end.
 
 Notation "K1 '<<' K2 '>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
@@ -45,24 +45,28 @@ Open Scope ECCA_scope.
 Coercion flattenECCAconf: ECCAconf >-> ECCAexp.
 Coercion flattenECCAcomp: ECCAcomp >-> ECCAexp.
 
-Lemma cont_compose_fill_het_compose {V: nat} (K K' : cont_r) (N : ECCAcomp) :
-  (het_compose_r K (fill_hole_r N K')) = (fill_hole_r N (@cont_compose V K K')).
+Lemma cont_compose_fill_het_compose {V: nat} (K K' : cont) (N : ECCAexp) :
+isComp N  ->
+  (het_compose K (fill_hole N K')) = (fill_hole N (@cont_compose V K K')).
 Proof.
-  intros. destruct K'; simpl; reflexivity.
+  intros. destruct K'. 
+  + cbn. destruct H. destruct N; cbn in *; auto.
+    - destruct (@no_comp_from_Let V N1 N2). rewrite H0 in H. discriminate. 
+    - destruct (@no_comp_from_If V N1 N2 N3). rewrite H0 in H. discriminate.
+  + cbn. reflexivity.
 Qed. 
 
-Lemma het_compose_empty_hole {V: nat} (M: ECCAconf) :
-  (@het_compose_r V rHole M) = M.
+Lemma het_compose_empty_hole {V: nat} (M: ECCAexp) :
+  (@het_compose V Hole M) = M.
 Proof.
-  induction M; cbn.
-  - auto.
-  - rewrite IHM. auto.
-  - fold (@het_compose_r V). rewrite IHM1. rewrite IHM2. auto.
+  induction M; cbn; auto.
+  - rewrite IHM2. auto.
+  - rewrite IHM2, IHM3. auto.
 Qed.
 
-Lemma K_compat (g: ECCAenv) (K : cont_r) (e1 e2 : ECCAexp) :
+Lemma K_compat (g: ECCAenv) (K : cont) (e1 e2 : ECCAexp) :
   (ECCA_RedClosR g e1 e2) ->
-  (ECCA_Equiv g (fill_hole e1 (unrestrict_cont K))) (fill_hole e2 (unrestrict_cont K)).
+  (ECCA_Equiv g (fill_hole e1 K) (fill_hole e2 K)).
 Proof.
   intros. destruct K.
   + simpl. eapply aE_Equiv. apply H. apply R_Refl.
@@ -70,18 +74,18 @@ Proof.
     apply H. apply R_Refl. apply R_Refl.
 Qed.     
 
-Lemma bind_commutes_over_fill_hole (g: ECCAenv) (K : cont_r) (n m : ECCAexp) :
-  (ECCA_Equiv g (bind n (fill_hole m (unrestrict_cont (wk_cont K)))) (fill_hole (bind n m) (unrestrict_cont K))).
+Lemma bind_commutes_over_fill_hole (g: ECCAenv) (K : cont) (n m : ECCAexp) :
+  (ECCA_Equiv g (bind n (fill_hole m (wk_cont K))) (fill_hole (bind n m) K)).
 Proof.
   destruct K.
   + simpl. eapply aE_Equiv; apply R_Refl.
-  + simpl. simpl_term_eq. assert ((bind n (wk_conf B)) = B).
-    * rewrite wk_flatten_equivariant. simpl_term_eq.
-    * rewrite <- H. eauto.
+  + simpl. simpl_term_eq. assert ((bind n (wk B)) = B).
+    * simpl_term_eq.
+    * rewrite H. eauto.
 Qed.
 
-Lemma fill_hole_over_branches (g: ECCAenv) (K : cont_r) (v: ECCAval) (m1 m2 : ECCAconf) :
-  (ECCA_Equiv g (eIf v (fill_hole m1 (unrestrict_cont K)) (fill_hole m2 (unrestrict_cont K))) (fill_hole (If v m1 m2) (unrestrict_cont K))).
+Lemma fill_hole_over_branches (g: ECCAenv) (K : cont) (v: ECCAval) (m1 m2 : ECCAexp) :
+  (ECCA_Equiv g (eIf v (fill_hole m1 K) (fill_hole m2 K)) (fill_hole (eIf v m1 m2) K)).
 Proof.
   destruct K.
   + unfold unrestrict_cont. simpl. eapply aE_Equiv; apply R_Refl.
@@ -89,43 +93,56 @@ Proof.
 (* I think here we need to prove that since v is a val, it is either Tru Fls or some id *)
 Admitted.
 
-Lemma IH_naturality_let (g: ECCAenv) (K : cont_r) (n: ECCAcomp) (m : ECCAconf) (A: ECCAexp) (x: name):
-  (ECCA_Equiv (g & x ~ Def n A) (het_compose_r K (open_conf x m)) (fill_hole (open_conf x m) (unrestrict_cont K))) ->
-  (ECCA_Equiv g (flattenECCAconf (Let n (het_compose_r (wk_cont K) m))) (eLet n (fill_hole (flattenECCAconf m) (unrestrict_cont (wk_cont K))))).
+Lemma IH_naturality_let (g: ECCAenv) (K : cont) (n: ECCAcomp) (m : ECCAconf) (A: ECCAexp) (x: name):
+  (ECCA_Equiv (g & x ~ Def n A) (het_compose K (open x m)) (fill_hole (open x m) K)) ->
+  (ECCA_Equiv g (eLet n (het_compose (wk_cont K) m)) (eLet n (fill_hole m (wk_cont K)))).
 Proof.
-intros. inversion H.
-+ subst. eapply aE_Equiv.
-  - instantiate (1:=e). 
-
 Admitted.
 
 Lemma Let_reduction (g: ECCAenv) (x: name) (n A m e: ECCAexp) :
 (g & x ~ (Def n A) |- open x m =r> e) -> 
 (g |- eLet n m =r> e).
 Proof.
-intros. apply R_RedR. assert (e=bind n (wk e)). simpl_term_eq. rewrite H0. apply R_Let.
+intros. apply R_RedR. (* assert (e=bind n (wk e)). simpl_term_eq. rewrite H0. apply R_Let. *)
+Abort.
 
-
-Lemma IH_naturality_if (g: ECCAenv) (K : cont_r) (v: ECCAval) (m1 m2 : ECCAconf) (y: name):
-  (ECCA_Equiv (g & y ~ Eq (flattenECCAval v) eTru) (het_compose_r K m1) (fill_hole m1 (unrestrict_cont K))) ->
-  (ECCA_Equiv (g & y ~ Eq (flattenECCAval v) eFls) (het_compose_r K m2) (fill_hole m2 (unrestrict_cont K))) -> 
-  (ECCA_Equiv g (flattenECCAconf (If v (het_compose_r K m1) (het_compose_r K m2))) (eIf v (fill_hole m1 (unrestrict_cont K)) (fill_hole m2 (unrestrict_cont K)))).
+Lemma IH_naturality_if (g: ECCAenv) (K : cont) (v: ECCAval) (m1 m2 : ECCAconf) (y: name):
+  (ECCA_Equiv (g & y ~ Eq v eTru) (het_compose K m1) (fill_hole m1 K)) ->
+  (ECCA_Equiv (g & y ~ Eq v eFls) (het_compose K m2) (fill_hole m2 K)) -> 
+  (ECCA_Equiv g (eIf v (het_compose K m1) (het_compose K m2)) (eIf v (fill_hole m1 K) (fill_hole m2 K))).
 Admitted. 
 
+Lemma equiv_let_compositional (x: name) (g: ECCAenv) (n1 n2 A: @ECCAexp 0) (b1 b2: @ECCAexp (1)):
+ECCA_Equiv g n1 n2 ->
+ECCA_Equiv (g & x ~ (Def n1 A)) (open x b1) (open x b2) ->
+ECCA_Equiv g (eLet n1 b1) (eLet n2 b2).
+Proof.
+Admitted.
+
+Lemma equiv_let_strengthening (x: name) (g: ECCAenv) (n1 A: @ECCAexp 0) (b1 b2: @ECCAexp (1)):
+ECCA_Equiv (g & x ~ (Def n1 A)) (open x b1) (open x b2) ->
+ECCA_Equiv g (eLet n1 b1) (bind n1 b2).
+Proof.
+Admitted.
+ 
 (*1. Zeta reduction on the left. 2. IH (rewrite K<<M''>> to K[M] on the left. 
 3. On the right, use K_compat lemma, should have goal K[M][x :=n] \equiv K[M[x := n]] 
 e -> e', then K[e] = K[e'] 
 3. Have goal: Show K[M'][x := n] \equiv K[let x = n in M'] 
 4. need lemma to show K[M][x :=n] \equiv K[M[x := n] *)
 
-Lemma naturality (K : cont_r) (M : ECCAconf) (G : ECCAenv) :
-  (@ECCA_conf_wf 0 G M) ->
-  (G |- (het_compose_r K M) =e= (fill_hole M (unrestrict_cont K)))%ECCA.
+Lemma naturality (K : cont) (M : ECCAexp) (G : ECCAenv) :
+  (@ECCA_wf 0 G M) ->
+  (G |- (het_compose K M) =e= (fill_hole M K))%ECCA.
 Proof.
-  intros. induction H.
-  + destruct K; eauto.
-  + unfold het_compose_r. fold (@het_compose_r (S (0 + 0))).
-    assert (ECCA_Equiv g (flattenECCAconf (Let n (het_compose_r (wk_cont K) m))) (eLet n (fill_hole (flattenECCAconf m) (unrestrict_cont (wk_cont K))))).
+  intros. induction H. 1,2,3,4,5,6,7,8,9,10,13,14,15: destruct K; eauto.
+  + destruct K. 
+    - cbn. rewrite het_compose_empty_hole. eauto.
+    - cbn in *. eapply equiv_let_strengthening with (b2:= eLet m (wk B0)) in IHECCA_wf4.
+      * instantiate (1:= (eLet m B0)). 
+
+ unfold het_compose. fold (@het_compose (S (0 + 0))).
+    assert (ECCA_Equiv g (eLet n (het_compose (wk_cont K) m)) (eLet n (fill_hole m (wk_cont K)))).
     * apply IH_naturality_let with (x:=x) (A:=A). apply IHECCA_conf_wf2.
     * eapply equiv_trans. apply H2.
       assert (ECCA_Equiv g (fill_hole (flattenECCAconf (Let n m)) (unrestrict_cont K)) (fill_hole (bind n m) (unrestrict_cont K))).
@@ -134,8 +151,8 @@ Proof.
          assert (ECCA_Equiv g (eLet n (fill_hole m (unrestrict_cont (wk_cont K)))) (bind n (fill_hole m (unrestrict_cont (wk_cont K))))).
          ** eapply aE_Equiv. apply R_RedR. apply R_Let. apply R_Refl.
          ** eapply equiv_trans. apply H4. apply bind_commutes_over_fill_hole.
-  + unfold het_compose_r. fold (@het_compose_r (0 + 0)).
-    assert (ECCA_Equiv g (flattenECCAconf (If v (het_compose_r K m1) (het_compose_r K m2))) (eIf v (fill_hole m1 (unrestrict_cont K)) (fill_hole m2 (unrestrict_cont K)))).
+  + unfold het_compose. fold (@het_compose (0 + 0)).
+    assert (ECCA_Equiv g (flattenECCAconf (If v (het_compose K m1) (het_compose K m2))) (eIf v (fill_hole m1 (unrestrict_cont K)) (fill_hole m2 (unrestrict_cont K)))).
     * apply IH_naturality_if with (y:=y). apply IHECCA_conf_wf2. apply IHECCA_conf_wf3.
     * eapply equiv_trans. apply H3. apply fill_hole_over_branches.
 Qed.
@@ -165,22 +182,22 @@ dependent induction M; try auto.
   apply aE_Equiv with (e:=eLet A M); apply R_Refl.
 - unfold fill_hole. unfold wk_cont. Admitted.
 
-cut (G |- (eLet x A (het_compose_r K M)) =e=
-            (subst x A (het_compose_r K M)))%ECCA. 
+cut (G |- (eLet x A (het_compose K M)) =e=
+            (subst x A (het_compose K M)))%ECCA. 
 (* property of substitution *)
-  cut (G |- (subst x A (het_compose_r K M)) =e=
+  cut (G |- (subst x A (het_compose K M)) =e=
             (fill_hole (subst x A M) (unrestrict_cont K)))%ECCA.
   (* by ??? *)
  cut (G |- (fill_hole (subst x A M) (unrestrict_cont K)) =e=
-            (het_compose_r K (getECCAconf (subst x A M))))%ECCA.
+            (het_compose K (getECCAconf (subst x A M))))%ECCA.
  (* by some tedious property of substitution ??? *)
  cut (G |- (subst x A (fill_hole K M)) =e=
-            (subst x A (het_compose_r K M)))%ECCA.
+            (subst x A (het_compose K M)))%ECCA.
 (* by IH *)
  cut (G |- (fill_hole K M) =e=
-            (het_compose_r K M))%ECCA.
+            (het_compose K M))%ECCA.
 (* by zeta *)
-  cut (G |-  (het_compose_r K (subst x A M)) =e=
+  cut (G |-  (het_compose K (subst x A M)) =e=
 fill_hole
    (eLet x (flattenECCAcomp A)
       (flattenECCAconf M))
@@ -189,7 +206,7 @@ fill_hole
 
 Require Import String.
 Lemma compositionality {V: nat} (e : ECCexp) (K K' : @cont_r V):
-  het_compose_r K' (transWork e K) =
+  het_compose K' (transWork e K) =
   (transWork e (@cont_compose V K' K)).
 Proof.
   intros. induction e.
