@@ -67,6 +67,12 @@ Proof.
   destruct K; simpl; auto.
 Qed.  
 
+Lemma appendEnv_rearrange {V:nat}(g g': @ECCAenv V) (x: name) (a: ctxmem) :
+  ((appendEnv g g')& x ~ a) = (appendEnv (g & x ~ a) g').
+Proof.
+  induction g; simpl; auto.
+Qed.
+
 Lemma Hetereogeneous_Cut (g g': ECCAenv) (K : cont_r) (M M': ECCAconf) (A B: ECCAexp):
 ECCA_cont_has_type (appendEnv g g') (unrestrict_cont K) (Cont M' A B) ->
 ECCA_has_type g M A ->
@@ -75,10 +81,13 @@ ECCA_Equiv g M M' ->
 ECCA_has_type (appendEnv g g') (het_compose_r K M) B.
 Proof.
   intros. induction H1.
-  - erewrite het_compose_equal_fill_hole. apply Cut_modulo_equivalence with (A := A) (N:=M'). assumption. inversion H. assumption. assumption. apply append_env_weakening with (g':=g') in H0. assumption. apply equiv_sym. apply append_env_equiv_weakening with (g':=g') in H2. assumption.
-  - simpl. assert (B = bind n (wk (B))). simpl_term_eq. rewrite H3. eapply aT_Let. 
-    + 
-    +
+  - erewrite het_compose_equal_fill_hole. apply Cut_modulo_equivalence with (A := A) (N:=M').
+    assumption. inversion H. assumption. assumption. apply append_env_weakening with (g':=g') in H0.
+    assumption. apply equiv_sym. apply append_env_equiv_weakening with (g':=g') in H2. assumption.
+  - simpl. inversion H. inversion H0. rewrite <- H8. rewrite <- H13. apply aT_Let with (A:=A2) (x:=x0).
+    + apply append_env_weakening with (g':=g') in H12. assumption.
+    + erewrite appendEnv_rearrange. admit.
+      
 Admitted.
 
  

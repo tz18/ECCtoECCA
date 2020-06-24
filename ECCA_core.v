@@ -392,7 +392,7 @@ Qed.
 (* Defining "g,g'|-"
   Append environment g to environment g'*)
 Fixpoint appendEnv {V:nat} (g g': @ECCAenv V) :=
-match g' with
-| ctx_empty => g
-| g'' & x ~ A => ((appendEnv g g'') & x ~ A)
+match g with
+| ctx_empty => g'
+| g'' & x ~ A => ((appendEnv g'' g') & x ~ A)
 end. 
