@@ -94,4 +94,18 @@ Definition close_cont {V: nat} (x: name) (k: @cont V): @cont (S V)
 match k with
 | Hole => Hole
 | LetHole B => LetHole (close x B)
+end.
+
+Definition open_cont_r {V: nat} (x: name) (k: @cont_r (S V)): @cont_r (V)
+:=
+match k with
+| rHole => rHole
+| rLetHole B => rLetHole (open_conf x B)
 end.  
+
+Definition open_cont {V: nat} (x: name) (k: @cont (S V)): @cont (V)
+:=
+match k with
+| Hole => Hole
+| LetHole B => LetHole (open x B)
+end.

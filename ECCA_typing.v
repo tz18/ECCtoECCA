@@ -120,22 +120,22 @@ Well boundedness wrt Type Environments
 
 Inductive ECCA_wf {V: nat}: ECCAenv -> ECCAexp -> Prop :=
 | wf_Prop (g: ECCAenv) :
-    ECCA_Env_WF g ->
+    (* ECCA_Env_WF g -> *)
     ECCA_wf g (eUni uProp)
 | wf_Type (g: ECCAenv) (i: nat) :
-    ECCA_Env_WF g ->
+    (* ECCA_Env_WF g -> *)
     ECCA_wf g (eUni (uType i))
 | wf_Var (g: ECCAenv) (x: atom) (A: ECCAexp) :
     (assumes g x A) -> (* this needs adjustment *)
     ECCA_wf g (eId x)
 | wf_Bool (g: ECCAenv) :
-    ECCA_Env_WF g ->
+    (* ECCA_Env_WF g -> *)
     ECCA_wf g eBool
 | wf_True (g: ECCAenv):
-    ECCA_Env_WF g ->
+    (* ECCA_Env_WF g -> *)
     ECCA_wf g eTru
 | wf_False (g: ECCAenv):
-    ECCA_Env_WF g ->
+    (* ECCA_Env_WF g -> *)
     ECCA_wf g eFls
 | wf_Sig (g: ECCAenv) (x: name) (A B: ECCAexp) (i: nat) :
     ECCA_wf g A ->
@@ -155,10 +155,11 @@ Inductive ECCA_wf {V: nat}: ECCAenv -> ECCAexp -> Prop :=
     ECCA_wf (g & x ~ Assum A) (open x B) ->
     ECCA_wf (g & x ~ Assum A) (open x e) ->
     ECCA_wf g (eAbs A e)
-| wf_Let (g: ECCAenv) (n m A B: ECCAexp) (x: name):
+| wf_Let (g: ECCAenv) (n m A: ECCAexp) (x: name):
     ECCA_wf g n ->
     ECCA_wf g A ->
-    ECCA_wf (g & x ~ Def n A) (open x B) ->
+    ECCA_has_type g n A ->
+(*     ECCA_wf (g & x ~ Def n A) (open x B) -> *)
     ECCA_wf (g & x ~ Def n A) (open x m) ->
     ECCA_wf g (eLet n m)
 | wf_If (g: ECCAenv) (B e1 e2: ECCAexp) (e: ECCAexp) (x y: name):

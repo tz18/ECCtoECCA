@@ -28,7 +28,7 @@ Definition cont_compose {V: nat} (K : @cont V) (K' : @cont V) : @cont V :=
   | LetHole M => LetHole (het_compose (wk_cont K) M)
   end.
 
-Notation "K1 '<<' K2 '>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
+Notation "K1 '(>0_0)>' K2 '<(0_0<)'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
 
 (* This is a little more understandable  *)
 
@@ -93,18 +93,37 @@ Proof.
 (* I think here we need to prove that since v is a val, it is either Tru Fls or some id *)
 Admitted.
 
+(* Lemma Let_equiv (g: ECCAenv) (x: name) (n A: @ECCAexp 0) (m e: @ECCAexp (S 0)) :
+(g & x ~ (Def n A) |- open x m =e= (open x e)) -> 
+(g |- eLet n m =e= eLet n e).
+Proof.
+intros. (* assert (e=bind n (wk e)). simpl_term_eq. rewrite H0. apply R_Let. *)
+Admitted. *)
+
+(* (* Is this true? *) 
+Lemma open_equivariant_over_het_compose {V: nat }(x: name) (k: @cont (S V)) (m: @ECCAexp (S V)): 
+(open x (k << m >>)) = ((open_cont x k) << (open x m) >>).
+Proof.
+destruct k. 
++ unfold open_cont. rewrite het_compose_empty_hole.  rewrite het_compose_empty_hole. auto.
++ cbn. 
+Admitted. *)
+
+(* It is NOT true that ((open x (wk B)) = B). Opening shifts all ids with name x.
+ *)
 Lemma IH_naturality_let (g: ECCAenv) (K : cont) (n: ECCAcomp) (m : ECCAconf) (A: ECCAexp) (x: name):
   (ECCA_Equiv (g & x ~ Def n A) (het_compose K (open x m)) (fill_hole (open x m) K)) ->
   (ECCA_Equiv g (eLet n (het_compose (wk_cont K) m)) (eLet n (fill_hole m (wk_cont K)))).
-Proof.
-Admitted.
+Proof. intros. Admitted. (* 
+apply Let_equiv with (x:=x) (A:=A).
+assert (open x (het_compose (wk_cont K) (flattenECCAconf m)) = 
+       (het_compose K (open x m))).
++ unfold wk_cont. destruct K.
+  - rewrite het_compose_empty_hole.  rewrite het_compose_empty_hole. auto.
+  - rewrite open_equivariant_over_het_compose. cbn. assert ((open x (wk B)) = B).
+    simpl_term_eq.
+ admit. Admitted. *)
 
-Lemma Let_reduction (g: ECCAenv) (x: name) (n A m e: ECCAexp) :
-(g & x ~ (Def n A) |- open x m =r> e) -> 
-(g |- eLet n m =r> e).
-Proof.
-intros. apply R_RedR. (* assert (e=bind n (wk e)). simpl_term_eq. rewrite H0. apply R_Let. *)
-Abort.
 
 Lemma IH_naturality_if (g: ECCAenv) (K : cont) (v: ECCAval) (m1 m2 : ECCAconf) (y: name):
   (ECCA_Equiv (g & y ~ Eq v eTru) (het_compose K m1) (fill_hole m1 K)) ->
@@ -112,18 +131,18 @@ Lemma IH_naturality_if (g: ECCAenv) (K : cont) (v: ECCAval) (m1 m2 : ECCAconf) (
   (ECCA_Equiv g (eIf v (het_compose K m1) (het_compose K m2)) (eIf v (fill_hole m1 K) (fill_hole m2 K))).
 Admitted. 
 
-Lemma equiv_let_compositional (x: name) (g: ECCAenv) (n1 n2 A: @ECCAexp 0) (b1 b2: @ECCAexp (1)):
+(* Lemma equiv_let_compositional (x: name) (g: ECCAenv) (n1 n2 A: @ECCAexp 0) (b1 b2: @ECCAexp (1)):
 ECCA_Equiv g n1 n2 ->
 ECCA_Equiv (g & x ~ (Def n1 A)) (open x b1) (open x b2) ->
 ECCA_Equiv g (eLet n1 b1) (eLet n2 b2).
 Proof.
-Admitted.
+Admitted. *)
 
-Lemma equiv_let_strengthening (x: name) (g: ECCAenv) (n1 A: @ECCAexp 0) (b1 b2: @ECCAexp (1)):
+(* Lemma equiv_let_strengthening (x: name) (g: ECCAenv) (n1 A: @ECCAexp 0) (b1 b2: @ECCAexp (1)):
 ECCA_Equiv (g & x ~ (Def n1 A)) (open x b1) (open x b2) ->
 ECCA_Equiv g (eLet n1 b1) (bind n1 b2).
 Proof.
-Admitted.
+Admitted. *)
  
 (*1. Zeta reduction on the left. 2. IH (rewrite K<<M''>> to K[M] on the left. 
 3. On the right, use K_compat lemma, should have goal K[M][x :=n] \equiv K[M[x := n]] 
@@ -136,12 +155,7 @@ Lemma naturality (K : cont) (M : ECCAexp) (G : ECCAenv) :
   (G |- (het_compose K M) =e= (fill_hole M K))%ECCA.
 Proof.
   intros. induction H. 1,2,3,4,5,6,7,8,9,10,13,14,15: destruct K; eauto.
-  + destruct K. 
-    - cbn. rewrite het_compose_empty_hole. eauto.
-    - cbn in *. eapply equiv_let_strengthening with (b2:= eLet m (wk B0)) in IHECCA_wf4.
-      * instantiate (1:= (eLet m B0)). 
-
- unfold het_compose. fold (@het_compose (S (0 + 0))).
+  + unfold het_compose. fold (@het_compose (S (0))).
     assert (ECCA_Equiv g (eLet n (het_compose (wk_cont K) m)) (eLet n (fill_hole m (wk_cont K)))).
     * apply IH_naturality_let with (x:=x) (A:=A). apply IHECCA_conf_wf2.
     * eapply equiv_trans. apply H2.
