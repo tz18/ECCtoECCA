@@ -1,0 +1,3 @@
+[submodule "shifted-names"]
+	path = shifted-names
+	url = https://github.com/lpw25/shifted-names
