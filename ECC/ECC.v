@@ -3,25 +3,25 @@ Require Import String Morph Var Context Relative.
 
 (* -=ECC Definition=- *)
 
-Inductive ECCexp {V: nat}: Type :=
+Inductive exp {V: nat}: Type :=
   | Id (x: @atom V)
-  | Uni (U: ECCuni)
-  | Pi (A: ECCexp) (B: @ECCexp (S V))
-  | Abs (A: ECCexp) (e: @ECCexp (S V))
-  | App  (e1 e2: ECCexp)
-  | Let (e1: ECCexp) (e2: @ECCexp (S V))
-  | Sig (A: ECCexp) (B: @ECCexp (S V))
-  | Pair (e1 e2 A: ECCexp)
-  | Fst (e: ECCexp)
-  | Snd (e: ECCexp)
-  | If (e e1 e2: ECCexp)
+  | Uni (U: universe)
+  | Pi (A: exp) (B: @exp (S V))
+  | Abs (A: exp) (e: @exp (S V))
+  | App  (e1 e2: exp)
+  | Let (e1: exp) (e2: @exp (S V))
+  | Sig (A: exp) (B: @exp (S V))
+  | Pair (e1 e2 A: exp)
+  | Fst (e: exp)
+  | Snd (e: exp)
+  | If (e e1 e2: exp)
   | Tru
   | Fls
   | Bool
 .
 
 Module ECCTerm <: Term.
-  Definition term := @ECCexp.
+  Definition term := @exp.
   Definition unit {N}: morph (@var) N (@term) N :=
     morph_inject (@Id).
 
@@ -106,241 +106,239 @@ Import ECCTerm.
 Import ECCRen.
 
 Inductive ctxmem:=
-| Assum (A: @ECCexp 0)
-| Def (e: @ECCexp 0) (A: @ECCexp 0)
+| Assum (A: @exp 0)
+| Def (e: @exp 0) (A: @exp 0)
 .
 
-Definition ECCenv:= @context (@ctxmem).
+Definition env:= @context (@ctxmem).
 
-Inductive assumes (g: ECCenv) (x: atom) (A: ECCexp) := (* FIXME: Should x be atom or name? *)
+Inductive assumes (g: env) (x: atom) (A: exp) := (* FIXME: Should x be atom or name? *)
 | ass :
   (has g x (Assum A)) ->
   assumes g x A
-| def (e: @ECCexp 0):
+| def (e: @exp 0):
   (has g x (Def e A)) ->
   assumes g x A
 .
-
-Hint Constructors ECCuni.
-Hint Constructors ECCexp.
+Hint Constructors exp.
 
 
 Locate "//".
-Inductive ECC_RedR : ECCenv -> ECCexp -> ECCexp -> Prop :=
-  | R_ID (g: ECCenv) (x: atom) (e' A: ECCexp) :
-    (has g x (Def e' A)) -> ECC_RedR g (Id x) e'
-  | R_App (g: ECCenv) (A body arg: ECCexp) :
-    ECC_RedR g (App (Abs A body) arg) (bind arg body) (*do anything with env here?*)
-  | R_Fst (g: ECCenv) (e1 e2 A: ECCexp) :
-    ECC_RedR g (Fst (Pair e1 e2 A)) e1
-  | R_Snd (g: ECCenv) (e1 e2 A: ECCexp) :
-    ECC_RedR g (Snd (Pair e1 e2 A)) e2
-  | R_Let (g: ECCenv) (e1 e2: ECCexp) :
-      ECC_RedR g (Let e1 e2) (bind e1 e2)  (*or here?*)
-  | R_IfTru (g: ECCenv) (e1 e2: ECCexp) :
-    ECC_RedR g (If Tru e1 e2) e1
-  | R_IfFls (g: ECCenv) (e1 e2: ECCexp) :
-    ECC_RedR g (If Fls e1 e2) e2 
+Inductive RedStep : env -> exp -> exp -> Prop :=
+  | R_ID (g: env) (x: atom) (e' A: exp) :
+    (has g x (Def e' A)) -> RedStep g (Id x) e'
+  | R_App (g: env) (A body arg: exp) :
+    RedStep g (App (Abs A body) arg) (bind arg body) (*do anything with env here?*)
+  | R_Fst (g: env) (e1 e2 A: exp) :
+    RedStep g (Fst (Pair e1 e2 A)) e1
+  | R_Snd (g: env) (e1 e2 A: exp) :
+    RedStep g (Snd (Pair e1 e2 A)) e2
+  | R_Let (g: env) (e1 e2: exp) :
+      RedStep g (Let e1 e2) (bind e1 e2)  (*or here?*)
+  | R_IfTru (g: env) (e1 e2: exp) :
+    RedStep g (If Tru e1 e2) e1
+  | R_IfFls (g: env) (e1 e2: exp) :
+    RedStep g (If Fls e1 e2) e2 
 .
 
-Hint Constructors ECC_RedR.
+Hint Constructors RedStep.
 
 (* Reflective Transitive Closure of step*)
-Inductive ECC_RedClosR : ECCenv -> ECCexp -> ECCexp -> Prop :=
-  | R_RedR (g g': ECCenv) (e e': ECCexp): (* maybe don't need this one? it follows from refl + trans*)
-      ECC_RedR g e e' ->
-      ECC_RedClosR g e e'
-  | R_Refl (g: ECCenv) (e: ECCexp):
-      ECC_RedClosR g e e
-  | R_Trans (g: ECCenv) (e e' e'': ECCexp) :
-      ECC_RedClosR g e e' ->
-      ECC_RedClosR g e' e'' ->
-      ECC_RedClosR g e e''
-  | R_CongLet (g: ECCenv) (e A: ECCexp) (e1 e2: ECCexp) (x: name) :
+Inductive RedClos : env -> exp -> exp -> Prop :=
+  | R_RedR (g g': env) (e e': exp): (* maybe don't need this one? it follows from refl + trans*)
+      RedStep g e e' ->
+      RedClos g e e'
+  | R_Refl (g: env) (e: exp):
+      RedClos g e e
+  | R_Trans (g: env) (e e' e'': exp) :
+      RedClos g e e' ->
+      RedClos g e' e'' ->
+      RedClos g e e''
+  | R_CongLet (g: env) (e A: exp) (e1 e2: exp) (x: name) :
       (* We need to restrict A somehow maybe  *)
-      ECC_RedClosR (g & x ~ Def e A) (open x e1) (open x e2) ->
-      ECC_RedClosR g (Let e e1) (Let e e2)
-  | R_CongLam1 (g: ECCenv) (A A' e e': ECCexp) (x: name) :
-      ECC_RedClosR g A A' ->
-      ECC_RedClosR (g & x ~ Assum A) (open x e) (open x e') ->
-      ECC_RedClosR g (Abs A e) (Abs A' e')
-  | R_CongPi (g: ECCenv) (A A' B B': ECCexp) (x: name) :
-      ECC_RedClosR g A A' ->
-      ECC_RedClosR (g & x ~ Assum A) (open x B) (open x B') ->
-      ECC_RedClosR g (Pi A B) (Pi A' B')
-  | R_CongSig (g: ECCenv) (A A' B B': ECCexp) (x: name) :
-      ECC_RedClosR g A A' ->
-      ECC_RedClosR (g & x ~ Assum A) (open x B) (open x B')->
-      ECC_RedClosR g (Sig A B) (Sig A' B')
-  | R_CongPair (g: ECCenv) (e1 e1' e2 e2' A A': ECCexp) :
-      ECC_RedClosR g e1 e1' ->
-      ECC_RedClosR g e2 e2' ->
-      ECC_RedClosR g A A'   ->
-      ECC_RedClosR g (Pair e1 e2 A) (Pair e1' e2' A')
-  | R_CongApp (g: ECCenv) (e1 e1' e2 e2': ECCexp) :
-      ECC_RedClosR g e1 e1' ->
-      ECC_RedClosR g e2 e2' ->
-      ECC_RedClosR g (App e1 e2) (App e1' e2')
-  | R_CongFst (g: ECCenv) (V V': ECCexp) :
-      ECC_RedClosR g V V' ->
-      ECC_RedClosR g (Fst V) (Fst V')
-  | R_CongSnd (g: ECCenv) (V V': ECCexp) :
-      ECC_RedClosR g V V' ->
-      ECC_RedClosR g (Snd V) (Snd V')
-  | R_CongIf (g: ECCenv) (e e' e1 e1' e2 e2': ECCexp) :
-      ECC_RedClosR g e e' ->
-      ECC_RedClosR g e1 e1' ->
-      ECC_RedClosR g e2 e2' ->
-      ECC_RedClosR g (If e e1 e2) (If e' e1' e2') 
+      RedClos (g & x ~ Def e A) (open x e1) (open x e2) ->
+      RedClos g (Let e e1) (Let e e2)
+  | R_CongLam1 (g: env) (A A' e e': exp) (x: name) :
+      RedClos g A A' ->
+      RedClos (g & x ~ Assum A) (open x e) (open x e') ->
+      RedClos g (Abs A e) (Abs A' e')
+  | R_CongPi (g: env) (A A' B B': exp) (x: name) :
+      RedClos g A A' ->
+      RedClos (g & x ~ Assum A) (open x B) (open x B') ->
+      RedClos g (Pi A B) (Pi A' B')
+  | R_CongSig (g: env) (A A' B B': exp) (x: name) :
+      RedClos g A A' ->
+      RedClos (g & x ~ Assum A) (open x B) (open x B')->
+      RedClos g (Sig A B) (Sig A' B')
+  | R_CongPair (g: env) (e1 e1' e2 e2' A A': exp) :
+      RedClos g e1 e1' ->
+      RedClos g e2 e2' ->
+      RedClos g A A'   ->
+      RedClos g (Pair e1 e2 A) (Pair e1' e2' A')
+  | R_CongApp (g: env) (e1 e1' e2 e2': exp) :
+      RedClos g e1 e1' ->
+      RedClos g e2 e2' ->
+      RedClos g (App e1 e2) (App e1' e2')
+  | R_CongFst (g: env) (V V': exp) :
+      RedClos g V V' ->
+      RedClos g (Fst V) (Fst V')
+  | R_CongSnd (g: env) (V V': exp) :
+      RedClos g V V' ->
+      RedClos g (Snd V) (Snd V')
+  | R_CongIf (g: env) (e e' e1 e1' e2 e2': exp) :
+      RedClos g e e' ->
+      RedClos g e1 e1' ->
+      RedClos g e2 e2' ->
+      RedClos g (If e e1 e2) (If e' e1' e2') 
 .
 
-Hint Constructors ECC_RedClosR.
+Hint Constructors RedClos.
 
 
-Inductive ECC_Equiv: ECCenv -> ECCexp -> ECCexp -> Prop :=
-  | E_Equiv (g: ECCenv) (e e1 e2: ECCexp) :
-      ECC_RedClosR g e1 e ->
-      ECC_RedClosR g e2 e ->
-      ECC_Equiv g e1 e2
-  | E_EquivIta1 (g: ECCenv) (e1 A e e2 e2': ECCexp) (x: name) :
-      ECC_RedClosR g e1 (Abs A e) ->
-      ECC_RedClosR g e2 e2' ->
-      ECC_Equiv (g & x ~ Assum A) (open x e) (App e2' (Id (free x))) ->
-      ECC_Equiv g e1 e2
-  | E_EquivIta2 (g: ECCenv) (e e1 e1' e2 A : ECCexp) (x: name) :
-      ECC_RedClosR g e1 e1' ->
-      ECC_RedClosR g e2 (Abs A e) ->
-      ECC_Equiv (g & x ~ Assum A) (App e1' (Id (free x))) (open x e) ->
-      ECC_Equiv g e1 e2
-(*   | E_EquivAlpha (g: ECCenv) (e1 e2: ECCexp):
+Inductive Equiv: env -> exp -> exp -> Prop :=
+  | E_Equiv (g: env) (e e1 e2: exp) :
+      RedClos g e1 e ->
+      RedClos g e2 e ->
+      Equiv g e1 e2
+  | E_EquivIta1 (g: env) (e1 A e e2 e2': exp) (x: name) :
+      RedClos g e1 (Abs A e) ->
+      RedClos g e2 e2' ->
+      Equiv (g & x ~ Assum A) (open x e) (App e2' (Id (free x))) ->
+      Equiv g e1 e2
+  | E_EquivIta2 (g: env) (e e1 e1' e2 A : exp) (x: name) :
+      RedClos g e1 e1' ->
+      RedClos g e2 (Abs A e) ->
+      Equiv (g & x ~ Assum A) (App e1' (Id (free x))) (open x e) ->
+      Equiv g e1 e2
+(*   | E_EquivAlpha (g: env) (e1 e2: exp):
       ECC_Aeq e1 e2 ->
-      ECC_Equiv g e1 e2 *)
+      Equiv g e1 e2 *)
 .
 
-Hint Constructors ECC_Equiv.
+Hint Constructors Equiv.
 
 (* Typing *)
 
-Inductive ECC_sub_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
-| ST_Cong (g: ECCenv) (A B: ECCexp) :
-  ECC_Equiv g A B ->
-  ECC_sub_type g A B
-| ST_Cum (g: ECCenv) (i: nat) :
-  ECC_sub_type g (Uni (uType i)) (Uni (uType (S i)))
-| ST_Pi (g: ECCenv) (A1 A2 B1 B2: ECCexp) (x: name) :
-  (ECC_Equiv g A1 A2) ->
-  (ECC_sub_type (g & x ~ Assum A2) (open x B1) (open x B2)) ->
-  (ECC_sub_type g (Pi A1 B1) (Pi A2 B2))
-| ST_Trans (g: ECCenv) (A A' B: ECCexp) :
-  (ECC_sub_type g A A') ->
-  (ECC_sub_type g A' B) ->
-  (ECC_sub_type g A B)
-| ST_Prop (g: ECCenv) :
-  (ECC_sub_type g (Uni (uProp)) (Uni (uType 0)))
-| ST_Sig (g: ECCenv) (A1 A2 B1 B2: ECCexp) (x: name):
-  (ECC_sub_type g A1 A2) ->
-  (ECC_sub_type (g & x ~ Assum A2) (open x B1) (open x B2)) ->
-  (ECC_sub_type g (Sig A1 B1) (Sig A2 B2))
+Inductive SubTypes: env -> exp -> exp -> Prop :=
+| ST_Cong (g: env) (A B: exp) :
+  Equiv g A B ->
+  SubTypes g A B
+| ST_Cum (g: env) (i: nat) :
+  SubTypes g (Uni (uType i)) (Uni (uType (S i)))
+| ST_Pi (g: env) (A1 A2 B1 B2: exp) (x: name) :
+  (Equiv g A1 A2) ->
+  (SubTypes (g & x ~ Assum A2) (open x B1) (open x B2)) ->
+  (SubTypes g (Pi A1 B1) (Pi A2 B2))
+| ST_Trans (g: env) (A A' B: exp) :
+  (SubTypes g A A') ->
+  (SubTypes g A' B) ->
+  (SubTypes g A B)
+| ST_Prop (g: env) :
+  (SubTypes g (Uni (uProp)) (Uni (uType 0)))
+| ST_Sig (g: env) (A1 A2 B1 B2: exp) (x: name):
+  (SubTypes g A1 A2) ->
+  (SubTypes (g & x ~ Assum A2) (open x B1) (open x B2)) ->
+  (SubTypes g (Sig A1 B1) (Sig A2 B2))
 .
 
-Hint Constructors ECC_sub_type.
+Hint Constructors SubTypes.
 
-Inductive ECC_has_type: ECCenv -> ECCexp -> ECCexp -> Prop :=
-| T_Ax_Prop (g: ECCenv) :
-  ECC_Env_WF g ->
-  (ECC_has_type g (Uni uProp) (Uni (uType 0)))
-| T_Ax_Type (g: ECCenv) (i: nat) :
-  ECC_Env_WF g ->
-  (ECC_has_type g (Uni (uType i)) (Uni (uType (S i))))
-| T_Var (g: ECCenv) (x: atom) (A: ECCexp) :
+Inductive Types: env -> exp -> exp -> Prop :=
+| T_Ax_Prop (g: env) :
+  WellFormed g ->
+  (Types g (Uni uProp) (Uni (uType 0)))
+| T_Ax_Type (g: env) (i: nat) :
+  WellFormed g ->
+  (Types g (Uni (uType i)) (Uni (uType (S i))))
+| T_Var (g: env) (x: atom) (A: exp) :
   (assumes g x A) -> (* this needs adjustment *)
-  (ECC_has_type g (Id x) A)
-| T_Let (g: ECCenv) (e e' A B: ECCexp) (x: name):
-  (ECC_has_type g e A) ->
-  (ECC_has_type (g & x ~ Def e A) (open x e') (open x B)) ->
-  (ECC_has_type g (Let e e') (bind e B)) (* FIXME: review if this is correct *)
-| T_Prod_Prop (g: ECCenv) (x: name) (A B: ECCexp) (i: nat):
-  (ECC_has_type g A (Uni (uType i))) ->
-  (ECC_has_type (g & x ~ Assum A) (open x B) (Uni (uProp))) ->
-  (ECC_has_type g (Pi A B) (Uni (uProp)))
-| T_Prod_Type (g: ECCenv) (x: name) (A B: ECCexp) (i: nat):
-  (ECC_has_type g A (Uni (uType i))) ->
-  (ECC_has_type (g & x ~ Assum A) (open x B) (Uni (uType i))) ->
-  (ECC_has_type g (Pi A B) (Uni (uType i)))
-| T_Lam (g: ECCenv) (x: name ) (A e B: ECCexp) :
-  (ECC_has_type (g & x ~ Assum A) (open x e) (open x B)) -> (* FIXME: hmm...*)
-  (ECC_has_type g (Abs A e) (Pi A B))
-| T_App (g: ECCenv) (x: name) (e e' A' B: ECCexp) :
-  (ECC_has_type g e (Pi A' B)) ->
-  (ECC_has_type g e' A') ->
-  (ECC_has_type g (App e e') (bind e B))
-| T_Sig (g: ECCenv) (x: name) (A B: ECCexp) (i: nat) :
-  (ECC_has_type g A (Uni (uType i))) ->
-  (ECC_has_type (g & x ~ Assum A) (open x B) (Uni (uType i))) -> (* should these be the same i*)
-  (ECC_has_type g (Sig A B) (Uni (uType i)))
-| T_Pair (g: ECCenv) (e1 e2 A B: ECCexp):
-  (ECC_has_type g e1 A) ->
-  (ECC_has_type g e2 (bind e1 B)) ->
-  (ECC_has_type g (Pair e1 e2 (Sig A B)) (Sig A B))
-| T_Fst (g: ECCenv) (e A B: ECCexp):
-  (ECC_has_type g e (Sig A B)) ->
-  (ECC_has_type g (Fst e) A)
-| T_Snd (g: ECCenv) (e A B: ECCexp):
-  (ECC_has_type g e (Sig A B)) ->
-  (ECC_has_type g (Snd e) (bind (Fst e) B))
-| T_Bool (g: ECCenv):
-  ECC_Env_WF g ->
-  (ECC_has_type g (Bool) (Uni (uType 0)))
-| T_True (g: ECCenv):
-  ECC_Env_WF g ->
-  (ECC_has_type g (Tru) (Bool))
-| T_False (g: ECCenv):
-  ECC_Env_WF g ->
-  (ECC_has_type g (Fls) (Bool))
-| T_If (g: ECCenv) (B: @ECCexp 1) (U e e1 e2: ECCexp) (x: name):
-  (ECC_has_type (g & x ~ Assum Bool) (open x B) U) ->
-  (ECC_has_type g e (Bool)) ->
-  (ECC_has_type g e1 (bind (Tru) B)) ->
-  (ECC_has_type g e2 (bind (Fls) B)) ->
-  (ECC_has_type g (If e e1 e2) (bind e B))
-| T_Conv (g: ECCenv) (e A B U: ECCexp) :
-  (ECC_has_type g e A) ->
-  (ECC_has_type g B U) ->
-  (ECC_sub_type g A B) ->
-  (ECC_has_type g e B)
+  (Types g (Id x) A)
+| T_Let (g: env) (e e' A B: exp) (x: name):
+  (Types g e A) ->
+  (Types (g & x ~ Def e A) (open x e') (open x B)) ->
+  (Types g (Let e e') (bind e B)) (* FIXME: review if this is correct *)
+| T_Prod_Prop (g: env) (x: name) (A B: exp) (i: nat):
+  (Types g A (Uni (uType i))) ->
+  (Types (g & x ~ Assum A) (open x B) (Uni (uProp))) ->
+  (Types g (Pi A B) (Uni (uProp)))
+| T_Prod_Type (g: env) (x: name) (A B: exp) (i: nat):
+  (Types g A (Uni (uType i))) ->
+  (Types (g & x ~ Assum A) (open x B) (Uni (uType i))) ->
+  (Types g (Pi A B) (Uni (uType i)))
+| T_Lam (g: env) (x: name ) (A e B: exp) :
+  (Types (g & x ~ Assum A) (open x e) (open x B)) -> (* FIXME: hmm...*)
+  (Types g (Abs A e) (Pi A B))
+| T_App (g: env) (x: name) (e e' A' B: exp) :
+  (Types g e (Pi A' B)) ->
+  (Types g e' A') ->
+  (Types g (App e e') (bind e B))
+| T_Sig (g: env) (x: name) (A B: exp) (i: nat) :
+  (Types g A (Uni (uType i))) ->
+  (Types (g & x ~ Assum A) (open x B) (Uni (uType i))) -> (* should these be the same i*)
+  (Types g (Sig A B) (Uni (uType i)))
+| T_Pair (g: env) (e1 e2 A B: exp):
+  (Types g e1 A) ->
+  (Types g e2 (bind e1 B)) ->
+  (Types g (Pair e1 e2 (Sig A B)) (Sig A B))
+| T_Fst (g: env) (e A B: exp):
+  (Types g e (Sig A B)) ->
+  (Types g (Fst e) A)
+| T_Snd (g: env) (e A B: exp):
+  (Types g e (Sig A B)) ->
+  (Types g (Snd e) (bind (Fst e) B))
+| T_Bool (g: env):
+  WellFormed g ->
+  (Types g (Bool) (Uni (uType 0)))
+| T_True (g: env):
+  WellFormed g ->
+  (Types g (Tru) (Bool))
+| T_False (g: env):
+  WellFormed g ->
+  (Types g (Fls) (Bool))
+| T_If (g: env) (B: @exp 1) (U e e1 e2: exp) (x: name):
+  (Types (g & x ~ Assum Bool) (open x B) U) ->
+  (Types g e (Bool)) ->
+  (Types g e1 (bind (Tru) B)) ->
+  (Types g e2 (bind (Fls) B)) ->
+  (Types g (If e e1 e2) (bind e B))
+| T_Conv (g: env) (e A B U: exp) :
+  (Types g e A) ->
+  (Types g B U) ->
+  (SubTypes g A B) ->
+  (Types g e B)
 with
 (* ECC Well-Formed Environments *)
-ECC_Env_WF: ECCenv -> Prop :=
+WellFormed: env -> Prop :=
 | W_Empty :
-  ECC_Env_WF ctx_empty
-| W_Assum (g: ECCenv) (x: name) (A U: ECCexp) :
-  ECC_Env_WF g ->
-  ECC_has_type g A U ->
-  ECC_Env_WF (g & x ~ Assum A)
-| W_Def (g: ECCenv) (x: name) (e A U: ECCexp) :
-  ECC_Env_WF g ->
-  ECC_has_type g A U ->
-  ECC_has_type g e A ->
-  ECC_Env_WF (g & x ~ Def e A)
+  WellFormed ctx_empty
+| W_Assum (g: env) (x: name) (A U: exp) :
+  WellFormed g ->
+  Types g A U ->
+  WellFormed (g & x ~ Assum A)
+| W_Def (g: env) (x: name) (e A U: exp) :
+  WellFormed g ->
+  Types g A U ->
+  Types g e A ->
+  WellFormed (g & x ~ Def e A)
 .
-Hint Constructors ECC_Env_WF.
-Hint Constructors ECC_has_type.
+Hint Constructors WellFormed.
+Hint Constructors Types.
 
 (* Mutual induction Scheme *)
-Scheme ECC_type_env_mut := Induction for ECC_has_type Sort Prop
-with ECC_env_type_mut := Induction for ECC_Env_WF Sort Prop.
+Scheme type_env_mut := Induction for Types Sort Prop
+with env_type_mut := Induction for WellFormed Sort Prop.
 
 (* "induction on the mutually defined judgments ..." Scheme.
  * Think this is "simultaneous induction"? *)
-Combined Scheme ECC_type_env_comb from ECC_env_type_mut, ECC_type_env_mut.
+Combined Scheme type_env_comb from env_type_mut, type_env_mut.
 
 (* ECC Notation *)
 
-Bind Scope ECC_scope with ECCexp.
-Bind Scope ECC_scope with ECCuni.
-Bind Scope ECC_scope with ECCenv.
+Bind Scope ECC_scope with exp.
+Bind Scope ECC_scope with universe.
+Bind Scope ECC_scope with env.
 Delimit Scope ECC_scope with ECC.
-Coercion Id: atom >-> ECCexp.
+Coercion Id: atom >-> exp.
 
 Notation "'type' x" := (Uni (uType x)) (at level 50):  ECC_scope.
 Notation "'prop'" := (Uni uProp) (at level 50):  ECC_scope.
@@ -353,22 +351,22 @@ Notation "< e1 , e2 > 'as' A" := (Pair e1 e2 A) (at level 50, e1 at level 5, e2 
 Notation "'fst' e" := (Fst e) (at level 50, e at level 5): ECC_scope.
 Notation "'snd' e" := (Snd e) (at level 50, e at level 5): ECC_scope.
 
-Example ex_fst: ECC_has_type ctx_empty (fst (< Tru, Fls> as (Si _ : Bool .. Bool)))%ECC Bool.
+Example ex_fst: Types ctx_empty (fst (< Tru, Fls> as (Si _ : Bool .. Bool)))%ECC Bool.
 Proof.
 eapply T_Fst. auto.
 Qed.
-(* Definition example_Type := (type 3)%ECC: ECCexp.
-Definition example_Prop := (prop)%ECC: ECCexp.
-Definition example_App := { X Y }%ECC: ECCexp.
-Definition example_Let := (LET X := Y in Z)%ECC : ECCexp.
+(* Definition example_Type := (type 3)%ECC: exp.
+Definition example_Prop := (prop)%ECC: exp.
+Definition example_App := { X Y }%ECC: exp.
+Definition example_Let := (LET X := Y in Z)%ECC : exp.
 Print example_Let.
 Definition F:= fresh (X::Y::Z::nil).
 Definition example_Let2 := (LET X := (type 3) in LET F := (LET X := (type 2) in X) in ({X F}))%ECC.
 Print example_Let2.
-Definition example_Pi := (P X : F -> Y)%ECC : ECCexp.
-Definition example_Abs := (\ X: Y -> Z)%ECC : ECCexp.
-Definition example_Sig := (Si X : Y .. Z)%ECC : ECCexp.
-Definition example_Pair := (< X, Y > as (Si X : Y .. Z))%ECC : ECCexp. *)
+Definition example_Pi := (P X : F -> Y)%ECC : exp.
+Definition example_Abs := (\ X: Y -> Z)%ECC : exp.
+Definition example_Sig := (Si X : Y .. Z)%ECC : exp.
+Definition example_Pair := (< X, Y > as (Si X : Y .. Z))%ECC : exp. *)
 
 (* 
 Definition example_ycombinator := (\F:(type 3) -> ({(\X:(type 2) -> ({F {X X}})) (\X:(type 2) -> ({F {X X}}))}))%ECC.
@@ -376,10 +374,10 @@ Print example_ycombinator.
  *)(* 
 Compute subst X Y (LET Y := type 1 in X).
 
-Goal ECC_RedClosR Empty (LET X := Y in LET Y := type 1 in X) Y.
+Goal RedClos Empty (LET X := Y in LET Y := type 1 in X) Y.
 Proof.
-cut (ECC_RedR Empty (LET X := Y in LET Y := type 1 in X)%ECC (subst X (Id Y) (LET Y := type 1 in X))%ECC).
-- cut (ECC_RedR Empty (subst X (Id Y) (LET Y := type 1 in X))%ECC Y). 
+cut (RedStep Empty (LET X := Y in LET Y := type 1 in X)%ECC (subst X (Id Y) (LET Y := type 1 in X))%ECC).
+- cut (RedStep Empty (subst X (Id Y) (LET Y := type 1 in X))%ECC Y). 
   + eauto.
   + cbv. apply R_Let.
 - cbv. apply R_Let.
@@ -387,7 +385,7 @@ Qed.
 
 
 
-Goal ECC_has_type Empty (fst (<Tru , Fls> as 
+Goal Types Empty (fst (<Tru , Fls> as 
                             (Si X : Bool .. (If X Bool (P Y : Bool -> Bool))))) Bool.
 Proof.
 eapply T_Fst. eapply T_Pair.
@@ -411,7 +409,7 @@ Unshelve. exact 1.
 Qed. *)
 
 
-(* Fixpoint ECCsize (e: ECCexp) : nat :=
+(* Fixpoint ECCsize (e: exp) : nat :=
   match e with
   | Id _ => 1
   | Uni _ => 1
@@ -439,7 +437,7 @@ Qed. *)
 (* -Lookup- *)
 (* Substitution *)
 
-(* Fixpoint FV (e: ECCexp) : atoms :=
+(* Fixpoint FV (e: exp) : atoms :=
 match e with
   | Id x => singleton x
   | Uni U => empty
@@ -459,7 +457,7 @@ end. *)
 
 (*Let's get nominal!*)
 (* LET'S NOT *)
-(* Fixpoint swap (x:atom) (y:atom) (t:ECCexp) : ECCexp :=
+(* Fixpoint swap (x:atom) (y:atom) (t:exp) : exp :=
   match t with
   | Id z     => Id (swap_var x y z)
   | Abs z A t1  => Abs (swap_var x y z) (swap x y A) (swap x y t1)
@@ -487,7 +485,7 @@ Qed. *)
    that avoids capturing any free variables in the substitute or in the body
    of the term being substituted in. *)
 (* Require Import Recdef.
-Function substWork (x: atom) (arg body: ECCexp) {measure ECCsize body}:=
+Function substWork (x: atom) (arg body: exp) {measure ECCsize body}:=
 if (AtomSetImpl.mem x (FV body)) then 
   match body with
     | Id x' => if (x == x') then arg else body
@@ -526,67 +524,67 @@ Proof.
 Qed.
  *)
 
-(* Definition subst (x: atom) (arg body: ECCexp):= substWork x arg body. *)
+(* Definition subst (x: atom) (arg body: exp):= substWork x arg body. *)
 (* 
-Inductive ECC_Aeq : ECCexp -> ECCexp -> Prop :=
-  | aeq_id (e: ECCexp):
+Inductive ECC_Aeq : exp -> exp -> Prop :=
+  | aeq_id (e: exp):
     ECC_Aeq e e
   | aeq_var (x: atom):
      ECC_Aeq (Id x) (Id x)
-  | aeq_abs_same (x: atom) (t1 t2 b1 b2: ECCexp):
+  | aeq_abs_same (x: atom) (t1 t2 b1 b2: exp):
      ECC_Aeq t1 t2 -> 
      ECC_Aeq b1 b2 ->
      ECC_Aeq (Abs x t1 b1) (Abs x t2 b2)
-  | aeq_abs_diff (x y: atom) (t1 t2 b1 b2: ECCexp):
+  | aeq_abs_diff (x y: atom) (t1 t2 b1 b2: exp):
      x <> y ->
      x `notin` (FV b2) ->
      ECC_Aeq b1 (swap y x b2) ->
      ECC_Aeq t1 t2 ->
      ECC_Aeq (Abs x t1 b1) (Abs y t2 b2)
-  | aeq_pi_same (x: atom) (t1 t2 b1 b2: ECCexp):
+  | aeq_pi_same (x: atom) (t1 t2 b1 b2: exp):
      ECC_Aeq t1 t2 -> 
      ECC_Aeq b1 b2 ->
      ECC_Aeq (Pi x t1 b1) (Pi x t2 b2)
-  | aeq_pi_diff (x y: atom) (t1 t2 b1 b2: ECCexp):
+  | aeq_pi_diff (x y: atom) (t1 t2 b1 b2: exp):
      x <> y ->
      x `notin` (FV b2) ->
      ECC_Aeq b1 (swap y x b2) ->
      ECC_Aeq t1 t2 ->
      ECC_Aeq (Pi x t1 b1) (Pi y t2 b2)
-  | aeq_let_same (x: atom) (t1 t2 b1 b2: ECCexp):
+  | aeq_let_same (x: atom) (t1 t2 b1 b2: exp):
      ECC_Aeq t1 t2 -> 
      ECC_Aeq b1 b2 ->
      ECC_Aeq (Let x t1 b1) (Let x t2 b2)
-  | aeq_let_diff (x y: atom) (t1 t2 b1 b2: ECCexp):
+  | aeq_let_diff (x y: atom) (t1 t2 b1 b2: exp):
      x <> y ->
      x `notin` (FV b2) ->
      ECC_Aeq b1 (swap y x b2) ->
      ECC_Aeq t1 t2 ->
      ECC_Aeq (Let x t1 b1) (Let y t2 b2)
-  | aeq_sig_same (x: atom) (t1 t2 b1 b2: ECCexp):
+  | aeq_sig_same (x: atom) (t1 t2 b1 b2: exp):
      ECC_Aeq t1 t2 -> 
      ECC_Aeq b1 b2 ->
      ECC_Aeq (Sig x t1 b1) (Sig x t2 b2)
-  | aeq_sig_diff (x y: atom) (t1 t2 b1 b2: ECCexp):
+  | aeq_sig_diff (x y: atom) (t1 t2 b1 b2: exp):
      x <> y ->
      x `notin` (FV b2) ->
      ECC_Aeq b1 (swap y x b2) ->
      ECC_Aeq t1 t2 ->
      ECC_Aeq (Sig x t1 b1) (Sig y t2 b2)
-  | aeq_app (t1 t2 t1' t2': ECCexp):
+  | aeq_app (t1 t2 t1' t2': exp):
      ECC_Aeq t1 t1' -> ECC_Aeq t2 t2' ->
      ECC_Aeq (App t1 t2) (App t1' t2')
-  | aeq_pair (t1 t2 t1' t2' A A': ECCexp):
+  | aeq_pair (t1 t2 t1' t2' A A': exp):
      ECC_Aeq t1 t1' -> ECC_Aeq t2 t2' ->
      ECC_Aeq A A' ->
      ECC_Aeq (Pair t1 t2 A) (Pair t1' t2' A')
-  | aeq_Fst (e e': ECCexp):
+  | aeq_Fst (e e': exp):
      ECC_Aeq e e' ->
      ECC_Aeq (Fst e) (Fst e')
-  | aeq_Snd (e e': ECCexp):
+  | aeq_Snd (e e': exp):
      ECC_Aeq e e' ->
      ECC_Aeq (Snd e) (Snd e')
-(*   | aeq_if (e1 e2 e3 e1' e2' e3': ECCexp):
+(*   | aeq_if (e1 e2 e3 e1' e2' e3': exp):
      ECC_Aeq e1 e1' ->
      ECC_Aeq e2 e2' ->
      ECC_Aeq e3 e3' ->

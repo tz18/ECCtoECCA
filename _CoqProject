@@ -1,5 +1,5 @@
--R shifted-names/src ShiftedNames
--R common common
+-R shifted-names/src SNames
+-R Common Common
 -R ECC ECC
 -R ECCA ECCA
 -R . Top
