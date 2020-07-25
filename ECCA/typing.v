@@ -224,20 +224,20 @@ Inductive WellBound_val {V: nat}: @env 0 -> val -> Prop :=
     WellBound_val g Fls
 | wf_val_Sig (g: env) (x: name) (A B: conf) (i: nat) :
     WellBound_conf g A ->
-    WellBound_conf (g & x ~ Assum (flattenconf A)) (open_conf x B) ->
+    WellBound_conf (g & x ~ Assum (unrestrict_conf A)) (open_conf x B) ->
     WellBound_val g (Sig A B)
 | wf_val_Pair (g: env) (v1 v2: val) (A B: conf) (x: name) :
     WellBound_val g v1 ->
     WellBound_val g v2 ->
     WellBound_conf g A ->
-    WellBound_conf (g & x ~ Def (flattenval v1) (flattenconf A)) (open_conf x B) ->
+    WellBound_conf (g & x ~ Def (unrestrict_val v1) (unrestrict_conf A)) (open_conf x B) ->
     WellBound_val g (Pair v1 v2 (Sig A B))
 | wf_val_Pi (g: env) (x: name) (A B: conf) :
     WellBound_conf g A ->
-    WellBound_conf (g & x ~ Assum (flattenconf A)) (open_conf x B) ->
+    WellBound_conf (g & x ~ Assum (unrestrict_conf A)) (open_conf x B) ->
     WellBound_val g (Pi A B)
 | wf_val_Lam (g: env) (x: name) (A e: conf) :
-    WellBound_conf (g & x ~ Assum (flattenconf A)) (open_conf x e) ->
+    WellBound_conf (g & x ~ Assum (unrestrict_conf A)) (open_conf x e) ->
     WellBound_val g (Abs A e)
 with WellBound_conf {V: nat}: env -> conf -> Prop :=  
 | wf_conf_Comp (g: env) (e: comp):
@@ -246,13 +246,13 @@ with WellBound_conf {V: nat}: env -> conf -> Prop :=
 | wf_conf_Let (g: env) (n: comp) (m A: conf) (x: name):
     WellBound_comp g n ->
     WellBound_conf g A ->
-    WellBound_conf (g & x ~ Def (flattencomp n) (flattenconf A)) (open_conf x m) ->
+    WellBound_conf (g & x ~ Def (unrestrict_comp n) (unrestrict_conf A)) (open_conf x m) ->
     WellBound_conf g (Let n m)
 | wf_conf_If (g: env) (v: val) (B m1 m2: conf) (x y: name):
     WellBound_conf (g & x ~ Assum eBool) (open_conf x B) -> 
     WellBound_val g v ->
-    WellBound_conf (g & y ~ Eq (flattenval v) eTru) m1 ->
-    WellBound_conf (g & y ~ Eq (flattenval v) eFls) m2 -> 
+    WellBound_conf (g & y ~ Eq (unrestrict_val v) eTru) m1 ->
+    WellBound_conf (g & y ~ Eq (unrestrict_val v) eFls) m2 -> 
     WellBound_conf g (If v m1 m2)
 with WellBound_comp {V: nat}: env -> comp -> Prop :=
 | wf_comp_Val (g: env) (v: val):

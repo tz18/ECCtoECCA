@@ -194,47 +194,47 @@ Export ECCARen.
 ============================================================
 *)
 
-Fixpoint flattenval {V: nat} (v: @val V): @exp V :=
+Fixpoint unrestrict_val {V: nat} (v: @val V): @exp V :=
 match v with
   | Id x => eId x
   | Uni U => eUni U
-  | Pi A B => ePi (flattenconf A) (flattenconf B) 
-  | Abs A B => eAbs (flattenconf A) (flattenconf B)
-  | Sig A B => eSig (flattenconf A) (flattenconf B)
-  | Pair v1 v2 A => ePair (flattenval v1) (flattenval v2) (flattenconf A)
+  | Pi A B => ePi (unrestrict_conf A) (unrestrict_conf B) 
+  | Abs A B => eAbs (unrestrict_conf A) (unrestrict_conf B)
+  | Sig A B => eSig (unrestrict_conf A) (unrestrict_conf B)
+  | Pair v1 v2 A => ePair (unrestrict_val v1) (unrestrict_val v2) (unrestrict_conf A)
   | Tru => eTru
   | Fls => eFls
   | Bool => eBool
 end
-with flattencomp {V: nat}  (e: @comp V): @exp V:=
+with unrestrict_comp {V: nat}  (e: @comp V): @exp V:=
 match e with
-  | App v1 v2 => eApp (flattenval v1) (flattenval v2)
-  | Val v => flattenval v
-  | Fst v => eFst (flattenval v)
-  | Snd v => eSnd (flattenval v)
-(*   | Subst x arg body => eSubst (flattenval x) (flattenval arg) (flattenval body) *)
+  | App v1 v2 => eApp (unrestrict_val v1) (unrestrict_val v2)
+  | Val v => unrestrict_val v
+  | Fst v => eFst (unrestrict_val v)
+  | Snd v => eSnd (unrestrict_val v)
+(*   | Subst x arg body => eSubst (unrestrict_val x) (unrestrict_val arg) (unrestrict_val body) *)
 end
-with flattenconf {V: nat}  (e: @conf V): @exp V:=
+with unrestrict_conf {V: nat}  (e: @conf V): @exp V:=
 match e with
-  | Comp e => flattencomp e
-  | Let A B => eLet (flattencomp A) (flattenconf B)
-  | If v m1 m2 => eIf (flattenval v) (flattenconf m1) (flattenconf m2)
+  | Comp e => unrestrict_comp e
+  | Let A B => eLet (unrestrict_comp A) (unrestrict_conf B)
+  | If v m1 m2 => eIf (unrestrict_val v) (unrestrict_conf m1) (unrestrict_conf m2)
 end.
 
-Fixpoint getconf {V: nat} (e: @exp V) : option (@conf V) :=
+Fixpoint restrict_conf {V: nat} (e: @exp V) : option (@conf V) :=
 match e with
   | eLet A B => 
-      match (getconf A) with
-        | Some (Comp A) => match (getconf B) with
+      match (restrict_conf A) with
+        | Some (Comp A) => match (restrict_conf B) with
           | Some B => Some (Let A B)
           | None => None
           end
         | _ => None
         end
   | eIf v m1 m2 =>
-      let m1 := (getconf m1) in
-      let m2 := (getconf m2) in
-      let v  := (getconf v) in
+      let m1 := (restrict_conf m1) in
+      let m2 := (restrict_conf m2) in
+      let v  := (restrict_conf v) in
       match m1 with
         | Some m1 => match m2 with
           | Some m2 => match v with 
@@ -247,32 +247,32 @@ match e with
         end 
 (* Computations are also configurations *)
   (* should be just this but gah gah gah cannot guess decreasing argument of fix:
-    | _ => match (getcomp e) with
+    | _ => match (restrict_comp e) with
     | Some m => Some (Comp m)
     | None => None
     end *)
   | eApp v1 v2 =>
-      match (getconf v1) with
-        | Some (Comp (Val v1)) => match (getconf v2) with
+      match (restrict_conf v1) with
+        | Some (Comp (Val v1)) => match (restrict_conf v2) with
           | Some (Comp (Val v2)) => Some (Comp (App v1 v2))
           | _ => None
           end
         | _ => None
         end
   | eFst v =>
-      match (getconf v) with
+      match (restrict_conf v) with
         | Some (Comp (Val v)) => Some (Comp (Fst v))
         | _ => None
         end
   | eSnd v =>
-      match (getconf v) with
+      match (restrict_conf v) with
         | Some (Comp (Val v)) => Some (Comp (Snd v))
         | _ => None
         end
 (*   | eSubst x arg body =>
-      let x := (getval x) in
-      let arg := (getval arg) in
-      let body  := (getval body) in
+      let x := (restrict_val x) in
+      let arg := (restrict_val arg) in
+      let body  := (restrict_val body) in
       match x with
         | Some x => match arg with
           | Some arg => match body with 
@@ -287,33 +287,33 @@ match e with
   | eId x => Some (Comp (Val (Id x)))
   | eUni U => Some (Comp (Val (Uni U)))
   | ePi A B =>
-      match (getconf A) with
-        | Some A => match (getconf B) with
+      match (restrict_conf A) with
+        | Some A => match (restrict_conf B) with
           | Some B => Some (Comp (Val (Pi A B)))
           | None => None
           end
         | None => None
         end
   | eAbs A B =>
-      match (getconf A) with
-        | Some A => match (getconf B) with
+      match (restrict_conf A) with
+        | Some A => match (restrict_conf B) with
           | Some B => Some (Comp (Val (Abs A B)))
           | None => None
           end
         | None => None
         end
   | eSig A B =>
-      match (getconf A) with
-        | Some A => match (getconf B) with
+      match (restrict_conf A) with
+        | Some A => match (restrict_conf B) with
           | Some B => Some (Comp (Val (Sig A B)))
           | None => None
           end
         | None => None
         end
   | ePair v1 v2 A => 
-      match (getconf v1) with
-        | Some (Comp (Val v1)) => match (getconf v2) with
-          | Some (Comp (Val v2)) => match (getconf A) with 
+      match (restrict_conf v1) with
+        | Some (Comp (Val v1)) => match (restrict_conf v2) with
+          | Some (Comp (Val v2)) => match (restrict_conf A) with 
             | Some A => Some (Comp (Val (Pair v1 v2 A)))
             | None => None
             end
@@ -326,24 +326,24 @@ match e with
   | eBool => (Some (Comp (Val Bool)))
 end.
 
-Definition getcomp {V: nat} (e: @exp V) : option (@comp V):=
-match (getconf e) with
+Definition restrict_comp {V: nat} (e: @exp V) : option (@comp V):=
+match (restrict_conf e) with
   | Some (Comp e) => Some e
   | _ => None
 end.
 
-Definition getval {V: nat} (e: @exp V) : option (@val V):=
-match (getconf e) with
+Definition restrict_val {V: nat} (e: @exp V) : option (@val V):=
+match (restrict_conf e) with
   | Some (Comp (Val e)) => Some e
   | _ => None
 end.
 
 Definition isConf {V: nat} (e: @exp V): Prop :=
-  exists a, (getconf e) = Some a.
+  exists a, (restrict_conf e) = Some a.
 Definition isComp {V: nat} ( e: @exp V): Prop :=
-  exists a, (getcomp e) = Some a.
+  exists a, (restrict_comp e) = Some a.
 Definition isVal {V: nat} ( e: @exp V): Prop :=
-  exists a, (getval e) = Some a.
+  exists a, (restrict_val e) = Some a.
 
 (* Definition reify_Prop_val {V: nat} (e: @exp V | (@isVal V e)) : @val V.
 Proof. auto.

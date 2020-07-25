@@ -62,7 +62,7 @@ intros. inversion H ; subst ; cbv.
 Qed. 
 
 Lemma het_compose_equal_fill_hole (K : cont_r) (N: comp) :
-  (flattenconf (het_compose_r K (Comp N))) = (fill_hole N (@unrestrict_cont 0 K)).
+  (unrestrict_conf (het_compose_r K (Comp N))) = (fill_hole N (@unrestrict_cont 0 K)).
 Proof.
   destruct K; simpl; auto.
 Qed.  

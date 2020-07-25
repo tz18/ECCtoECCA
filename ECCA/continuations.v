@@ -24,7 +24,7 @@ Bind Scope ECCA_scope with cont_r.
 Fixpoint unrestrict_cont {V: nat}(k: @cont_r V): @cont V:=
 match k with
   | rHole => Hole
-  | rLetHole B => LetHole (flattenconf B)
+  | rLetHole B => LetHole (unrestrict_conf B)
 end.
 
 Definition fill_hole {V: nat}(e: @exp V) (K: @cont V): @exp V:=
