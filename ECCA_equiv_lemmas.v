@@ -4,96 +4,23 @@ Require Import Equivalence.
 
 Lemma equiv_refl (g: ECCAenv): Reflexive (ECCA_Equiv g).
 Proof.
-unfold Reflexive. intros.
-apply aE_Equiv with (e:= x); auto.
+unfold Reflexive. intros. eapply aE_Refl. 
 Qed.
 
 Lemma equiv_sym (g: ECCAenv): Symmetric (ECCA_Equiv g).
 Proof.
-unfold Symmetric. intros. inversion H.
-- apply aE_Equiv with (e := e); auto.
-- subst. apply aE_EquivIta2 with (x:=x0) (e2:=x) (e1':=e2')(e1:=y)(A:= A)(e:=e).
-  + auto.
-  + apply H0.
-  + apply H2. 
-- subst. eapply aE_EquivIta1.
-  + apply H1.
-  + apply H0.
-  + apply H2.
-- subst. eapply aE_Reflect. apply or_comm. apply H0.
+  unfold Symmetric. intros. eapply aE_Symm. auto.
 Qed.
 
 Lemma equiv_trans (g: ECCAenv): Transitive (ECCA_Equiv g).
 Proof.
-unfold Transitive. intros. induction H; induction H0; subst.
-- cut (exists d, (g |- e =r> d) /\ (g |- e0 =r> d))%ECCA.
-  + intros. destruct H3. destruct H3. apply aE_Equiv with (e:=x).
-    * apply R_Trans with (e':=e); auto.
-    * apply R_Trans with (e':=e0); auto.
-  + apply church_rosser with (e:=e2); auto.
-- cut (exists d, (g |- e =r> d) /\ (g |- (eAbs A e2) =r> d))%ECCA.
-  + intros. destruct H4. destruct H4.
-(*need more church rosser stuff for the eta-equivalence cases.*)
-Admitted.
+  unfold Transitive. intros. eapply aE_Trans. apply H. auto.
+Qed.
 
 Lemma equiv_weakening (g: ECCAenv) (x: name) (a: ctxmem) (e1 e2: ECCAexp):
   (ECCA_Equiv g e1 e2) ->
   (ECCA_Equiv (ctx_cons g x a) e1 e2).
 Admitted.
-
-Lemma if_cong_v_equiv (g: ECCAenv) (v v' m1 m2: ECCAexp):
-  (ECCA_Equiv g v v') ->
-  (ECCA_Equiv g (eIf v m1 m2) (eIf v' m1 m2)).
-Proof.
-  intros. inversion H. 1,2,3: eapply aE_Equiv.
-  - apply R_CongIf. apply H0. apply R_Refl. apply R_Refl.
-  - apply R_CongIf. apply H1. apply R_Refl. apply R_Refl.
-  - apply R_CongIf. apply H0. apply R_Refl. apply R_Refl.
-  - apply R_CongIf. admit. apply R_Refl. apply R_Refl.
-  - apply R_CongIf. apply H0. apply R_Refl. apply R_Refl.
-  - apply R_CongIf. admit. apply R_Refl. apply R_Refl.
-  - admit.
-Admitted.
-
-Lemma if_eta_1 (g: ECCAenv) (x: name) (v m1 m2 m: ECCAexp):
-  (ECCA_Equiv g (eIf v m1 m2) m) ->
-  (ECCA_Equiv (ctx_cons g x (Eq v eTru)) m1 m).
-Proof.
-  intros.
-  cut (ECCA_Equiv (ctx_cons g x (Eq v eTru)) (eIf v m1 m2) (eIf eTru m1 m2)).
-  - intros.
-    cut (ECCA_Equiv (ctx_cons g x (Eq v eTru)) (eIf eTru m1 m2) m1).
-    + intros. apply equiv_weakening with (x:=x) (a:=Eq v eTru) in H.
-      eapply equiv_trans. apply equiv_sym in H1. apply H1.
-      eapply equiv_trans. apply equiv_sym in H0. apply H0.
-      assumption.
-    + apply aE_Equiv with (e:=m1).
-      * apply R_RedR. auto.
-      * apply R_Refl.
-  - cut (ECCA_Equiv (ctx_cons g x (Eq v eTru)) v eTru).
-    + intros. apply if_cong_v_equiv. assumption.
-    + apply aE_Reflect with (x:=(free x)). left. apply ctx_has.
-Qed.
-
-Lemma if_eta_2 (g: ECCAenv) (x: name) (v m1 m2 m: ECCAexp):
-  (ECCA_Equiv g (eIf v m1 m2) m) ->
-  (ECCA_Equiv (ctx_cons g x (Eq v eFls)) m2 m).
-Proof.
-  intros.
-  cut (ECCA_Equiv (ctx_cons g x (Eq v eFls)) (eIf v m1 m2) (eIf eFls m1 m2)).
-  - intros.
-    cut (ECCA_Equiv (ctx_cons g x (Eq v eFls)) (eIf eFls m1 m2) m2).
-    + intros. apply equiv_weakening with (x:=x) (a:=Eq v eFls) in H.
-      eapply equiv_trans. apply equiv_sym in H1. apply H1.
-      eapply equiv_trans. apply equiv_sym in H0. apply H0.
-      assumption.
-    + apply aE_Equiv with (e:=m2).
-      * apply R_RedR. auto.
-      * apply R_Refl.
-  - cut (ECCA_Equiv (ctx_cons g x (Eq v eFls)) v eFls).
-    + intros. apply if_cong_v_equiv. assumption.
-    + apply aE_Reflect with (x:=(free x)). left. apply ctx_has.
-Qed.
 
 Instance ECCA_Equiv_equiv (g: ECCAenv) : Equivalence (ECCA_Equiv g).
 Proof.

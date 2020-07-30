@@ -30,7 +30,12 @@ Definition cont_compose {V: nat} (K : @cont_r V) (K' : @cont_r V) : @cont_r V :=
 
 Notation "K1 '<<' K2 '>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
 
-(* This is a little more understandable  *)
+Open Scope ECCA_scope.
+
+Coercion flattenECCAconf: ECCAconf >-> ECCAexp.
+Coercion flattenECCAcomp: ECCAcomp >-> ECCAexp.
+
+(* This is a little more understandable 
 
 Lemma technical_1 (K : cont_r) (e : ECCAcomp) (G : ECCAenv) :
 (G |- (flattenECCAconf (fill_hole_r e K)) =e=
@@ -132,53 +137,7 @@ Proof.
     * eapply equiv_trans. apply H3. apply fill_hole_over_branches.
 Qed.
 
-(* 
-
- destruct K; eauto. rewrite (cont_compose_empty_hole m).
-    apply aE_Equiv with (e:= eLet n m); apply R_Refl.
-  + simpl. cbn in *.
-Check rLetHole. eapply aE_Equiv.
-    Focus 2.
-    - eapply R_RedR.
-      eapply R_Let.
-    -  unfold bind.
-       eapply R_CongLet.
-      
-  + simpl. rewrite (cont_compose_empty_hole m1).
-    rewrite (cont_compose_empty_hole m2).
-    apply aE_Equiv with (e:= eIf (flattenECCAval v) m1 m2); apply R_Refl.
-  + simpl. admit. *)
-
- (*   
-dependent induction M; try auto. 
-+ simpl. apply technical_1.
-+ simpl. destruct K.
-- unfold fill_hole. unfold wk_cont. rewrite (cont_compose_empty_hole M).
-  apply aE_Equiv with (e:=eLet A M); apply R_Refl.
-- unfold fill_hole. unfold wk_cont. Admitted.
-
-cut (G |- (eLet x A (het_compose_r K M)) =e=
-            (subst x A (het_compose_r K M)))%ECCA. 
-(* property of substitution *)
-  cut (G |- (subst x A (het_compose_r K M)) =e=
-            (fill_hole (subst x A M) (unrestrict_cont K)))%ECCA.
-  (* by ??? *)
- cut (G |- (fill_hole (subst x A M) (unrestrict_cont K)) =e=
-            (het_compose_r K (getECCAconf (subst x A M))))%ECCA.
- (* by some tedious property of substitution ??? *)
- cut (G |- (subst x A (fill_hole K M)) =e=
-            (subst x A (het_compose_r K M)))%ECCA.
-(* by IH *)
- cut (G |- (fill_hole K M) =e=
-            (het_compose_r K M))%ECCA.
-(* by zeta *)
-  cut (G |-  (het_compose_r K (subst x A M)) =e=
-fill_hole
-   (eLet x (flattenECCAcomp A)
-      (flattenECCAconf M))
-   (unrestrict_cont K)
-           ))%ECCA. *)
-
+(*
 Require Import String.
 Lemma compositionality {V: nat} (e : ECCexp) (K K' : @cont_r V):
   het_compose_r K' (transWork e K) =
@@ -187,8 +146,17 @@ Proof.
   intros. induction e.
   1,3,2,4,7,11,12,13: try (unfold transWork; destruct K; destruct K'; simpl; reflexivity).
   - unfold transWork. fold (@transWork V). fold (@transWork V).
-    rewrite (IHe1 (rLetHole (close_conf "X1" (If (Id (!"X1")) (transWork e2 K) (transWork e3 K)))) K').
-    simpl. shelve.
+    erewrite IHe1.
+    simpl.
+    erewrite <- IHe2.
+    erewrite <- IHe3.
+    assert ((rLetHole (het_compose_r (wk_cont K') (close_conf "X1" (If (Id (!"X1")) (transWork e2 K) (transWork e3 K))))) = (rLetHole (close_conf "X1" (If (Id (!"X1")) (het_compose_r K' (transWork e2 K)) (het_compose_r K' (transWork e3 K)))))).
+    * assert ((If (Id (!"X1")) (het_compose_r K' (transWork e2 K)) (het_compose_r K' (transWork e3 K))) = (het_compose_r K' (If (Id (!"X1")) (transWork e2 K) (transWork e3 K)))).
+      ** auto.
+      ** rewrite H. admit.
+    * rewrite H. auto.
+  - unfold transWork. fold (@transWork V). fold (@transWork V).
+    erewrite IHe1. simpl. erewrite <- IHe2.
   - unfold transWork. fold (@transWork V). fold (@transWork V).
     rewrite (IHe1 (rLetHole (close_conf "X1"
              (transWork e2 (rLetHole (close_conf "X2" (fill_hole_r (App (Id (!"X1")) (Id (!"X2"))) K)))))) K').
@@ -227,4 +195,5 @@ Proof.
     rewrite (IHe (add x ns) (rLetHole x (fill_hole_r (Snd x) K)) K'). simpl.
     rewrite (cont_compose_fill_het_compose K' K (Snd x)).
     reflexivity.
-Qed.
+Qed.*)
+*)
