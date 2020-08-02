@@ -81,3 +81,29 @@ match k with
 | rHole => rHole
 | rLetHole B => rLetHole (close_conf x B)
 end.  
+
+Fixpoint het_compose_r {V: nat} (K : @cont_r V) (M : @conf V) {struct M} : conf :=
+  match M with
+  | Comp e => fill_hole_r e K
+  | Let N M' => Let N (@het_compose_r (S V) (wk_cont K) M')
+  | If V1 M1 M2 => If V1
+                      (het_compose_r K M1)
+                      (het_compose_r K M2)
+  end.
+
+Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.
+
+(* Fixpoint het_compose (K : cont_r) (M : exp) (p : IsANF M) : conf :=
+  match M with
+  | Comp e => fill_hole_r e K
+  | Let x N M' => Let x N (het_compose K M')
+  end. *)
+
+Definition cont_compose {V: nat} (K : @cont_r V) (K' : @cont_r V) : @cont_r V :=
+  match K' with
+  | rHole => K
+  | rLetHole M => rLetHole (het_compose_r (wk_cont K) M)
+  end.
+
+Notation "K1 '<<' K2 '>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
+

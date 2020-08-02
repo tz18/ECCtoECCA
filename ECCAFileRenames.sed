@@ -1,0 +1,9 @@
+s/ECCA_continuations/continuations/g
+s/ECCA_core/core/g
+s/ECCA_core_lemmas/core_lemmas/g
+s/ECCA_equiv/equiv/g
+s/ECCA_equiv_lemmas/equiv_lemmas/g
+s/ECCA_key_lemmas/key_lemmas/g
+s/ECCA_reduction/reduction/g
+s/ECCA_reduction_lemmas/reduction_lemmas/g
+s/ECCA_typing/typing/g
