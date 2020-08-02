@@ -1,7 +1,6 @@
 Require Export typing.
 Require Export equiv_lemmas.
 Require Export continuations.
-Require Export ECCA_het_comp.
 
 Lemma Cut (g: env) (K : cont) (N: exp) (A B: exp):
 (Types_cont g K (Cont N A B) ->
@@ -59,21 +58,21 @@ intros. inversion H ; subst ; cbv.
   intros. rewrite <- H3. eapply aT_Let with (n:= N') (m:= M) (A:=A) (B:=(wk B)) (x:=y) (g:=g).
   * assumption.
   * apply equivalence_in_derivation with (N := N); assumption.
-Qed. 
+Qed.
 
-Lemma het_compose_equal_fill_hole (K : cont_r) (N: comp) :
+(* Lemma het_compose_equal_fill_hole (K : cont_r) (N: comp) :
   (unrestrict_conf (het_compose_r K (Comp N))) = (fill_hole N (@unrestrict_cont 0 K)).
 Proof.
   destruct K; simpl; auto.
 Qed.  
-
+ *)
 Lemma append_rearrange {V:nat}(g g': @env V) (x: name) (a: ctxmem) :
   ((append g g')& x ~ a) = (append (g & x ~ a) g').
 Proof.
   induction g; simpl; auto.
 Qed.
 
-Lemma Hetereogeneous_Cut (g g': env) (K : cont_r) (M M': conf) (A B: exp):
+(* Lemma Hetereogeneous_Cut (g g': env) (K : cont_r) (M M': conf) (A B: exp):
 Types_cont (append g g') (unrestrict_cont K) (Cont M' A B) ->
 Types g M A ->
 (@WellBound_conf 0 g M) ->
@@ -89,5 +88,5 @@ Proof.
     + erewrite append_rearrange. admit.
       
 Admitted.
-
+ *)
  

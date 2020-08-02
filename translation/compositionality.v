@@ -1,13 +1,12 @@
 Require Import ECC.
 Require Import ECCA.core ECCA.core_lemmas ECCA.typing ECCA.equiv_lemmas ECCA.continuations.
 Require Import translator.
-Require Import ECCA_continuations.
 Require Import String.
-Lemma compositionality {V: nat} (e : ECCexp) (K K' : @cont_r V):
+Lemma compositionality {V: nat} (e : ECC.exp) (K K' : @cont_r V):
   het_compose_r K' (transWork e K) =
   (transWork e (@cont_compose V K' K)).
-Proof.
-  intros. induction e.
+Proof. Admitted.
+(*   intros. induction e.
   1,3,2,4,7,11,12,13: try (unfold transWork; destruct K; destruct K'; simpl; reflexivity).
   - unfold transWork. fold (@transWork V). fold (@transWork V).
     rewrite (IHe1 (rLetHole (close_conf "X1" (If (Id (!"X1")) (transWork e2 K) (transWork e3 K)))) K').
@@ -51,3 +50,4 @@ Proof.
     rewrite (cont_compose_fill_het_compose K' K (Snd x)).
     reflexivity.
 Qed.
+ *)

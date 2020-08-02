@@ -1,4 +1,3 @@
-Require Import ECC.
 Require Import core core_lemmas typing.
 Require Import equiv_lemmas.
 Require Import continuations.

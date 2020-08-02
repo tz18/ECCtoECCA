@@ -1,13 +1,14 @@
 Require Import Atom.
 Require Import ECC.
-Require Import ECCA_core ECCA_core_lemmas ECCA_typing ECCA_continuations.
+Require Import ECCA.core ECCA.core_lemmas ECCA.typing ECCA.continuations.
+
 Require Import String.
 
 Notation "! k" := (free k) (at level 10, format "! k").
 
 Open Scope string.
 
-Fixpoint transWork  {V: nat} (e: @ECCexp V) (K: @cont_r V) : @ECCAconf V:=
+Fixpoint transWork  {V: nat} (e: @ECC.exp V) (K: @cont_r V) : @conf V:=
 (*   let (X, _) := (atom_fresh ns) in
   let Xns    := (add X ns) in
   let (Y, _) := (atom_fresh Xns)  in
@@ -47,8 +48,7 @@ Fixpoint transWork  {V: nat} (e: @ECCexp V) (K: @cont_r V) : @ECCAconf V:=
     | ECC.If e e1 e2 =>
       (@transWork (V) e (rLetHole (close_conf ("X1")
          (If (@Id ((V)) (!"X1")) (@transWork V e1 K) (@transWork V e2 K)))))
-end
-.
+end.
 
 Definition example:=
 (@ECC.Abs 0 ECC.Tru (ECC.ECCRen.close "x1" (ECC.Id (free "x1")))).
@@ -68,10 +68,11 @@ Compute transWork ex2 rHole.
                             (transWork Y e1 (rLetHole Y (fill_hole (Subst X Tru (Id Y)) K)))
                             (transWork Y e1 (rLetHole Y (fill_hole (Subst X Fls (Id Y)) K)))))) *) 
 
-Definition trans {V: nat}(e: @ECCexp V):=
+Definition trans {V: nat}(e: @ECC.exp V):=
   @transWork V e rHole
 .
 (* 
+(*  *)
 Fixpoint transEnv (g: ECCenv):=
 match g with
 | ctxempty => ctxempty
