@@ -2,5 +2,23 @@
 -R Common Common
 -R ECC ECC
 -R ECCA ECCA
--R translation Translation
--R . Top
+-R Translation Translation
+shifted-names/src/Morph.v
+shifted-names/src/Var.v
+shifted-names/src/Context.v
+shifted-names/src/Relative.v
+Common/Atom.v
+ECC/ECC.v
+ECCA/core.v
+ECCA/core_lemmas.v
+ECCA/reduction.v
+ECCA/reduction_lemmas.v
+ECCA/equiv.v
+ECCA/equiv_lemmas.v
+ECCA/typing.v
+ECCA/continuations.v
+ECCA/continuations_lemmas.v
+ECCA/key_lemmas.v
+Translation/translator.v
+Translation/compositionality.v
+Translation/trans_preservation.v
