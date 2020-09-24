@@ -11,97 +11,97 @@ Delimit Scope ECCA_scope with ECCA.
 
 (* Restricted ECCA, used in computing *)
 
-Inductive ECCAval {V: nat}: Type :=
+Inductive val {V: nat}: Type :=
   | Id (x: @atom V)
-  | Uni (U: ECCuni)
-  | Pi (A: ECCAconf) (B: @ECCAconf (S V))
-  | Abs (A: ECCAconf) (B: @ECCAconf (S V))
-  | Sig (A: ECCAconf) (B: @ECCAconf (S V))
-  | Pair (v1 v2: ECCAval) (A: @ECCAconf V)
+  | Uni (U: universe)
+  | Pi (A: conf) (B: @conf (S V))
+  | Abs (A: conf) (B: @conf (S V))
+  | Sig (A: conf) (B: @conf (S V))
+  | Pair (v1 v2: val) (A: @conf V)
   | Tru
   | Fls
   | Bool
 with
-ECCAconf {V: nat}: Type :=
-  | Comp (e: ECCAcomp)
-  | Let (A: ECCAcomp) (B: @ECCAconf (S V))
-  | If (v: ECCAval) (m1 m2: ECCAconf)
+conf {V: nat}: Type :=
+  | Comp (e: comp)
+  | Let (A: comp) (B: @conf (S V))
+  | If (v: val) (m1 m2: conf)
 with
-ECCAcomp {V: nat}: Type :=
-  | App (v1 v2: ECCAval)
-  | Val (v: ECCAval)
-  | Fst (v: ECCAval)
-  | Snd (v: ECCAval)
+comp {V: nat}: Type :=
+  | App (v1 v2: val)
+  | Val (v: val)
+  | Fst (v: val)
+  | Snd (v: val)
 .
 
 (* Mutual induction Scheme *)
-Scheme ECCA_val_conf_mut := Induction for ECCAval Sort Prop
-with ECCA_conf_comp_mut := Induction for ECCAconf Sort Prop
-with ECCA_comp_val_mut := Induction for ECCAcomp Sort Prop.
+Scheme val_conf_mut := Induction for val Sort Prop
+with conf_comp_mut := Induction for conf Sort Prop
+with comp_val_mut := Induction for comp Sort Prop.
 
-Combined Scheme ECCA_val_conf_comp_comb from ECCA_val_conf_mut, ECCA_conf_comp_mut, ECCA_comp_val_mut.
+Combined Scheme val_conf_comp_comb from val_conf_mut, conf_comp_mut, comp_val_mut.
 
-(* Fixpoint open_val a {V} (t: @ECCAval (S V)):=
+(* Fixpoint open_val a {V} (t: @val (S V)):=
 match t with 
   | Id x => Id (openv a v)
   | Pair v1 v2 A => Pair (open_val a v1) (open_val a v2) (open_conf a A)
-  | Pi A B(A: ECCAconf) (B: @ECCAconf (S V)) => Pi (open_conf a A) (open_conf a B)
-  | Abs A B(A: ECCAconf) (B: @ECCAconf (S V)) => Abs (open_conf a A) (open_conf a B)
-  | Sig A B(A: ECCAconf) (B: @ECCAconf (S V)) => Sig (open_conf a A) (open_conf a B)
+  | Pi A B(A: conf) (B: @conf (S V)) => Pi (open_conf a A) (open_conf a B)
+  | Abs A B(A: conf) (B: @conf (S V)) => Abs (open_conf a A) (open_conf a B)
+  | Sig A B(A: conf) (B: @conf (S V)) => Sig (open_conf a A) (open_conf a B)
   | (Uni U) as v | Tru as v | Fls as v | Bool as v => v
 end
 with 
-open_comp a {V} (t: @ECCAcomp (S V)) :=
+open_comp a {V} (t: @comp (S V)) :=
 match
   | App v1 v2 => App (open_val a v1) (open_val a v2)
   | Val v => Val (open_val a v)
   | Fst v => Fst (open_val a v)
   | Snd v => Snd (open_val a v)
 end
-open_conf a {V} (t: @ECCAconf (S V)) :=
+open_conf a {V} (t: @conf (S V)) :=
 match
   | Comp e => Comp (open_comp a e)
   | Let A B => Let (open_comp a A) (open_comp a B)
 end *)
 
 
-Hint Constructors ECCAval. 
-Coercion Id: atom >-> ECCAval.
-Bind Scope ECCA_scope with ECCAval.
-Bind Scope ECCA_scope with ECCAconf.
-Bind Scope ECCA_scope with ECCAcomp.
+Hint Constructors val. 
+Coercion Id: atom >-> val.
+Bind Scope ECCA_scope with val.
+Bind Scope ECCA_scope with conf.
+Bind Scope ECCA_scope with comp.
 
 
-Inductive ECCAexp {V: nat}: Type :=
+Inductive exp {V: nat}: Type :=
   | eId (x: @atom V)
-  | eUni (U: ECCuni)
-  | ePi (A: ECCAexp) (B: @ECCAexp (S V))
-  | eAbs (A: ECCAexp) (B: @ECCAexp (S V))
-  | eSig (A: ECCAexp) (B: @ECCAexp (S V))
-  | ePair (v1 v2: ECCAexp) (A: ECCAexp)
+  | eUni (U: universe)
+  | ePi (A: exp) (B: @exp (S V))
+  | eAbs (A: exp) (B: @exp (S V))
+  | eSig (A: exp) (B: @exp (S V))
+  | ePair (v1 v2: exp) (A: exp)
   | eTru
   | eFls
   | eBool
-  | eLet (A: ECCAexp) (B: @ECCAexp (S V))
-  | eIf (v: ECCAexp) (e1 e2: ECCAexp) 
-  | eApp (v1 v2: ECCAexp)
-  | eFst (v: ECCAexp)
-  | eSnd (v: ECCAexp)
-(*   | eSubst (x arg body: ECCAexp) *)
+  | eLet (A: exp) (B: @exp (S V))
+  | eIf (v: exp) (e1 e2: exp) 
+  | eApp (v1 v2: exp)
+  | eFst (v: exp)
+  | eSnd (v: exp)
+(*   | eSubst (x arg body: exp) *)
 .
 
-(* Approach: If we have an ECCAexp with a proof
- that we can get an ECCAconf out of it, we should be able to
- extract the ECCAconf. Three fundamental naming operations cannot break ANF:
+(* Approach: If we have an exp with a proof
+ that we can get an conf out of it, we should be able to
+ extract the conf. Three fundamental naming operations cannot break ANF:
  wk, open, and close. The only operation that could potentially break ANF is bind.
- Let's apply these constructors by operating over the ECCAexp,
+ Let's apply these constructors by operating over the exp,
  preserving the proof that it is ANF,
- and extracting the ECCAconf back after.*)
+ and extracting the conf back after.*)
 
-Hint Constructors ECCAexp.
+Hint Constructors exp.
 
 Module ECCATerm <: Term.
-  Definition term := @ECCAexp.
+  Definition term := @exp.
   Definition unit {N}: morph (@var) N (@term) N :=
     morph_inject (@eId).
 
@@ -194,47 +194,47 @@ Export ECCARen.
 ============================================================
 *)
 
-Fixpoint flattenECCAval {V: nat} (v: @ECCAval V): @ECCAexp V :=
+Fixpoint unrestrict_val {V: nat} (v: @val V): @exp V :=
 match v with
   | Id x => eId x
   | Uni U => eUni U
-  | Pi A B => ePi (flattenECCAconf A) (flattenECCAconf B) 
-  | Abs A B => eAbs (flattenECCAconf A) (flattenECCAconf B)
-  | Sig A B => eSig (flattenECCAconf A) (flattenECCAconf B)
-  | Pair v1 v2 A => ePair (flattenECCAval v1) (flattenECCAval v2) (flattenECCAconf A)
+  | Pi A B => ePi (unrestrict_conf A) (unrestrict_conf B) 
+  | Abs A B => eAbs (unrestrict_conf A) (unrestrict_conf B)
+  | Sig A B => eSig (unrestrict_conf A) (unrestrict_conf B)
+  | Pair v1 v2 A => ePair (unrestrict_val v1) (unrestrict_val v2) (unrestrict_conf A)
   | Tru => eTru
   | Fls => eFls
   | Bool => eBool
 end
-with flattenECCAcomp {V: nat}  (e: @ECCAcomp V): @ECCAexp V:=
+with unrestrict_comp {V: nat}  (e: @comp V): @exp V:=
 match e with
-  | App v1 v2 => eApp (flattenECCAval v1) (flattenECCAval v2)
-  | Val v => flattenECCAval v
-  | Fst v => eFst (flattenECCAval v)
-  | Snd v => eSnd (flattenECCAval v)
-(*   | Subst x arg body => eSubst (flattenECCAval x) (flattenECCAval arg) (flattenECCAval body) *)
+  | App v1 v2 => eApp (unrestrict_val v1) (unrestrict_val v2)
+  | Val v => unrestrict_val v
+  | Fst v => eFst (unrestrict_val v)
+  | Snd v => eSnd (unrestrict_val v)
+(*   | Subst x arg body => eSubst (unrestrict_val x) (unrestrict_val arg) (unrestrict_val body) *)
 end
-with flattenECCAconf {V: nat}  (e: @ECCAconf V): @ECCAexp V:=
+with unrestrict_conf {V: nat}  (e: @conf V): @exp V:=
 match e with
-  | Comp e => flattenECCAcomp e
-  | Let A B => eLet (flattenECCAcomp A) (flattenECCAconf B)
-  | If v m1 m2 => eIf (flattenECCAval v) (flattenECCAconf m1) (flattenECCAconf m2)
+  | Comp e => unrestrict_comp e
+  | Let A B => eLet (unrestrict_comp A) (unrestrict_conf B)
+  | If v m1 m2 => eIf (unrestrict_val v) (unrestrict_conf m1) (unrestrict_conf m2)
 end.
 
-Fixpoint getECCAconf {V: nat} (e: @ECCAexp V) : option (@ECCAconf V) :=
+Fixpoint restrict_conf {V: nat} (e: @exp V) : option (@conf V) :=
 match e with
   | eLet A B => 
-      match (getECCAconf A) with
-        | Some (Comp A) => match (getECCAconf B) with
+      match (restrict_conf A) with
+        | Some (Comp A) => match (restrict_conf B) with
           | Some B => Some (Let A B)
           | None => None
           end
         | _ => None
         end
   | eIf v m1 m2 =>
-      let m1 := (getECCAconf m1) in
-      let m2 := (getECCAconf m2) in
-      let v  := (getECCAconf v) in
+      let m1 := (restrict_conf m1) in
+      let m2 := (restrict_conf m2) in
+      let v  := (restrict_conf v) in
       match m1 with
         | Some m1 => match m2 with
           | Some m2 => match v with 
@@ -247,32 +247,32 @@ match e with
         end 
 (* Computations are also configurations *)
   (* should be just this but gah gah gah cannot guess decreasing argument of fix:
-    | _ => match (getECCAcomp e) with
+    | _ => match (restrict_comp e) with
     | Some m => Some (Comp m)
     | None => None
     end *)
   | eApp v1 v2 =>
-      match (getECCAconf v1) with
-        | Some (Comp (Val v1)) => match (getECCAconf v2) with
+      match (restrict_conf v1) with
+        | Some (Comp (Val v1)) => match (restrict_conf v2) with
           | Some (Comp (Val v2)) => Some (Comp (App v1 v2))
           | _ => None
           end
         | _ => None
         end
   | eFst v =>
-      match (getECCAconf v) with
+      match (restrict_conf v) with
         | Some (Comp (Val v)) => Some (Comp (Fst v))
         | _ => None
         end
   | eSnd v =>
-      match (getECCAconf v) with
+      match (restrict_conf v) with
         | Some (Comp (Val v)) => Some (Comp (Snd v))
         | _ => None
         end
 (*   | eSubst x arg body =>
-      let x := (getECCAval x) in
-      let arg := (getECCAval arg) in
-      let body  := (getECCAval body) in
+      let x := (restrict_val x) in
+      let arg := (restrict_val arg) in
+      let body  := (restrict_val body) in
       match x with
         | Some x => match arg with
           | Some arg => match body with 
@@ -287,33 +287,33 @@ match e with
   | eId x => Some (Comp (Val (Id x)))
   | eUni U => Some (Comp (Val (Uni U)))
   | ePi A B =>
-      match (getECCAconf A) with
-        | Some A => match (getECCAconf B) with
+      match (restrict_conf A) with
+        | Some A => match (restrict_conf B) with
           | Some B => Some (Comp (Val (Pi A B)))
           | None => None
           end
         | None => None
         end
   | eAbs A B =>
-      match (getECCAconf A) with
-        | Some A => match (getECCAconf B) with
+      match (restrict_conf A) with
+        | Some A => match (restrict_conf B) with
           | Some B => Some (Comp (Val (Abs A B)))
           | None => None
           end
         | None => None
         end
   | eSig A B =>
-      match (getECCAconf A) with
-        | Some A => match (getECCAconf B) with
+      match (restrict_conf A) with
+        | Some A => match (restrict_conf B) with
           | Some B => Some (Comp (Val (Sig A B)))
           | None => None
           end
         | None => None
         end
   | ePair v1 v2 A => 
-      match (getECCAconf v1) with
-        | Some (Comp (Val v1)) => match (getECCAconf v2) with
-          | Some (Comp (Val v2)) => match (getECCAconf A) with 
+      match (restrict_conf v1) with
+        | Some (Comp (Val v1)) => match (restrict_conf v2) with
+          | Some (Comp (Val v2)) => match (restrict_conf A) with 
             | Some A => Some (Comp (Val (Pair v1 v2 A)))
             | None => None
             end
@@ -326,38 +326,38 @@ match e with
   | eBool => (Some (Comp (Val Bool)))
 end.
 
-Definition getECCAcomp {V: nat} (e: @ECCAexp V) : option (@ECCAcomp V):=
-match (getECCAconf e) with
+Definition restrict_comp {V: nat} (e: @exp V) : option (@comp V):=
+match (restrict_conf e) with
   | Some (Comp e) => Some e
   | _ => None
 end.
 
-Definition getECCAval {V: nat} (e: @ECCAexp V) : option (@ECCAval V):=
-match (getECCAconf e) with
+Definition restrict_val {V: nat} (e: @exp V) : option (@val V):=
+match (restrict_conf e) with
   | Some (Comp (Val e)) => Some e
   | _ => None
 end.
 
-Definition isANF {V: nat} (e: @ECCAexp V): Prop :=
-  exists a, (getECCAconf e) = Some a.
-Definition isComp {V: nat} ( e: @ECCAexp V): Prop :=
-  exists a, (getECCAcomp e) = Some a.
-Definition isVal {V: nat} ( e: @ECCAexp V): Prop :=
-  exists a, (getECCAval e) = Some a.
+Definition isConf {V: nat} (e: @exp V): Prop :=
+  exists a, (restrict_conf e) = Some a.
+Definition isComp {V: nat} ( e: @exp V): Prop :=
+  exists a, (restrict_comp e) = Some a.
+Definition isVal {V: nat} ( e: @exp V): Prop :=
+  exists a, (restrict_val e) = Some a.
 
-(* Definition reify_Prop_val {V: nat} (e: @ECCAexp V | (@isVal V e)) : @ECCAval V.
+(* Definition reify_Prop_val {V: nat} (e: @exp V | (@isVal V e)) : @val V.
 Proof. auto.
 Qed.
  *)
 
 (* 
-Definition open_val {V: nat} (v: @ECCAval (S V)) : @ECCAval V :=
+Definition open_val {V: nat} (v: @val (S V)) : @val V :=
 open 
 
-Definition reflect_Prop_val ( e : ECCAexp) : Option (isVal e). *) 
+Definition reflect_Prop_val ( e : exp) : Option (isVal e). *) 
 
-Coercion Val: ECCAval >-> ECCAcomp. 
-Coercion Comp: ECCAcomp >-> ECCAconf. 
+Coercion Val: val >-> comp. 
+Coercion Comp: comp >-> conf. 
 
 (* 
 =====================================
@@ -366,23 +366,23 @@ Coercion Comp: ECCAcomp >-> ECCAconf.
 *)
 
 Inductive ctxmem {V: nat} :=
-| Assum (A: @ECCAexp V)
-| Def (e: @ECCAexp V) (A: @ECCAexp V)
-| Eq (e1: @ECCAexp V) (e2: @ECCAexp V) 
+| Assum (A: @exp V)
+| Def (e: @exp V) (A: @exp V)
+| Eq (e1: @exp V) (e2: @exp V) 
 .
 
-Definition ECCAenv {V: nat} := @context (@ctxmem V).
+Definition env {V: nat} := @context (@ctxmem V).
 
-Inductive assumes {V: nat} (g: ECCAenv) (x: atom) (A: @ECCAexp V) :=
+Inductive assumes {V: nat} (g: env) (x: atom) (A: @exp V) :=
 | ass :
   (has g x (Assum A)) ->
   assumes g x A
-| def (e: @ECCAexp V):
+| def (e: @exp V):
   (has g x (Def e A)) ->
   assumes g x A
 .
 
-Lemma ctx_has {V: nat} (g: @ECCAenv V) (x: name) (a: ctxmem):
+Lemma ctx_has {V: nat} (g: @env V) (x: name) (a: ctxmem):
   (has (ctx_cons g x a) (free x) a).
 Proof.
   unfold has. rewrite rw_closev_same. unfold bindv. auto.
@@ -391,8 +391,8 @@ Qed.
 
 (* Defining "g,g'|-"
   Append environment g to environment g'*)
-Fixpoint appendEnv {V:nat} (g g': @ECCAenv V) :=
+Fixpoint append {V:nat} (g g': @env V) :=
 match g with
 | ctx_empty => g'
-| g'' & x ~ A => ((appendEnv g'' g') & x ~ A)
+| g'' & x ~ A => ((append g'' g') & x ~ A)
 end. 

@@ -1,40 +1,24 @@
--R . Top
-ShiftedNames/Morph.v
-ShiftedNames/Var.v
-ShiftedNames/Context.v
-ShiftedNames/Relative.v
-Atom.v
-ECC.v
-ECCA_core.v
-ECCA_core_lemmas.v
-ECCA_reduction.v
-ECCA_reduction_lemmas.v
-ECCA_equiv.v
-ECCA_equiv_lemmas.v
-ECCA_subst.v
-ECCA_subst_lemmas.v
-ECCA_typing.v
-ECCA_continuations.v
-translator.v
-ECCA_trans_preservation.v
-ECCA_het_comp.v
-ECCA_key_lemmas.v
-Metalib/AssocList.v
-Metalib/CoqEqDec.v
-Metalib/CoqFSetDecide.v
-Metalib/CoqFSetInterface.v
-Metalib/CoqListFacts.v
-Metalib/CoqMSetDecide.v
-Metalib/CoqMSetInterface.v
-Metalib/CoqUniquenessTac.v
-Metalib/CoqUniquenessTacEx.v
-Metalib/FSetExtra.v
-Metalib/FSetWeakNotin.v
-Metalib/LibDefaultSimp.v
-Metalib/LibLNgen.v
-Metalib/LibTactics.v
-Metalib/Metatheory.v
-Metalib/MetatheoryAtom.v
-Metalib/MSetExtra.v
-Metalib/MSetWeakNotin.v
-
+-R shifted-names/src SNames
+-R common common
+-R ECC ECC
+-R ECCA ECCA
+-R translation translation
+shifted-names/src/Morph.v
+shifted-names/src/Var.v
+shifted-names/src/Context.v
+shifted-names/src/Relative.v
+common/Atom.v
+ECC/ECC.v
+ECCA/core.v
+ECCA/core_lemmas.v
+ECCA/reduction.v
+ECCA/reduction_lemmas.v
+ECCA/equiv.v
+ECCA/equiv_lemmas.v
+ECCA/typing.v
+ECCA/continuations.v
+ECCA/continuations_lemmas.v
+ECCA/key_lemmas.v
+translation/translator.v
+translation/compositionality.v
+translation/trans_preservation.v
