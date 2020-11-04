@@ -284,7 +284,12 @@ Qed.
 
 Require Import Coq.Program.Equality.
 Lemma boolsrg_gte_truesrg: forall (g: env) (e: @exp 0)  (n1 n2: nat), trues_rg g e n1 -> bools_rg g e n2 -> (n2 >= n1).
-Proof. intros.
+Proof. intros. dependent induction H0; dependent induction H; auto; try contradiction; try discriminate.
++ cut ((Def e A) = (Def e0 A0)).
+    * intro. inversion H3. subst. auto. 
+    * apply has_function with (x0:=x) (g0:=g). auto.
++ 
+
 dependent induction g; dependent induction e.
   - inversion H; inversion H0; subst; cbn in *; try contradiction.
   - inversion H; inversion H0; subst. auto.
