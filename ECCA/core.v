@@ -361,28 +361,28 @@ Coercion Comp: comp >-> conf.
 
 (* 
 =====================================
-=======--Type Environments --========
+=======--Type Environments--=========
 =====================================
 *)
 
-Inductive ctxmem {V: nat} :=
-| Assum (A: @exp V)
-| Def (e: @exp V) (A: @exp V)
-| Eq (e1: @exp V) (e2: @exp V) 
+Inductive ctxmem :=
+| Assum (A: @exp 0)
+| Def (e: @exp 0) (A: @exp 0)
+| Eq (e1: @exp 0) (e2: @exp 0) 
 .
 
-Definition env {V: nat} := @context (@ctxmem V).
+Definition env := @context ctxmem.
 
-Inductive assumes {V: nat} (g: env) (x: atom) (A: @exp V) :=
+Inductive assumes (g: env) (x: atom) (A: @exp 0) :=
 | ass :
   (has g x (Assum A)) ->
   assumes g x A
-| def (e: @exp V):
+| def (e: @exp 0):
   (has g x (Def e A)) ->
   assumes g x A
 .
 
-Lemma ctx_has {V: nat} (g: @env V) (x: name) (a: ctxmem):
+Lemma ctx_has (g: env) (x: name) (a: ctxmem):
   (has (ctx_cons g x a) (free x) a).
 Proof.
   unfold has. rewrite rw_closev_same. unfold bindv. auto.
@@ -391,7 +391,7 @@ Qed.
 
 (* Defining "g,g'|-"
   Append environment g to environment g'*)
-Fixpoint append {V:nat} (g g': @env V) :=
+Fixpoint append (g g': env) :=
 match g with
 | ctx_empty => g'
 | g'' & x ~ A => ((append g'' g') & x ~ A)

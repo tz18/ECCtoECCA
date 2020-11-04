@@ -8,13 +8,7 @@ Notation "! k" := (free k) (at level 10, format "! k").
 
 Open Scope string.
 
-Fixpoint transWork  {V: nat} (e: @ECC.exp V) (K: @cont_r V) : @conf V:=
-(*   let (X, _) := (atom_fresh ns) in
-  let Xns    := (add X ns) in
-  let (Y, _) := (atom_fresh Xns)  in
-  let Yns    := (add Y Xns) in
-  let (Z, _) := (atom_fresh Yns) in
-  let Zns    := (add Z Yns) in *)
+Fixpoint transWork (e: @ECC.exp 0) (K: @cont_r 0) : @conf 0:=
   match e with
     | ECC.Id x => (fill_hole_r (Val (Id x)) K)
     | ECC.Pi A B => (fill_hole_r (Val (Pi (transWork A rHole) (transWork B rHole))) K)
@@ -24,7 +18,7 @@ Fixpoint transWork  {V: nat} (e: @ECC.exp V) (K: @cont_r V) : @conf V:=
     | ECC.Fls => (fill_hole_r (Val (Fls)) K)
     | ECC.Bool => (fill_hole_r (Val (Bool)) K)
     | ECC.Uni U => (fill_hole_r (Val (Uni U)) K)
-    | ECC.Let e1 e2 => (@transWork V e1 (@rLetHole V
+    | ECC.Let e1 e2 => (@transWork e1 (@rLetHole V
                           (@transWork (S V) e2 (wk_cont K))))
     | ECC.App e1 e2 =>
       (@transWork (V) e1 (rLetHole (close_conf ("X1")
