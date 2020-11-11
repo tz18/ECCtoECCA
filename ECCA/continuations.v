@@ -7,34 +7,35 @@ Require Import core_lemmas.
 
 (* TODO: incomplete *)
 
-Inductive cont {V: nat}: Type :=
+Inductive cont: Type :=
   | Hole
-  | LetHole (B: @exp (S V))
+  | LetHole (B: @exp (S 0))
 .
 Hint Constructors cont.
 Bind Scope ECCA_scope with cont.
 
-Inductive cont_r {V: nat}: Type :=
+Inductive cont_r: Type :=
   | rHole
-  | rLetHole (B: @conf (S V))
+  | rLetHole (B: @conf (S 0))
 .
 Hint Constructors cont_r.
 Bind Scope ECCA_scope with cont_r.
 
-Fixpoint unrestrict_cont {V: nat}(k: @cont_r V): @cont V:=
+Fixpoint unrestrict_cont {V: nat}(k: cont_r): cont:=
 match k with
   | rHole => Hole
   | rLetHole B => LetHole (unrestrict_conf B)
 end.
 
-Definition fill_hole {V: nat}(e: @exp V) (K: @cont V): @exp V:=
+Definition fill_hole (e: exp) (K: cont): exp:=
   match K with
     | Hole => e
     | LetHole B => eLet e B
 end.
+Check fill_hole.
 Notation "K '[' N ']'" := (fill_hole N K) (at level 200): ECCA_scope.
 
-Definition fill_hole_r {V: nat}(e: @comp V) (K: @cont_r V): @conf V:=
+Definition fill_hole_r (e: comp) (K: cont_r): conf:=
   match K with
     | rHole => e
     | rLetHole B => Let e B
@@ -45,9 +46,10 @@ Notation "'LET' '_' ':=' '[]' 'in' B" := (LetHole B) (at level 50) : ECCA_scope.
 Definition exId: @exp 1 := (eId (@bound 1 l0)).
 Definition example_aLetHole := (LET _ := [] in (eId (@bound 1 l0)))%ECCA.
 Definition ex_fillhole := (fill_hole (eTru) example_aLetHole).
+Eval cbn in ex_fillhole.
 
-Inductive cont_type {V: nat}: Type :=
-  | Cont (M: @exp V) (A: @exp V) (B: @exp V)
+Inductive cont_type : Type :=
+  | Cont (M A B: @exp 0)
 .
 Hint Constructors cont_type.
 (* TODO: Add notation for cont type  *)
@@ -64,16 +66,16 @@ Inductive Types_cont : env -> cont  -> cont_type -> Prop :=
 
 Hint Constructors Types_cont.
 
-Lemma fill_with_hole_is_id {V: nat}(e: @exp V): fill_hole e Hole = e.
+Lemma fill_with_hole_is_id {V: nat}(e: exp): fill_hole e Hole = e.
 Proof.
 eauto. Qed.
 
-Definition wk_cont {V: nat} (k: @cont_r V): @cont_r (S V)
+(*Definition wk_cont {V: nat} (k: cont_r): @cont_r (S V)
 :=
 match k with
 | rHole => rHole
 | rLetHole B => rLetHole (wk_conf B)
-end.  
+end.
 
 Definition close_cont {V: nat} (x: name) (k: @cont_r V): @cont_r (S V)
 :=
@@ -106,4 +108,4 @@ Definition cont_compose {V: nat} (K : @cont_r V) (K' : @cont_r V) : @cont_r V :=
   end.
 
 Notation "K1 '<<' K2 '>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
-
+*)

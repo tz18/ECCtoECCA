@@ -355,6 +355,39 @@ Example ex_fst: Types ctx_empty (fst (< Tru, Fls> as (Si _ : Bool .. Bool)))%ECC
 Proof.
 eapply T_Fst. auto.
 Qed.
+
+Require Import Lia.
+Fixpoint size {V: nat} (e: @exp V) : nat :=
+  match e with
+  | Id _ => 1
+  | Uni _ => 1
+  | Pi A B => 1 + (size A) + (size B)
+  | Abs A e => 1 + (size A) + (size e)
+  | App e1 e2 => 1 + (size e1) + (size e2)
+  | Let e1 e2 => 1 + (size e1) + (size e2)
+  | Sig A B => 1 + (size A) + (size B)
+  | Pair e1 e2 A => 1 + (size e1) + (size e2) + (size A)
+  | Fst e => 1 + (size e)
+  | Snd e => 1 + (size e)
+  | If e e1 e2 => 1 + (size e) + (size e1) + (size e2) 
+  | Tru => 1
+  | Fls => 1
+  | Bool => 1
+end.
+
+Lemma size_non_zero : forall V e, 0 < @size V e.
+Proof.
+  induction e; simpl; lia.
+Qed.
+
+Lemma size_open_id : forall {V: nat} (e: @exp (1 + V)) x, @size (V) (open x e) = @size (1 + V) e.
+Proof. intros. 
+  inductT e; induction V0; cbn; try easy; try (rewrite IHe1; try easy; rewrite IHe2; try easy; try (rewrite IHe3; try easy)).
+  all: ( rewrite IHe; try easy).
+Qed.
+
+
+
 (* Definition example_Type := (type 3)%ECC: exp.
 Definition example_Prop := (prop)%ECC: exp.
 Definition example_App := { X Y }%ECC: exp.
@@ -409,28 +442,7 @@ Unshelve. exact 1.
 Qed. *)
 
 
-(* Fixpoint ECCsize (e: exp) : nat :=
-  match e with
-  | Id _ => 1
-  | Uni _ => 1
-  | Pi _ A B => 1 + (ECCsize A) + (ECCsize B)
-  | Abs _ A e => 1 + (ECCsize A) + (ECCsize e)
-  | App e1 e2 => 1 + (ECCsize e1) + (ECCsize e2)
-  | Let _ e1 e2 => 1 + (ECCsize e1) + (ECCsize e2)
-  | Sig _ A B => 1 + (ECCsize A) + (ECCsize B)
-  | Pair e1 e2 A => 1 + (ECCsize e1) + (ECCsize e2) + (ECCsize A)
-  | Fst e => 1 + (ECCsize e)
-  | Snd e => 1 + (ECCsize e)
-(*   | If e e1 e2 => 1 + (ECCsize e) + (ECCsize e1) + (ECCsize e2) *)
-  | Tru => 1
-  | Fls => 1
-  | Bool => 1
-end. *)
 
-(* Lemma ECCsize_non_zero : forall e, 0 < ECCsize e.
-Proof.
-  induction e; simpl; omega.
-Qed. *)
 
 (* -=ECC Evaluation=- *)
 
@@ -473,7 +485,7 @@ end. *)
   end.
 
 Lemma swap_size_eq : forall x y t,
-    ECCsize (swap x y t) = ECCsize t.
+    size (swap x y t) = size t.
 Proof.
   induction t; simpl; auto.
 Qed. *)
@@ -485,7 +497,7 @@ Qed. *)
    that avoids capturing any free variables in the substitute or in the body
    of the term being substituted in. *)
 (* Require Import Recdef.
-Function substWork (x: atom) (arg body: exp) {measure ECCsize body}:=
+Function substWork (x: atom) (arg body: exp) {measure size body}:=
 if (AtomSetImpl.mem x (FV body)) then 
   match body with
     | Id x' => if (x == x') then arg else body

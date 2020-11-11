@@ -83,7 +83,7 @@ e -> e', then K[e] = K[e']
 3. Have goal: Show K[M'][x := n] \equiv K[let x = n in M'] 
 4. need lemma to show K[M][x :=n] \equiv K[M[x := n] *)
 
-Lemma naturality (K : cont_r) (M : conf) (G : env) :
+(* Lemma naturality (K : cont_r) (M : conf) (G : env) :
   (@WellBound_conf 0 G M) ->
   (G |- (het_compose_r K M) =e= (fill_hole M (unrestrict_cont K)))%ECCA.
 Proof.
@@ -104,3 +104,4 @@ Proof.
     * apply IH_naturality_if with (y:=y). apply IHWellBound_conf2. apply IHWellBound_conf3.
     * eapply equiv_trans. apply H3. apply fill_hole_over_branches.
 Qed.
+ *)
