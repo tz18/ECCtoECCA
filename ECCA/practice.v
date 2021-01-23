@@ -153,6 +153,34 @@ Proof. induction e; intros; inversion H; inversion H0; subst; auto.
 + cut (n4 >= n0). cut (n5 >= n3). lia. auto. auto.
 Qed.
 
+Require Import String.
+
+Open Scope string.
+(* 
+Unset Guard Checking.
+Set Sized Typing.
+    
+Fixpoint truesg (e: @exp 0): nat:=
+match e with
+  | eId x => 0
+  | eUni U => 0
+  | ePi A B => (truesg A) + (truesg (open "X" B))
+  | _ => 0
+end.
+
+
+  | eAbs A B => (truesg A) + (truesg B)
+  | eSig A B => (truesg A) + (truesg B)
+  | ePair v1 v2 A => (truesg A) + (truesg v1) + (truesg v2)
+  | eTru => 1
+  | eFls => 0
+  | eBool => 0
+  | eLet A B => (truesg A) + (truesg B)
+  | eIf v1 e1 e2 => (truesg v1) + (truesg e1) + (truesg e2)
+  | eApp v1 v2 => (truesg v1) + (truesg v2)
+  | eFst v => truesg v
+  | eSnd v => truesg v *)
+
  Inductive trues_rg : env -> @exp 0 -> nat -> Prop :=
 | t_trug (g: env):
   trues_rg g (eTru) 1
@@ -272,23 +300,76 @@ intros. cbn. reflexivity. Qed.
 Require Import Coq.Program.Equality.
 
 Lemma has_function {A} (g: @context A)(x: var) (M M': A): 
-has g x M /\ has g x M' ->
+has g x M -> has g x M' ->
 M = M'.
 Proof.
-intros. destruct H. dependent induction g.
+intros. dependent induction g.
 + cbn in H. contradiction. 
 + cbn in H. cbn in H0. destruct (bindv (closev a x)).
   - apply IHg with (x:= v). auto. auto. 
   - subst. reflexivity.
 Qed.
 
+Ltac discriminateContext:=
+  match reverse goal with 
+  | H1: ?g ∋ ?x ~ ?a, H2: ?g ∋ ?x ~ ?b  |- _  =>  cut (a = b); try discriminate; apply has_function with (x0:=x) (g0:=g); auto
+end.
+
+Ltac invertContext:=
+  match reverse goal with 
+  | H1: ?g ∋ ?x ~ ?a, H2: ?g ∋ ?x ~ ?b  |- _  =>  cut (a = b); 
+                                     (try let h := fresh "H" in (intro h; inversion h; subst; auto)||
+                                     apply has_function with (x0:=x) (g0:=g); auto)
+end.
+
+Hint Constructors bools_rg.
+Theorem weakening {Γ e A}:
+  trues_rg Γ e A ->
+  forall r Δ,
+    Γ =[r]=> Δ ->
+    trues_rg Δ ([r] e) A.
+Proof.
+Admitted.
+(*   induction 1; try (cbn; intros * rl; eauto).
+  - rewrite applyt_related with (rl := rl).
+    simple refine H.  auto with contexts.
+  - constructor; intro.
+    names; auto with all.
+Qed.  *)
+
+(* Lemma ctx_extend_substitution {Γ Δ x} {A : ctxmem} {r} :
+  forall_has Γ (fun v B => boolsrg Δ ([r] (vv v)) B) ->
+  forall_has (Γ & x ~ A)
+    (fun v B => boolsrg (Δ & x ~ A) ([r,,x] (vv v)) B).
+Proof.
+  intros H.
+  apply forall_has_cons; names.
+  - 
+    apply VAR; names; easy.
+  - apply (forall_has_map H); intros; names.
+    eauto using weakening with contexts.
+Qed. *)
+
 Require Import Coq.Program.Equality.
 Lemma boolsrg_gte_truesrg: forall (g: env) (e: @exp 0)  (n1 n2: nat), trues_rg g e n1 -> bools_rg g e n2 -> (n2 >= n1).
-Proof. intros. dependent induction H0; dependent induction H; auto; try contradiction; try discriminate.
-+ cut ((Def e A) = (Def e0 A0)).
-    * intro. inversion H3. subst. auto. 
-    * apply has_function with (x0:=x) (g0:=g). auto.
-+ 
+Proof. intros. induction H0.
+1,2,3,4,5,6,7,8: dependent induction H; auto; try contradiction; 
+try discriminate; try invertContext ; try discriminateContext.
++ apply IHbools_rg. inversion H. subst.
+assert (trues_rg (g & x0 ~ Assum A) ([r_rename x r_id x0] (open x B)) n). 
+- 
+assert ((g & x ~ Assum A) =[r_rename x r_id x0]=> (g & x0 ~ Assum A)).
+
+
+ apply weakening. (*This just requires the weakning theorem from above!*)
++ shelve.
++ shelve.
++ shelve.
++ shelve.
++ shelve.
++ shelve. 
+
+
 
 dependent induction g; dependent induction e.
   - inversion H; inversion H0; subst; cbn in *; try contradiction.
