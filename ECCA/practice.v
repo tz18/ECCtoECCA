@@ -323,7 +323,7 @@ Ltac invertContext:=
 end.
 
 Hint Constructors bools_rg.
-Theorem weakening {Γ e A}:
+Theorem trues_rg_weakening {Γ e A}:
   trues_rg Γ e A ->
   forall r Δ,
     Γ =[r]=> Δ ->
@@ -355,9 +355,24 @@ Lemma boolsrg_gte_truesrg: forall (g: env) (e: @exp 0)  (n1 n2: nat), trues_rg g
 Proof. intros. induction H0.
 1,2,3,4,5,6,7,8: dependent induction H; auto; try contradiction; 
 try discriminate; try invertContext ; try discriminateContext.
++ apply IHbools_rg. inversion H. subst. 
+assert (trues_rg (g & x ~ Assum A) (open x B) n1 = trues_rg (g & x ~ Assum A) ([x <- x0](open x0 B)) n1).
+  - names. reflexivity.
+  - rewrite H1. eauto using trues_rg_weakening with contexts.
 + apply IHbools_rg. inversion H. subst.
+assert (trues_rg (g & x ~ Assum A) (open x B) n1 = trues_rg (g & x ~ Assum A) ([x <- x0](open x0 B)) n1).
+  - names. reflexivity.
+  - rewrite H1. eauto using trues_rg_weakening with contexts.
++ apply IHbools_rg. inversion H. subst.
+assert (trues_rg (g & x ~ Assum A) (open x B) n1 = trues_rg (g & x ~ Assum A) ([x <- x0](open x0 B)) n1).
+  - names. reflexivity.
+  - rewrite H1. eauto using trues_rg_weakening with contexts.
++ apply IHbools_rg. inversion H. subst. (*weirdness because arbitrary type in the definition*) 
+assert (trues_rg (g & x ~ Def e A) (open x B) n1 = trues_rg (g & x ~ Def e A) ([x <- x0](open x0 B)) n1).
+  - names. reflexivity.
+  - rewrite H1. eauto using trues_rg_weakening with contexts.
+
 assert (trues_rg (g & x0 ~ Assum A) ([r_rename x r_id x0] (open x B)) n). 
-- 
 assert ((g & x ~ Assum A) =[r_rename x r_id x0]=> (g & x0 ~ Assum A)).
 
 
