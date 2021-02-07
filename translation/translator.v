@@ -1,7 +1,7 @@
 Require Import Atom.
 Require Import ECC.
 Require Import ECCA.core ECCA.core_lemmas ECCA.typing ECCA.continuations.
-
+Require Import Lia Omega.
 Require Import String.
 
 Notation "! k" := (free k) (at level 10, format "! k").
@@ -11,14 +11,11 @@ Open Scope string.
 (*Require Import Recdef.
 Require Import Lia.
 Require Import Coq.Program.Wf.*)
-Unset Guard Checking.
-Set Sized Typing.
-Fixpoint transWork (e: @ECC.exp 0) (K: cont_r) {struct e}: @conf 0:=
+Require Import Program.
+Program Fixpoint transWork (e: @ECC.exp 0) (K: cont_r) {measure (ECC.size e)}: @conf 0:=
   match e with
     | ECC.Id x => (fill_hole_r (Val (Id x)) K)
     | ECC.Pi A B => (fill_hole_r (Val (Pi (transWork A rHole) (close_conf "PiX" (transWork (ECC.ECCRen.open "PiX" B) rHole)))) K)
-    | _  => Tru end.
-
     | ECC.Abs A e => (fill_hole_r (Val (Abs (transWork A rHole) (close_conf "AbsX" (transWork (ECC.ECCRen.open "AbsX" e) rHole)))) K)
     | ECC.Sig A B => (fill_hole_r (Val (Sig (transWork A rHole) (close_conf "SigX" (transWork (ECC.ECCRen.open "SigX" B) rHole)))) K)
     | ECC.Tru => (fill_hole_r (Val (Tru)) K)
@@ -27,8 +24,19 @@ Fixpoint transWork (e: @ECC.exp 0) (K: cont_r) {struct e}: @conf 0:=
     | ECC.Uni U => (fill_hole_r (Val (Uni U)) K)
     | ECC.Let e1 e2 => (transWork e1 (rLetHole
                           (close_conf "LetX" (transWork (ECC.ECCRen.open "LetX" e2) K))))
+    | _  => Tru end.
+Obligations.
+Next Obligation. names; lia. Defined.
+Next Obligation. names; rewrite size_open_id. cbn. lia. Defined.
+Next Obligation. names; lia. Defined.
+Next Obligation. names; rewrite size_open_id. cbn. lia. Defined.
+Next Obligation. names; lia. Defined.
+Next Obligation. names; rewrite size_open_id. cbn. lia. Defined.
+Next Obligation. names; rewrite size_open_id. cbn. lia. Defined.
+Next Obligation. names; lia. Defined.
+Solve Obligations with repeat split; discriminate.
 
-    | _ => Tru end.
+
 Obligations.
 Solve Obligation 1. with (intros; try (rewrite ECC.size_open_id); cbn; lia).
 

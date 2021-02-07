@@ -386,7 +386,15 @@ Proof. intros.
   all: ( rewrite IHe; try easy).
 Qed.
 
+Lemma size_close_id : forall {V: nat} (e: @exp (V)) x, @size (1 + V) (close x e) = @size (V) e.
+Proof. intros. induction e; names; auto.
+Qed.
 
+Lemma size_wk_id : forall {V: nat} (e: @exp (V)), @size (1 + V) (wk e) = @size (V) e.
+Proof. intros. induction e; names; auto.
+Qed.
+
+Hint Resolve size_open_id size_close_id size_wk_id.
 
 (* Definition example_Type := (type 3)%ECC: exp.
 Definition example_Prop := (prop)%ECC: exp.
