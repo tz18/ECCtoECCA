@@ -24,45 +24,46 @@ Program Fixpoint transWork (e: @ECC.exp 0) (K: cont_r) {measure (ECC.size e)}: @
     | ECC.Uni U => (fill_hole_r (Val (Uni U)) K)
     | ECC.Let e1 e2 => (transWork e1 (rLetHole
                           (close_conf "LetX" (transWork (ECC.ECCRen.open "LetX" e2) K))))
-    | _  => Tru end.
-Obligations.
-Next Obligation. names; lia. Defined.
-Next Obligation. names; rewrite size_open_id. cbn. lia. Defined.
-Next Obligation. names; lia. Defined.
-Next Obligation. names; rewrite size_open_id. cbn. lia. Defined.
-Next Obligation. names; lia. Defined.
-Next Obligation. names; rewrite size_open_id. cbn. lia. Defined.
-Next Obligation. names; rewrite size_open_id. cbn. lia. Defined.
-Next Obligation. names; lia. Defined.
-Solve Obligations with repeat split; discriminate.
-
-
-Obligations.
-Solve Obligation 1. with (intros; try (rewrite ECC.size_open_id); cbn; lia).
-
     | ECC.App e1 e2 =>
-      (@transWork (V) e1 (rLetHole (close_conf ("X1")
-         (@transWork (V) (e2) (rLetHole (close_conf ("X2") 
-                (fill_hole_r (App (@Id ((V)) (!"X1"))
-                                  (@Id ((V)) (!"X2")))
+      (transWork e1 (rLetHole (close_conf ("AppX1")
+         (transWork e2 (rLetHole (close_conf ("AppX2") 
+                (fill_hole_r (App (Id (!"AppX1"))
+                                  (Id (!"AppX2")))
                               K)))))))
     | ECC.Pair e1 e2 A =>
-      (@transWork (V) e1 (rLetHole (close_conf ("X1")
-         (@transWork (V) (e2) (rLetHole (close_conf ("X2")
-                (fill_hole_r (Pair (@Id ((V)) (!"X1"))
-                                   (@Id ((V)) (!"X2"))
+      (transWork e1 (rLetHole (close_conf ("X1")
+         (transWork (e2) (rLetHole (close_conf ("X2")
+                (fill_hole_r (Pair (Id (!"X1"))
+                                   (Id (!"X2"))
                                    (transWork A rHole))
                           K)))))))
     | ECC.Fst e =>
-      (@transWork (V) e (rLetHole (close_conf ("X1")
-         (fill_hole_r (Fst (@Id ((V)) (!"X1"))) K))))
+      (transWork e (rLetHole (close_conf ("X1")
+         (fill_hole_r (Fst (Id (!"X1"))) K))))
     | ECC.Snd e =>
-      (@transWork (V) e (rLetHole (close_conf ("X1")
-         (fill_hole_r (Snd (@Id ((V)) (!"X1"))) K))))
+      (transWork e (rLetHole (close_conf ("X1")
+         (fill_hole_r (Snd (Id (!"X1"))) K))))
     | ECC.If e e1 e2 =>
-      (@transWork (V) e (rLetHole (close_conf ("X1")
-         (If (@Id ((V)) (!"X1")) (@transWork V e1 K) (@transWork V e2 K)))))
+      (transWork e (rLetHole (close_conf ("X1")
+         (If (Id (!"X1")) (transWork e1 K) (transWork e2 K)))))
 end.
+Obligations.
+Next Obligation. cbn; lia. Defined.
+Next Obligation. cbn; rewrite size_open_id. cbn. lia. Defined.
+Next Obligation. cbn; lia. Defined.
+Next Obligation. cbn; rewrite size_open_id. cbn. lia. Defined.
+Next Obligation. cbn; lia. Defined.
+Next Obligation. cbn; rewrite size_open_id. cbn. lia. Defined.
+Next Obligation. cbn; rewrite size_open_id. cbn. lia. Defined.
+Next Obligation. cbn; lia. Defined.
+Next Obligation. cbn; lia. Defined.
+Next Obligation. cbn; lia. Defined.
+Next Obligation. cbn; lia. Defined.
+Next Obligation. cbn; lia. Defined.
+Next Obligation. cbn; lia. Defined.
+Next Obligation. cbn; lia. Defined.
+Next Obligation. cbn; lia. Defined.
+Next Obligation. cbn; lia. Defined.
 
 Definition example:=
 (@ECC.Abs 0 ECC.Tru (ECC.ECCRen.close "x1" (ECC.Id (free "x1")))).
@@ -77,14 +78,7 @@ Definition ex2 := @ECC.App 0 example example2.
 Compute ex2.
 Compute transWork ex2 rHole.
 
-(*     | ECC.If e e1 e2 => (transWork X e (rLetHole X 
-                        (If (Id X) 
-                            (transWork Y e1 (rLetHole Y (fill_hole (Subst X Tru (Id Y)) K)))
-                            (transWork Y e1 (rLetHole Y (fill_hole (Subst X Fls (Id Y)) K)))))) *) 
 
-Definition trans {V: nat}(e: @ECC.exp V):=
-  @transWork V e rHole
-.
 (* 
 (*  *)
 Fixpoint transEnv (g: ECCenv):=
