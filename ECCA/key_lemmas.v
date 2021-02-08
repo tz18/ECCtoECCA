@@ -1,4 +1,4 @@
-Require Export typing.
+(* Require Export typing.
 Require Export equiv.
 Require Export continuations.
 Require Export continuations_lemmas.
@@ -69,7 +69,7 @@ Lemma has_type_wf_g (g: env) (N: exp) (A: exp) (x : name):
   WellFormed (g & x ~ (Def N A)).
 Proof.
   intros.  apply type_well_typed in H as H1. destruct H1.
-  apply W_Def with (U := x0); auto.
+  apply wf_Def with (U := x0); auto.
 Qed. 
   
 Lemma equivalence_in_derivation (g: env) (N N' M : exp) (A B : exp) (x : name):
@@ -130,7 +130,7 @@ Proof.
   destruct K; simpl; auto.
 Qed.  
 
-Lemma append_rearrange {V:nat}(g g': @env V) (x: name) (a: ctxmem) :
+Lemma append_rearrange {V:nat}(g g': env) (x: name) (a: ctxmem) :
   ((append g g')& x ~ a) = (append (g & x ~ a) g').
 Proof.
   induction g; auto.
@@ -230,3 +230,4 @@ Types (append g g') (het_compose_r K M) B.
 Admitted.
 
  
+ *)

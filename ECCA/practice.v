@@ -331,6 +331,7 @@ Theorem trues_rg_weakening {Γ e A}:
 Proof.
 Admitted.
 (*   induction 1; try (cbn; intros * rl; eauto).
+
   - rewrite applyt_related with (rl := rl).
     simple refine H.  auto with contexts.
   - constructor; intro.
@@ -383,6 +384,8 @@ assert ((g & x ~ Assum A) =[r_rename x r_id x0]=> (g & x0 ~ Assum A)).
 + shelve.
 + shelve.
 + shelve. 
+
+
 
 
 
