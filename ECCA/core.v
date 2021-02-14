@@ -373,7 +373,7 @@ Inductive ctxmem :=
 
 Definition env := @context ctxmem.
 
-Inductive assumes (g: env) (x: atom) (A: @exp 0) :=
+Inductive assumes (g: env) (x: atom) (A: exp) :=
 | ass :
   (has g x (Assum A)) ->
   assumes g x A
@@ -381,6 +381,8 @@ Inductive assumes (g: env) (x: atom) (A: @exp 0) :=
   (has g x (Def e A)) ->
   assumes g x A
 .
+
+Hint Constructors assumes.
 
 Lemma ctx_has (g: env) (x: name) (a: ctxmem):
   (has (ctx_cons g x a) (free x) a).

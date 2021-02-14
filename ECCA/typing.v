@@ -33,22 +33,22 @@ Hint Constructors SubTypes.
 Reserved Notation "g '|-' a ':' b" (at level 250, a at level 99).
 Inductive Types: env -> exp -> exp -> Prop :=
 | aT_Ax_Prop (g: env) :
-  WellFormed g ->
+ (*  WellFormed g -> *)
   (g |- (eUni uProp) : (eUni (uType 0)))
 | aT_Ax_Type (g: env) (i: nat) :
-  WellFormed g ->
+(*   WellFormed g -> *)
   (g |- (eUni (uType i)) : (eUni (uType (S i))))
 | aT_Var (g: env) (x: atom) (A: exp) :
   (assumes g x A) -> (* this needs adjustment *)
   (g |- (eId x) : A)
 | aT_Bool (g: env):
-  WellFormed g ->
+(*   WellFormed g -> *)
   (g |- (eBool) : (eUni (uType 0)))
 | aT_True (g: env):
-  WellFormed g ->
+(*   WellFormed g -> *)
   (g |- (eTru) : (eBool))
 | aT_False (g: env):
-  WellFormed g ->
+(*   WellFormed g -> *)
   (g |- (eFls) : (eBool)) 
 | aT_Sig (g: env) (x: name) (A B: exp) (i: nat) :
   (g |- A : (eUni (uType i))) ->
@@ -95,7 +95,7 @@ Inductive Types: env -> exp -> exp -> Prop :=
   (g |- e: (eSig A B)) ->
   (g |- (eSnd e): (bind (eFst e) B)) 
 where "g '|-' a ':' b" := (Types g a b) : ECCA_scope
-with 
+(* with 
 (* ECCA Well-Formed Environments *)
 WellFormed: env -> Prop :=
 | wf_Empty:
@@ -108,7 +108,7 @@ WellFormed: env -> Prop :=
   WellFormed g ->
   Types g A U ->
   Types g e A ->
-  WellFormed (g & x ~ Def e A)
+  WellFormed (g & x ~ Def e A) *)
 (* | W_Eq  *)
 .
 
@@ -120,22 +120,22 @@ Well boundedness wrt Type Environments
 
 Inductive WellBound: env -> @exp 0 -> Prop :=
 | wb_Prop (g: env) :
-    WellFormed g ->
+(*     WellFormed g -> *)
     WellBound g (eUni uProp)
 | wb_Type (g: env) (i: nat) :
-    WellFormed g ->
+(*     WellFormed g -> *)
     WellBound g (eUni (uType i))
 | wb_Var (g: env) (x: atom) (A: exp) :
     (assumes g x A) -> (* this needs adjustment *)
     WellBound g (eId x)
 | wb_Bool (g: env) :
-    WellFormed g ->
+(*     WellFormed g -> *)
     WellBound g eBool
 | wb_True (g: env):
-    WellFormed g ->
+(*     WellFormed g -> *)
     WellBound g eTru
 | wb_False (g: env):
-    WellFormed g ->
+(*     WellFormed g -> *)
     WellBound g eFls
 | wb_Sig (g: env) (x: name) (A B: exp) (i: nat) :
     WellBound g A ->
@@ -208,19 +208,19 @@ Inductive WellBound_val: env -> @val 0 -> Prop :=
     (assumes g x A) -> (* this needs adjustment *)
     WellBound_val g (Id x)
 | wb_val_Prop (g: env) :
-    WellFormed g ->
+(*     WellFormed g -> *)
     WellBound_val g (Uni uProp)
 | wb_val_Type (g: env) (i: nat) :
-    WellFormed g ->
+(*     WellFormed g -> *)
     WellBound_val g (Uni (uType i))
 | wb_val_Bool (g: env) :
-    WellFormed g ->
+(*     WellFormed g -> *)
     WellBound_val g Bool
 | wb_val_True (g: env):
-    WellFormed g ->
+(*     WellFormed g -> *)
     WellBound_val g Tru
 | wf_val_False (g: env):
-    WellFormed g ->
+(*     WellFormed g -> *)
     WellBound_val g Fls
 | wf_val_Sig (g: env) (x: name) (A B: conf) (i: nat) :
     WellBound_conf g A ->
@@ -271,5 +271,5 @@ with WellBound_comp: env -> @comp 0 -> Prop :=
 .
 
 Hint Constructors Types.
-Hint Constructors WellFormed.
+
 
