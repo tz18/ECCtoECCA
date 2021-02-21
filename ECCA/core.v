@@ -358,6 +358,29 @@ Definition reflect_Prop_val ( e : exp) : Option (isVal e). *)
 
 Coercion Val: val >-> comp. 
 Coercion Comp: comp >-> conf. 
+(*
+=====================================
+=============--Size--================
+=====================================
+*)
+
+Fixpoint esize {V: nat} (e: @exp V) : nat :=
+  match e with
+  | eId _ => 1
+  | eUni _ => 1
+  | ePi A B => 1 + (esize A) + (esize B)
+  | eAbs A e => 1 + (esize A) + (esize e)
+  | eApp e1 e2 => 1 + (esize e1) + (esize e2)
+  | eLet e1 e2 => 1 + (esize e1) + (esize e2)
+  | eSig A B => 1 + (esize A) + (esize B)
+  | ePair e1 e2 A => 1 + (esize e1) + (esize e2) + (esize A)
+  | eFst e => 1 + (esize e)
+  | eSnd e => 1 + (esize e)
+  | eIf e e1 e2 => 1 + (esize e) + (esize e1) + (esize e2) 
+  | eTru => 1
+  | eFls => 1
+  | eBool => 1
+end.
 
 (* 
 =====================================

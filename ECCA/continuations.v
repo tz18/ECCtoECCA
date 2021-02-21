@@ -21,7 +21,7 @@ Inductive cont_r: Type :=
 Hint Constructors cont_r.
 Bind Scope ECCA_scope with cont_r.
 
-Fixpoint unrestrict_cont {V: nat}(k: cont_r): cont:=
+Definition unrestrict_cont (k: cont_r): cont:=
 match k with
   | rHole => Hole
   | rLetHole B => LetHole (unrestrict_conf B)
@@ -83,15 +83,20 @@ match k with
 | rHole => rHole
 | rLetHole B => rLetHole (close_conf x B)
 end.  
-
-Fixpoint het_compose_r {V: nat} (K : @cont_r V) (M : @conf V) {struct M} : conf :=
+*)
+Require Import Program.
+Require Import Lia.
+Program Fixpoint het_compose_r (K : cont_r) (M : conf ) (x: name) {measure (esize (unrestrict_conf M))}: conf :=
   match M with
   | Comp e => fill_hole_r e K
-  | Let N M' => Let N (@het_compose_r (S V) (wk_cont K) M')
+  | Let N M' => Let N (close_conf x (het_compose_r K (open_conf x M') x)) (*will this capture x ?*)
   | If V1 M1 M2 => If V1
-                      (het_compose_r K M1)
-                      (het_compose_r K M2)
+                      (het_compose_r K M1 x)
+                      (het_compose_r K M2 x)
   end.
+Obligations.
+Next Obligation. cbn. rewrite esize_open_id. 
+
 
 Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.
 
