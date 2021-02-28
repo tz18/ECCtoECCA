@@ -125,16 +125,25 @@ Corollary flatten_comp_is_ANF {V: nat}:
 Proof. apply flatten_is_ANF. Defined.
 
 Lemma unrestrict_restrict_id {V: nat}: 
-   (forall (e: @exp V) (p: isConf e), 
-    (unrestrict_conf ((unoption_ex (restrict_conf e)) p) ) = e.)
-   /\
-  (forall (e: @exp V) (p: isComp e), 
-    (unrestrict_comp ((unoption_ex (restrict_comp e)) p) ) = e.)
+forall (e: @exp V),
+  (forall (p: isConf e), 
+    (unrestrict_conf ((unoption_ex (restrict_conf e)) p) ) = e)
   /\
-  (forall (e: @exp V) (p: isConf e), 
-    (unrestrict_val ((unoption_ex (restrict_val e)) p) ) = e.)
+  (forall (p: isComp e), 
+    (unrestrict_comp ((unoption_ex (restrict_comp e)) p) ) = e)
+  /\
+  (forall (p: isVal e), 
+    (unrestrict_val ((unoption_ex (restrict_val e)) p) ) = e).
 Proof.
-intros. .
+intros. induction e; split; auto.
++ intros. inversion p. inversion H. Admitted.
+
+Corollary unrestrict_restrict_id_conf {V}:
+forall (e: @exp V),
+  (forall (p: isConf e), 
+    (unrestrict_conf ((unoption_ex (restrict_conf e)) p) ) = e).
+Proof. apply unrestrict_restrict_id. Defined.
+
 
 (*===============================
 =========--Names--===============
@@ -234,11 +243,6 @@ Hint Resolve esize_open_id esize_close_id esize_wk_id.
 Lemma unrestrict_open_commutes_conf (x: name) {V} (M: @conf (S V)): 
 (@unrestrict_conf V (@open_conf V x M)) = (@open x V (@unrestrict_conf (S V) M)).
 Proof.
-unfold open_conf. 
-
-Lemma unrestrict_restrict_id_conf (unrestrict_conf):  
-
-
-
-
+unfold open_conf. apply unrestrict_restrict_id.
+Qed.
 

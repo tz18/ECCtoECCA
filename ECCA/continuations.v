@@ -89,13 +89,21 @@ Require Import Lia.
 Program Fixpoint het_compose_r (K : cont_r) (M : conf ) (x: name) {measure (esize (unrestrict_conf M))}: conf :=
   match M with
   | Comp e => fill_hole_r e K
-  | Let N M' => Let N (close_conf x (het_compose_r K (open_conf x M') x)) (*will this capture x ?*)
+  | Let N M' => Let N (close_conf x (het_compose_r K (open_conf x M') x)) (*will this capture x somehow?*)
   | If V1 M1 M2 => If V1
                       (het_compose_r K M1 x)
                       (het_compose_r K M2 x)
   end.
 Obligations.
-Next Obligation. cbn. rewrite esize_open_id. 
+Next Obligation. cbn. 
+rewrite unrestrict_open_commutes_conf. 
+rewrite esize_open_id. 
+cbn. lia. Defined.
+Next Obligation.
+cbn. lia. Defined.
+Next Obligation.
+cbn. lia. Defined.
+
 
 
 Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.

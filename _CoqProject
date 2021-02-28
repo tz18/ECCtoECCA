@@ -11,6 +11,7 @@ common/Atom.v
 ECC/ECC.v
 ECCA/core.v
 ECCA/core_lemmas.v
+ECCA/core_lemmas_names.v
 ECCA/reduction.v
 ECCA/reduction_lemmas.v
 ECCA/equiv.v
