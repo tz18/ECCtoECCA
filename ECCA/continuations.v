@@ -13,6 +13,7 @@ Inductive cont: Type :=
 .
 Hint Constructors cont.
 Bind Scope ECCA_scope with cont.
+Notation "'[]'" := (Hole) (at level 200): ECCA_scope.
 
 Inductive cont_r: Type :=
   | rHole
@@ -20,6 +21,8 @@ Inductive cont_r: Type :=
 .
 Hint Constructors cont_r.
 Bind Scope ECCA_scope with cont_r.
+Notation "'[]'" := (rHole) (at level 200): ECCA_scope.
+
 
 Definition unrestrict_cont (k: cont_r): cont:=
 match k with
@@ -34,15 +37,16 @@ Definition fill_hole (e: exp) (K: cont): exp:=
 end.
 Check fill_hole.
 Notation "K '[' N ']'" := (fill_hole N K) (at level 200): ECCA_scope.
+Notation "'LET' '_' ':=' '[]' 'in' B" := (LetHole B) (at level 50) : ECCA_scope.
 
 Definition fill_hole_r (e: comp) (K: cont_r): conf:=
   match K with
     | rHole => e
     | rLetHole B => Let e B
 end.
+Notation "K '[' N ']'" := (fill_hole_r N K) (at level 200): ECCA_scope.
+Notation "'rLET' '_' ':=' '[]' 'in' B" := (rLetHole B) (at level 50) : ECCA_scope.
 
-Notation "'[]'" := (Hole) (at level 50) : ECCA_scope.
-Notation "'LET' '_' ':=' '[]' 'in' B" := (LetHole B) (at level 50) : ECCA_scope.
 Definition exId: @exp 1 := (eId (@bound 1 l0)).
 Definition example_aLetHole := (LET _ := [] in (eId (@bound 1 l0)))%ECCA.
 Definition ex_fillhole := (fill_hole (eTru) example_aLetHole).
@@ -86,24 +90,33 @@ end.
 *)
 Require Import Program.
 Require Import Lia.
-Program Fixpoint het_compose_r (K : cont_r) (M : conf ) (x: name) {measure (esize (unrestrict_conf M))}: conf :=
+Require Import Recdef.   
+
+Definition shift_cont_r (x: name) (K: cont_r):=
+match K with
+  | rHole => rHole
+  | rLetHole B => rLetHole (open_conf x (wk_conf B))
+end.
+
+Definition size {V} (M: @conf V) := (esize (@unrestrict_conf V M)).
+
+Function het_compose_r (K : cont_r) (M : conf ) (x: name) {measure size M}: conf :=
   match M with
   | Comp e => fill_hole_r e K
-  | Let N M' => Let N (close_conf x (het_compose_r K (open_conf x M') x)) (*will this capture x somehow?*)
+  | Let N M' => Let N (close_conf x (het_compose_r (shift_cont_r x K) (open_conf x M') x)) 
   | If V1 M1 M2 => If V1
                       (het_compose_r K M1 x)
                       (het_compose_r K M2 x)
   end.
-Obligations.
-Next Obligation. cbn. 
+Proof.
++ intros. cbn. unfold size.
 rewrite unrestrict_open_commutes_conf. 
 rewrite esize_open_id. 
-cbn. lia. Defined.
-Next Obligation.
-cbn. lia. Defined.
-Next Obligation.
-cbn. lia. Defined.
-
+cbn. lia.
++ intros. cbn. unfold size. lia.
++ intros. cbn. unfold size. lia.
+Qed.
+Hint Rewrite het_compose_r_equation.
 
 
 Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.
@@ -114,11 +127,11 @@ Notation "K '<<' M '>>'" := (het_compose_r K M) (at level 250): ECCA_scope.
   | Let x N M' => Let x N (het_compose K M')
   end. *)
 
-Definition cont_compose {V: nat} (K : @cont_r V) (K' : @cont_r V) : @cont_r V :=
+Definition cont_compose (K : cont_r) (K' : cont_r) (x: name) : cont_r:=
   match K' with
   | rHole => K
-  | rLetHole M => rLetHole (het_compose_r (wk_cont K) M)
+  | rLetHole M => rLetHole (close_conf x (het_compose_r (shift_cont_r x K) (open_conf x M) x))
   end.
 
-Notation "K1 '<<' K2 '>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
-*)
+Notation "K1 '<<<' K2 '>>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
+

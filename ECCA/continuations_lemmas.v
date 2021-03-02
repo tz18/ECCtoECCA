@@ -18,10 +18,12 @@ Open Scope ECCA_scope.
 Coercion unrestrict_conf: conf >-> exp.
 Coercion unrestrict_comp: comp >-> exp.
 
-Lemma cont_compose_fill_het_compose {V: nat} (K K' : cont_r) (N : comp) :
-  (het_compose_r K (fill_hole_r N K')) = (fill_hole_r N (@cont_compose V K K')).
+Lemma cont_compose_fill_het_compose (x: name) (K K' : cont_r) (N : comp):
+  (het_compose_r K (fill_hole_r N K') x) = (fill_hole_r N (cont_compose K K' x)).
 Proof.
-  intros. destruct K'; simpl; reflexivity.
+  intros. destruct K'.
++  cbn. auto. rewrite het_compose_r_equation.  reflexivity.
++  cbn. rewrite het_compose_r_equation. reflexivity.
 Qed. 
 
 Lemma het_compose_empty_hole {V: nat} (M: conf) :
