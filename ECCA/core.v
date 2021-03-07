@@ -187,6 +187,199 @@ Module ECCARen := Renamings(ECCATerm).
 Export ECCATerm.
 Export ECCARen.
 
+(*=============================
+========Induction principle====
+===============================*)
+
+Inductive Vclosed : @term 0 -> Set :=
+  | vc_eId (X: @atom 0) : Vclosed (eId X)
+  | vc_eUni (U: universe) : Vclosed (eUni U)
+  | vc_ePi (A: exp) (B: @exp 1) : Vclosed A -> (forall x, Vclosed (open x B)) -> Vclosed (ePi A B)
+  | vc_eAbs (A: exp) (B: @exp 1) : Vclosed A -> (forall x, Vclosed (open x B)) -> Vclosed (eAbs A B)
+  | vc_eSig (A: exp) (B: @exp 1) : Vclosed A -> (forall x, Vclosed (open x B)) -> Vclosed (eSig A B)
+  | vc_ePair (v1 v2: exp) (A: exp) : Vclosed v1 -> Vclosed v2 -> Vclosed A -> Vclosed (ePair v1 v2 A)
+  | vc_eTru : Vclosed (eTru)
+  | vc_eFls : Vclosed (eFls)
+  | vc_eBool: Vclosed (eBool)
+  | vc_eLet (A: exp) (B: @exp 1) : Vclosed A -> (forall n, Vclosed (open n B)) -> Vclosed (eLet A B)
+  | vc_eIf (v: exp) (e1 e2: exp) : Vclosed v -> Vclosed e1 -> Vclosed e2 -> Vclosed (eIf v e1 e2)
+  | vc_eApp (v1 v2: exp) : Vclosed v1 -> Vclosed v2 -> Vclosed (eApp v1 v2)
+  | vc_eFst (v: exp) : Vclosed v -> Vclosed (eFst v)
+  | vc_eSnd (v: exp) : Vclosed v -> Vclosed (eSnd v).
+
+Fixpoint Vclosedk (V : nat) : @term V -> Set :=
+  match V with
+  | 0 => fun t => Vclosed t
+  | S V => fun t => forall n, Vclosedk V (open n t)
+  end.
+
+Fixpoint always_Vclosedk {V : nat} (t : term) {struct t} : Vclosedk V t :=
+  match t with
+  | eId x => 
+    let fix go {V} : forall (x : @atom V), Vclosedk V (eId x) :=
+      match V with 
+      | 0 => vc_eId
+      | S V => fun v n => go _ 
+      end 
+    in go x
+  | eUni U =>
+    let fix go {V} : forall (U : universe), Vclosedk V (eUni U) :=
+      match V with 
+      | 0 => vc_eUni
+      | S V => fun v n => go _ 
+      end 
+    in go U
+  | ePi A B => 
+    let fix go {V} : forall A B, Vclosedk (V) A -> 
+                      Vclosedk (S V) B -> 
+                      Vclosedk V (ePi A B) :=
+      match V with 
+      | 0 => vc_ePi 
+      | S V => fun _ _ vca vcb a=> go _ _ (vca a) (vcb a)
+      end 
+    in go _ _ (always_Vclosedk A) (always_Vclosedk B)
+  | eAbs A B =>
+    let fix go {V} : forall A B, Vclosedk (V) A -> 
+                      Vclosedk (S V) B -> 
+                      Vclosedk V (eAbs A B) :=
+      match V with 
+      | 0 => vc_eAbs 
+      | S V => fun _ _ vca vcb a=> go _ _ (vca a) (vcb a)
+      end 
+    in go _ _ (always_Vclosedk A) (always_Vclosedk B)
+  | eSig A B =>
+    let fix go {V} : forall A B, Vclosedk (V) A -> 
+                      Vclosedk (S V) B -> 
+                      Vclosedk V (eSig A B) :=
+      match V with 
+      | 0 => vc_eSig 
+      | S V => fun _ _ vca vcb a=> go _ _ (vca a) (vcb a)
+      end 
+    in go _ _ (always_Vclosedk A) (always_Vclosedk B)
+  | ePair v1 v2 A =>
+    let fix go {V} : forall v e1 e2, Vclosedk V v -> 
+                                     Vclosedk V e1 ->
+                                     Vclosedk V e2 ->
+                                     Vclosedk V (ePair v e1 e2) :=
+      match V with 
+      | 0 => vc_ePair 
+      | S V => fun _ _ _ vv1 vv2 va a => go _ _ _ (vv1 a) (vv2 a) (va a) 
+      end 
+    in go _ _ _ (always_Vclosedk v1) (always_Vclosedk v2) (always_Vclosedk A)
+  | eTru =>
+    let fix go {V} : Vclosedk V _ :=
+      match V with 0 => vc_eTru | S V => fun _ => go end in
+    go
+  | eFls =>
+    let fix go {V} : Vclosedk V _ :=
+      match V with 0 => vc_eFls | S V => fun _ => go end in
+    go
+  | eBool =>
+    let fix go {V} : Vclosedk V _ :=
+      match V with 0 => vc_eBool | S V => fun _ => go end in
+    go
+  | eLet A B =>
+    let fix go {V} : forall A B, Vclosedk (V) A -> 
+                      Vclosedk (S V) B -> 
+                      Vclosedk V (eLet A B) :=
+      match V with 
+      | 0 => vc_eLet 
+      | S V => fun _ _ vca vcb a=> go _ _ (vca a) (vcb a)
+      end 
+    in go _ _ (always_Vclosedk A) (always_Vclosedk B)
+  | eIf v e1 e2 => 
+    let fix go {V} : forall v e1 e2, Vclosedk V v -> 
+                                     Vclosedk V e1 ->
+                                     Vclosedk V e2 ->
+                                     Vclosedk V (eIf v e1 e2) :=
+      match V with 
+      | 0 => vc_eIf 
+      | S V => fun _ _ _ vv ve1 ve2 a => go _ _ _ (vv a) (ve1 a) (ve2 a) 
+      end 
+    in go _ _ _ (always_Vclosedk v) (always_Vclosedk e1) (always_Vclosedk e2)
+  | eApp f e  =>
+    let fix go {V} : forall f e, Vclosedk V f -> 
+                                 Vclosedk V e -> 
+                                 Vclosedk V (eApp f e) :=
+      match V with 
+      | 0 => vc_eApp 
+      | S V => fun _ _ vf ve a => go _ _ (vf a) (ve a) 
+      end 
+    in go _ _ (always_Vclosedk f) (always_Vclosedk e)
+  | eFst v =>
+    let fix go {V} : forall v, Vclosedk V v -> 
+                                 Vclosedk V (eFst v) :=
+      match V with 
+      | 0 => vc_eFst 
+      | S V => fun _ vv a => go _ (vv a) 
+      end 
+    in go _ (always_Vclosedk v)
+  | eSnd v =>
+    let fix go {V} : forall v, Vclosedk V v -> 
+                                 Vclosedk V (eSnd v) :=
+      match V with 
+      | 0 => vc_eSnd 
+      | S V => fun _ vv a => go _ (vv a) 
+      end 
+    in go _ (always_Vclosedk v)
+end.
+
+(* Lemma always_Vclosedk_open x : forall {V} (t : @term (1 + V)),
+  always_Vclosedk t x = always_Vclosedk (open x t).
+Proof.
+  intros.
+  inductT t; induction V0; cbn; try easy.
+  - rewrite IHt; easy.
+  - rewrite IHt; easy.
+  - rewrite IHt1, IHt2; try apply heq_intro; easy.
+  - rewrite IHt1, IHt2; try apply heq_intro; easy.
+Qed.
+Hint Rewrite always_Vclosedk_open : rw_names. *)
+
+Check Vclosed_ind.
+
+Definition term_ind
+             (P : exp -> Prop)
+             (IDD : forall (v : atom), P (eId v))
+             (UNI : forall (U : universe), P (eUni U))
+             (TRU : P (eTru))
+             (FLS : P (eFls))
+             (BOO : P (eBool))
+             (ABS : forall (A B : exp),
+                 P (A) ->
+                 (forall (n : name), P (open n B)) ->
+                 P (eAbs A B))
+             (PIE : forall (A B : exp),
+                 P (A) ->
+                 (forall (n : name), P (open n B)) ->
+                 P (ePi A B))
+             (SIG : forall (A B : exp),
+                 P (A) ->
+                 (forall (n : name), P (open n B)) ->
+                 P (eSig A B))
+             (LET : forall (A B : exp),
+                 P (A) ->
+                 (forall (n : name), P (open n B)) ->
+                 P (eLet A B))
+             (APP : forall (f e : exp), P f -> P e -> P (eApp f e))
+             (PAI : forall (v1 v2 A : exp), P v1 -> P v2 -> P A -> P (ePair v1 v2 A))
+             (IFF : forall (v e1 e2 : exp), P v -> P e1 -> P e2 -> P (eIf v e1 e2))
+             (FST : forall (v : exp), P v -> P (eFst v))
+             (SND : forall (v : exp), P v -> P (eSnd v))
+             (tm : exp) : P tm :=
+    Vclosed_ind (fun tm _ => P tm)
+       IDD UNI 
+       (fun a b _ Ha _ Hb => PIE a b Ha Hb)
+       (fun a b _ Ha _ Hb => ABS a b Ha Hb)
+       (fun a b _ Ha _ Hb => SIG a b Ha Hb)
+       (fun v1 v2 a _ Hv1 _ Hv2 _ Ha => PAI v1 v2 a Hv1 Hv2 Ha) 
+       TRU FLS BOO 
+       (fun a b _ Ha _ Hb => LET a b Ha Hb) 
+       (fun v e1 e2 _ Hv _ He1 _ He2 => IFF v e1 e2 Hv He1 He2) 
+       (fun f e _ F _ E => APP f e F E) 
+       (fun v _ V => FST v V)
+       (fun v _ V => SND v V)
+       tm (always_Vclosedk tm).
 
 (* 
 ============================================================
