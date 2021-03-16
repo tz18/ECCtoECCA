@@ -26,27 +26,35 @@ Proof.
 +  cbn. rewrite het_compose_r_equation. reflexivity.
 Qed. 
 
-Lemma het_compose_empty_hole {V: nat} (M: conf) :
-  (@het_compose_r V rHole M) = M.
+Require Import Coq.Program.Equality.
+
+
+
+Corollary close_open_id_conf {V x} (M: @conf (S V)): (@close_conf V x (@open_conf V x M)) = M.
+Admitted.
+
+Lemma het_compose_empty_hole (x: name) (M: conf) :
+  (het_compose_r rHole M x) = M.
 Proof.
-  induction M; cbn.
-  - auto.
-  - rewrite IHM. auto.
-  - fold (@het_compose_r V). rewrite IHM1. rewrite IHM2. auto.
+  induction M using conf_open_ind.
+  + rewrite het_compose_r_equation. cbn. reflexivity.
+  + rewrite het_compose_r_equation. cbn. rewrite H. cbn. rewrite close_open_id_conf. reflexivity.
+  + rewrite het_compose_r_equation. cbn. rewrite IHM1. rewrite IHM2. reflexivity.
 Qed.
 
+Open Scope string.
 Lemma K_compat (g: env) (K : cont_r) (e1 e2 : exp) :
   (RedClos g e1 e2) ->
   (Equiv g (fill_hole e1 (unrestrict_cont K))) (fill_hole e2 (unrestrict_cont K)).
 Proof.
   intros. destruct K.
   + simpl. eapply aE_Step. apply H. apply R_Refl.
-  + simpl. eapply aE_Step. (* apply R_CongLet with (x:="x") (A:=Bool).
-    apply H. apply R_Refl. apply R_Refl. *)
-Admitted.     
+  + simpl. eapply aE_Step.  apply R_CongLet with (x:="x") (A:=Bool).
+    apply H. apply R_Refl. apply R_Refl.
+Qed.
 
 Lemma bind_commutes_over_fill_hole (g: env) (K : cont_r) (n m : exp) :
-  (Equiv g (bind n (fill_hole m (unrestrict_cont (wk_cont K)))) (fill_hole (bind n m) (unrestrict_cont K))).
+  (Equiv g (bind n (fill_hole m unrestrict_cont (wk_cont K)))) (fill_hole (bind n m) (unrestrict_cont K))).
 Proof.
   destruct K.
   + simpl. eapply aE_Step; apply R_Refl.
