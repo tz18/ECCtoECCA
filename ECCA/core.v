@@ -9,69 +9,7 @@ Require Import String Morph Var Context Relative.
 Declare Scope ECCA_scope.
 Delimit Scope ECCA_scope with ECCA.
 
-(* Restricted ECCA, used in computing *)
-
-Inductive val {V: nat}: Type :=
-  | Id (x: @atom V)
-  | Uni (U: universe)
-  | Pi (A: conf) (B: @conf (S V))
-  | Abs (A: conf) (B: @conf (S V))
-  | Sig (A: conf) (B: @conf (S V))
-  | Pair (v1 v2: val) (A: @conf V)
-  | Tru
-  | Fls
-  | Bool
-with
-conf {V: nat}: Type :=
-  | Comp (e: comp)
-  | Let (A: comp) (B: @conf (S V))
-  | If (v: val) (m1 m2: conf)
-with
-comp {V: nat}: Type :=
-  | App (v1 v2: val)
-  | Val (v: val)
-  | Fst (v: val)
-  | Snd (v: val)
-.
-
-(* Mutual induction Scheme *)
-Scheme val_conf_mut := Induction for val Sort Prop
-with conf_comp_mut := Induction for conf Sort Prop
-with comp_val_mut := Induction for comp Sort Prop.
-
-Combined Scheme val_conf_comp_comb from val_conf_mut, conf_comp_mut, comp_val_mut.
-
-(* Fixpoint open_val a {V} (t: @val (S V)):=
-match t with 
-  | Id x => Id (openv a v)
-  | Pair v1 v2 A => Pair (open_val a v1) (open_val a v2) (open_conf a A)
-  | Pi A B(A: conf) (B: @conf (S V)) => Pi (open_conf a A) (open_conf a B)
-  | Abs A B(A: conf) (B: @conf (S V)) => Abs (open_conf a A) (open_conf a B)
-  | Sig A B(A: conf) (B: @conf (S V)) => Sig (open_conf a A) (open_conf a B)
-  | (Uni U) as v | Tru as v | Fls as v | Bool as v => v
-end
-with 
-open_comp a {V} (t: @comp (S V)) :=
-match
-  | App v1 v2 => App (open_val a v1) (open_val a v2)
-  | Val v => Val (open_val a v)
-  | Fst v => Fst (open_val a v)
-  | Snd v => Snd (open_val a v)
-end
-open_conf a {V} (t: @conf (S V)) :=
-match
-  | Comp e => Comp (open_comp a e)
-  | Let A B => Let (open_comp a A) (open_comp a B)
-end *)
-
-
-Hint Constructors val. 
-Coercion Id: atom >-> val.
-Bind Scope ECCA_scope with val.
-Bind Scope ECCA_scope with conf.
-Bind Scope ECCA_scope with comp.
-
-
+(* The flat / single sort grammar of our language *)
 Inductive exp {V: nat}: Type :=
   | eId (x: @atom V)
   | eUni (U: universe)
@@ -87,18 +25,11 @@ Inductive exp {V: nat}: Type :=
   | eApp (v1 v2: exp)
   | eFst (v: exp)
   | eSnd (v: exp)
-(*   | eSubst (x arg body: exp) *)
 .
 
-(* Approach: If we have an exp with a proof
- that we can get an conf out of it, we should be able to
- extract the conf. Three fundamental naming operations cannot break ANF:
- wk, open, and close. The only operation that could potentially break ANF is bind.
- Let's apply these constructors by operating over the exp,
- preserving the proof that it is ANF,
- and extracting the conf back after.*)
-
 Hint Constructors exp.
+
+(* Telling shifted names how our language has binders *)
 
 Module ECCATerm <: Term.
   Definition term := @exp.
@@ -187,177 +118,6 @@ Module ECCARen := Renamings(ECCATerm).
 Export ECCATerm.
 Export ECCARen.
 
-
-(* 
-============================================================
-=======--Moving from restricted to unrestricted--=========== 
-============================================================
-*)
-
-Fixpoint unrestrict_val {V: nat} (v: @val V): @exp V :=
-match v with
-  | Id x => eId x
-  | Uni U => eUni U
-  | Pi A B => ePi (unrestrict_conf A) (unrestrict_conf B) 
-  | Abs A B => eAbs (unrestrict_conf A) (unrestrict_conf B)
-  | Sig A B => eSig (unrestrict_conf A) (unrestrict_conf B)
-  | Pair v1 v2 A => ePair (unrestrict_val v1) (unrestrict_val v2) (unrestrict_conf A)
-  | Tru => eTru
-  | Fls => eFls
-  | Bool => eBool
-end
-with unrestrict_comp {V: nat}  (e: @comp V): @exp V:=
-match e with
-  | App v1 v2 => eApp (unrestrict_val v1) (unrestrict_val v2)
-  | Val v => unrestrict_val v
-  | Fst v => eFst (unrestrict_val v)
-  | Snd v => eSnd (unrestrict_val v)
-(*   | Subst x arg body => eSubst (unrestrict_val x) (unrestrict_val arg) (unrestrict_val body) *)
-end
-with unrestrict_conf {V: nat}  (e: @conf V): @exp V:=
-match e with
-  | Comp e => unrestrict_comp e
-  | Let A B => eLet (unrestrict_comp A) (unrestrict_conf B)
-  | If v m1 m2 => eIf (unrestrict_val v) (unrestrict_conf m1) (unrestrict_conf m2)
-end.
-
-Fixpoint restrict_conf {V: nat} (e: @exp V) : option (@conf V) :=
-match e with
-  | eLet A B => 
-      match (restrict_conf A) with
-        | Some (Comp A) => match (restrict_conf B) with
-          | Some B => Some (Let A B)
-          | None => None
-          end
-        | _ => None
-        end
-  | eIf v m1 m2 =>
-      let m1 := (restrict_conf m1) in
-      let m2 := (restrict_conf m2) in
-      let v  := (restrict_conf v) in
-      match m1 with
-        | Some m1 => match m2 with
-          | Some m2 => match v with 
-            | Some (Comp (Val v)) => Some (If v m1 m2)
-            | _ => None
-            end
-          | _ => None
-          end
-        | _ => None
-        end 
-(* Computations are also configurations *)
-  (* should be just this but gah gah gah cannot guess decreasing argument of fix:
-    | _ => match (restrict_comp e) with
-    | Some m => Some (Comp m)
-    | None => None
-    end *)
-  | eApp v1 v2 =>
-      match (restrict_conf v1) with
-        | Some (Comp (Val v1)) => match (restrict_conf v2) with
-          | Some (Comp (Val v2)) => Some (Comp (App v1 v2))
-          | _ => None
-          end
-        | _ => None
-        end
-  | eFst v =>
-      match (restrict_conf v) with
-        | Some (Comp (Val v)) => Some (Comp (Fst v))
-        | _ => None
-        end
-  | eSnd v =>
-      match (restrict_conf v) with
-        | Some (Comp (Val v)) => Some (Comp (Snd v))
-        | _ => None
-        end
-(*   | eSubst x arg body =>
-      let x := (restrict_val x) in
-      let arg := (restrict_val arg) in
-      let body  := (restrict_val body) in
-      match x with
-        | Some x => match arg with
-          | Some arg => match body with 
-            | Some body => Some (Comp (Subst x arg body))
-            | None => None
-            end
-          | None => None
-          end
-        | None => None
-        end   *)
-(* Values are also computations which are also configurations *)
-  | eId x => Some (Comp (Val (Id x)))
-  | eUni U => Some (Comp (Val (Uni U)))
-  | ePi A B =>
-      match (restrict_conf A) with
-        | Some A => match (restrict_conf B) with
-          | Some B => Some (Comp (Val (Pi A B)))
-          | None => None
-          end
-        | None => None
-        end
-  | eAbs A B =>
-      match (restrict_conf A) with
-        | Some A => match (restrict_conf B) with
-          | Some B => Some (Comp (Val (Abs A B)))
-          | None => None
-          end
-        | None => None
-        end
-  | eSig A B =>
-      match (restrict_conf A) with
-        | Some A => match (restrict_conf B) with
-          | Some B => Some (Comp (Val (Sig A B)))
-          | None => None
-          end
-        | None => None
-        end
-  | ePair v1 v2 A => 
-      match (restrict_conf v1) with
-        | Some (Comp (Val v1)) => match (restrict_conf v2) with
-          | Some (Comp (Val v2)) => match (restrict_conf A) with 
-            | Some A => Some (Comp (Val (Pair v1 v2 A)))
-            | None => None
-            end
-          | _ => None
-          end
-        | _ => None
-        end
-  | eTru => (Some (Comp (Val Tru)))
-  | eFls => (Some (Comp (Val Fls)))
-  | eBool => (Some (Comp (Val Bool)))
-end.
-
-Definition restrict_comp {V: nat} (e: @exp V) : option (@comp V):=
-match (restrict_conf e) with
-  | Some (Comp e) => Some e
-  | _ => None
-end.
-
-Definition restrict_val {V: nat} (e: @exp V) : option (@val V):=
-match (restrict_conf e) with
-  | Some (Comp (Val e)) => Some e
-  | _ => None
-end.
-
-Definition isConf {V: nat} (e: @exp V): Prop :=
-  exists a, (restrict_conf e) = Some a.
-Definition isComp {V: nat} ( e: @exp V): Prop :=
-  exists a, (restrict_comp e) = Some a.
-Definition isVal {V: nat} ( e: @exp V): Prop :=
-  exists a, (restrict_val e) = Some a.
-
-(* Definition reify_Prop_val {V: nat} (e: @exp V | (@isVal V e)) : @val V.
-Proof. auto.
-Qed.
- *)
-
-(* 
-Definition open_val {V: nat} (v: @val (S V)) : @val V :=
-open 
-
-Definition reflect_Prop_val ( e : exp) : Option (isVal e). *) 
-
-Coercion Val: val >-> comp. 
-Coercion Comp: comp >-> conf. 
 (*
 =====================================
 =============--Size--================
@@ -579,6 +339,194 @@ Definition term_ind
        tm (always_Vclosedk tm).
 
 Check Vclosed_ind.
+
+
+(* 
+============================================================
+=======--ANF Syntactic Restriction--======================== 
+============================================================
+
+Which terms are ANF? We have a judgment for it.
+*)
+
+Inductive isConf: @exp 0 -> Prop :=
+| CompIs (c: exp):
+  isComp c -> isConf c
+| Let (A: exp) (B: exp):
+  isComp A ->
+  (forall x, isConf (open x B)) ->
+  isConf (eLet A B)
+| If (v: exp) (e1 e2: exp):
+  isVal v ->
+  isConf e1 ->
+  isConf e2 ->
+  isConf (eIf v e1 e2)
+with isComp: exp -> Prop :=
+| ValIs (v: exp) :
+  isVal v -> isComp v
+| Fst (v: exp):
+  isVal v -> 
+  isComp (eFst v)
+| Snd (v: exp):
+  isVal v -> 
+  isComp (eSnd v)
+| App (v1 v2: exp):
+  isVal v1 ->
+  isVal v2 -> 
+  isComp (eApp v1 v2)
+with isVal: exp -> Prop :=
+| Id (x: atom):
+  isVal (eId x)
+| Tru:
+  isVal (eTru)
+| Fls:
+  isVal (eFls)
+| Bool:
+  isVal (eBool)
+| Uni (U: universe):
+  isVal (eUni U)
+| Pair (v1 v2: exp) (A: exp):
+  isVal v1 ->
+  isVal v2 ->
+  isConf A ->
+  isVal (ePair v1 v2 A)
+| Pi (A: exp) (B: exp):
+  isConf A ->  
+  (forall x, isConf (open x B)) ->
+  isVal (ePi A B)
+| Abs (A: exp) (B: exp):
+  isConf A ->  
+  (forall x, isConf (open x B)) ->
+  isVal (eAbs A B)
+| Sig (A: exp) (B: exp):
+  isConf A ->  
+  (forall x, isConf (open x B)) ->
+  isVal (eSig A B)
+.
+Hint Constructors isConf isVal isComp.
+Check Let.
+
+Definition Conf:= {e: exp | isConf e}.
+Definition Comp:= {e: exp | isComp e}.
+Definition Val:= {e: exp | isVal e}.
+
+
+Scheme val_conf_mut := Induction for isVal Sort Prop
+with conf_comp_mut := Induction for isConf Sort Prop
+with comp_val_mut := Induction for isComp Sort Prop.
+
+Combined Scheme val_conf_comp_comb from val_conf_mut, conf_comp_mut, comp_val_mut.
+
+Check val_conf_comp_comb.
+
+
+Definition reprove_conf (e: exp) (P: isConf e) (r: ren) (t: total r) :  isConf ([r] e). Admitted.
+
+
+Fixpoint reprove_val (e: exp) (P: isVal e) (r: ren) (t: total r) :  isVal ([r] e):=
+match P with
+| Id x => Id (applyt r t x)
+| Pair v1 v2 A Pv1 Pv2 PA =>
+  Pair (reprove_val v1 _ r t) (reprove_val v2 _ r t) (reprove_conf A _ r t)
+end.
+| Pi (A: exp) (B: exp):
+  isConf A ->  
+  (forall x, isConf (open x B)) ->
+  isVal (ePi A B)
+| Abs (A: exp) (B: exp):
+  isConf A ->  
+  (forall x, isConf (open x B)) ->
+  isVal (eAbs A B)
+| Sig (A: exp) (B: exp):
+  isConf A ->  
+  (forall x, isConf (open x B)) ->
+  isVal (eSig A B)
+
+Lemma weakening2:
+forall (e: exp),
+(isVal e  -> (forall r,
+total r -> isVal ([r] e))) /\
+(isConf e  -> (forall r,
+total r -> isConf ([r] e))) /\
+(isComp e  -> (forall r,
+total r ->isComp ([r] e))).
+Proof.
+
+
+Lemma weakening2:
+forall r,
+total r ->
+
+  (forall (e: exp), isVal e  -> isVal ([r] e))
+  /\
+  (forall (e: exp), isConf e  -> isConf ([r] e))
+  /\
+  (forall (e: exp), isComp e  -> isComp ([r] e)).
+Proof.
+
+Qed.
+
+Lemma weakening2:
+forall (e: exp),
+(isVal e  -> (forall r,
+total r -> isVal ([r] e))) /\
+(isConf e  -> (forall r,
+total r -> isConf ([r] e))) /\
+(isComp e  -> (forall r,
+total r ->isComp ([r] e))).
+Proof.
+intros. induction e using term_ind.
++ repeat split; induction r.
+  - intros. names. auto.
+  - intros. names. apply IHr1. apply Id. 
++ names. auto.
++  shelve.
++ split. apply IHr. apply val_conf_comp_comb; intros; names; auto.
++ induction e. apply val_conf_comp_comb; try (intros; names; auto; fail).
+  - intros. destruct H. cbn. apply IHr1; auto. destruct IHr2; auto. apply H1 with (e:= eId x). apply Id.
+  - intros. cbn. constructor; auto. apply H1.
++ intros. names. auto.
+  - induction 1; cbn; intros * rl; eauto.
+  - rewrite applyt_related with (rl := rl).
+    auto with contexts.
+  - constructor; intro.
+    names; auto with contexts.
++ cbn in H. contradiction.
+Qed.
+(* Lemma ANF_nominal_irrelevance:
+, forall (e: exp),
+(isVal e -> forall (x y: name), isVal (open y (close x e)))
+/\
+(isConf e -> forall (x y: name), isConf (open y (close x e)))
+/\
+(isComp e -> forall (x y: name), isComp (open y (close x e))).
+Proof. intros. cbn.   
+
+induction e using term_ind.
+all: try (cbn; repeat split; auto ; fail).
++ cbn; repeat split. intros. 
+  - inversion H0. apply Abs with (x:=x).
+    * apply IHe1. auto.
+    * names. apply IHe1. auto.
+
+
+apply val_conf_comp_comb; try (cbn; constructor; auto; fail). 
++ intros. names in H. names in H0. names. apply Pi. ; auto.
+
+Lemma ANF_nominal_irrelevance:
+forall (x y: name),
+forall (e: exp),
+(isVal e -> forall (x y: name), isVal (open y (close x e)))
+/\
+(isConf e -> forall (x y: name), isConf (open y (close x e)))
+/\
+(isComp e -> forall (x y: name), isComp (open y (close x e)))
+.
+Proof. intros.  
+induction e using term_ind.
+all: try (cbn; repeat split; auto ; fail).
++ cbn; repeat split. intros. 
+  - inversion H0. destruct H with (n:=x). destruct H4. *)
 
 (* 
 =====================================

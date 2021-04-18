@@ -3,26 +3,26 @@ Require Import equiv_lemmas.
 Require Import continuations.
 Require Import String. 
 
-(* This is a little more understandable  *)
-
-Lemma technical_1 (K : cont_r) (e : comp) (G : env) :
-(G |- (unrestrict_conf (fill_hole_r e K)) =e=
- (fill_hole (unrestrict_comp e)
-   (unrestrict_cont K)))%ECCA.
-Proof. 
-  induction K; cbn; eauto.
-Qed.
-
 Open Scope ECCA_scope.
 
-Coercion unrestrict_conf: conf >-> exp.
-Coercion unrestrict_comp: comp >-> exp.
+Lemma het_compose_preserves_ANF:
+forall M, isConf M -> forall K, (cont_is_ANF K -> isConf (het_compose K M)).
+Proof.
+induction 1.
++ intros. rewrite het_compose_comp; auto. apply fill_hole_comp_preserves_ANF; auto.
++ intros. rewrite het_compose_equation. apply Let; auto.
+  - intros. names. 
+    * names. rewrite het_compose_equation.
++ rewrite het_compose_equation. apply Let; auto. intros.
+  unfold shift_cont. names.
 
-Lemma cont_compose_fill_het_compose (x: name) (K K' : cont_r) (N : comp):
-  (het_compose_r K (fill_hole_r N K') x) = (fill_hole_r N (cont_compose K K' x)).
+
+Lemma cont_compose_fill_het_compose (x: name) (K K' : cont) (N : exp) (PN: isComp N) (PK: cont_is_ANF K) (PK': cont_is_ANF K'):
+  (het_compose K (fill_hole N K') (fill_hole_preserves_ANF _ _ PK' PN)) = (fill_hole N (cont_compose K K' PK')).
 Proof.
   intros. destruct K'.
-+  cbn. auto. rewrite het_compose_r_equation.  reflexivity.
++  cbn. destruct PK'.
++  cbn. auto..
 +  cbn. rewrite het_compose_r_equation. reflexivity.
 Qed. 
 
