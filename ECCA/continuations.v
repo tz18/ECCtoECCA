@@ -15,14 +15,12 @@ Hint Constructors cont.
 Bind Scope ECCA_scope with cont.
 Notation "'[]'" := (Hole) (at level 200): ECCA_scope.
 
-Inductive cont_is_ANF: cont -> Set :=
-  | rHole:
-    cont_is_ANF Hole
-  | rLetHole (B: @exp (S 0)):
-    (forall x, isConf (open x B)) ->
-    cont_is_ANF (LetHole B)
-.
-Hint Constructors cont_is_ANF.
+Definition cont_is_ANF (k: cont): Prop :=
+match k with
+| Hole => True
+| LetHole B => isConf B
+end.
+
 Bind Scope ECCA_scope with cont_is_ANF.
 Notation "'[]'" := (Hole) (at level 200): ECCA_scope.
 
@@ -34,13 +32,6 @@ end.
 Check fill_hole.
 Notation "K '[' N ']'" := (fill_hole N K) (at level 200): ECCA_scope.
 Notation "'LET' '_' ':=' '[]' 'in' B" := (LetHole B) (at level 50) : ECCA_scope.
-
-Lemma fill_hole_comp_preserves_ANF (e: exp) (K: cont) : cont_is_ANF K -> isComp e -> 
-isConf (fill_hole e K).
-Proof.
-intros. destruct K; cbn; auto.
-cbn. inversion H. eauto.
-Qed.
 
 Definition exId: @exp 1 := (eId (@bound 1 l0)).
 Definition example_aLetHole := (LET _ := [] in (eId (@bound 1 l0)))%ECCA.

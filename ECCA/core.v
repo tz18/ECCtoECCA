@@ -349,21 +349,19 @@ Check Vclosed_ind.
 Which terms are ANF? We have a judgment for it.
 *)
 
-Inductive isConf: @exp 0 -> Prop :=
-| CompIs (c: exp):
-  isComp c -> isConf c
+Inductive isConf {V}: @exp V -> Prop :=
 | Let (A: exp) (B: exp):
   isComp A ->
-  (forall x, isConf (open x B)) ->
+  isConf B ->
   isConf (eLet A B)
 | If (v: exp) (e1 e2: exp):
   isVal v ->
   isConf e1 ->
   isConf e2 ->
   isConf (eIf v e1 e2)
-with isComp: exp -> Prop :=
-| ValIs (v: exp) :
-  isVal v -> isComp v
+| CompIs (c: exp):
+  isComp c -> isConf c
+with isComp {V}: exp -> Prop :=
 | Fst (v: exp):
   isVal v -> 
   isComp (eFst v)
@@ -374,7 +372,9 @@ with isComp: exp -> Prop :=
   isVal v1 ->
   isVal v2 -> 
   isComp (eApp v1 v2)
-with isVal: exp -> Prop :=
+| ValIs (v: exp) :
+  isVal v -> isComp v
+with isVal {V}: exp -> Prop :=
 | Id (x: atom):
   isVal (eId x)
 | Tru:
@@ -392,23 +392,33 @@ with isVal: exp -> Prop :=
   isVal (ePair v1 v2 A)
 | Pi (A: exp) (B: exp):
   isConf A ->  
-  (forall x, isConf (open x B)) ->
+  isConf B ->
   isVal (ePi A B)
 | Abs (A: exp) (B: exp):
-  isConf A ->  
-  (forall x, isConf (open x B)) ->
+  isConf A ->
+  isConf B ->
   isVal (eAbs A B)
 | Sig (A: exp) (B: exp):
   isConf A ->  
-  (forall x, isConf (open x B)) ->
+  isConf B ->
   isVal (eSig A B)
 .
 Hint Constructors isConf isVal isComp.
-Check Let.
+Check isComp.
 
-Definition Conf:= {e: exp | isConf e}.
+(* Fixpoint isBlahk {V : nat} (p: exp -> Prop) : @exp V -> Prop :=
+  match V with
+  | 0 => fun t => p t
+  | S V => fun t => forall n, isBlahk p (open n t)
+  end.
+
+Definition isConfk {V}:= @isBlahk V isConf.
+Definition isCompk {V}:= @isBlahk V isComp.
+Definition isValk {V}:= @isBlahk V isVal. *)
+
+(* Definition Conf:= {e: exp | isConf e}.
 Definition Comp:= {e: exp | isComp e}.
-Definition Val:= {e: exp | isVal e}.
+Definition Val:= {e: exp | isVal e}. *)
 
 
 Scheme val_conf_mut := Induction for isVal Sort Prop
@@ -419,114 +429,412 @@ Combined Scheme val_conf_comp_comb from val_conf_mut, conf_comp_mut, comp_val_mu
 
 Check val_conf_comp_comb.
 
-
-Definition reprove_conf (e: exp) (P: isConf e) (r: ren) (t: total r) :  isConf ([r] e). Admitted.
-
-
-Fixpoint reprove_val (e: exp) (P: isVal e) (r: ren) (t: total r) :  isVal ([r] e):=
-match P with
-| Id x => Id (applyt r t x)
-| Pair v1 v2 A Pv1 Pv2 PA =>
-  Pair (reprove_val v1 _ r t) (reprove_val v2 _ r t) (reprove_conf A _ r t)
-end.
-| Pi (A: exp) (B: exp):
-  isConf A ->  
-  (forall x, isConf (open x B)) ->
-  isVal (ePi A B)
-| Abs (A: exp) (B: exp):
-  isConf A ->  
-  (forall x, isConf (open x B)) ->
-  isVal (eAbs A B)
-| Sig (A: exp) (B: exp):
-  isConf A ->  
-  (forall x, isConf (open x B)) ->
-  isVal (eSig A B)
-
-Lemma weakening2:
-forall (e: exp),
-(isVal e  -> (forall r,
-total r -> isVal ([r] e))) /\
-(isConf e  -> (forall r,
-total r -> isConf ([r] e))) /\
-(isComp e  -> (forall r,
-total r ->isComp ([r] e))).
+Lemma renamings_rename: forall (r: ren) (t: total r) {V} x, exists y, ([r] @eId V x) = eId y.
 Proof.
+intros. generalize x. generalize V.
+induction r.
++ names. eauto.
++ names. names in IHr1. names in IHr2. intros. destruct IHr2 with (x:= x0). apply t.
+rewrite H. names. destruct IHr1 with V0 x1. apply t. eauto.
++ intros. names. destruct IHr with V0 x0. apply t. names in H. rewrite H. names. eauto.
++ intros. names. destruct IHr with (S V0) (closev a x0). apply t. names in H. rewrite H. names. eauto.
++ contradiction.
+Qed.
+  
+Lemma renaming_ids_pANF: forall {V} (r: ren) (t: total r) x, @isVal V ([r] (eId x)).
+Proof.
+intros. cbn in *. destruct renamings_rename with r V x. auto. cbn in *. rewrite H. apply Id.
+Qed.
+
+Hint Resolve renamings_rename.
+Hint Resolve renaming_ids_pANF.
+
+(*TODO Prove the most general possible lemma that ANF doesn't care about names
+Maybe by some kind of size induction, or on V?*)
+
+(*structure equivalent*)
+Inductive squiv {V V1} : @exp V -> @exp V1 -> Prop:=
+  | squivId (x: atom) (y: atom):
+    squiv (eId x) (eId y)
+  | squivUni (U U': universe):
+    squiv (eUni U) (eUni U')
+  | squivPi (A: exp) (A': exp) (B: exp) (B': exp):
+    squiv A A' ->
+    squiv B B' ->
+    squiv (ePi A B) (ePi A' B')
+  | squivAbs (A: exp) (A': exp) (B: exp) (B': exp):
+    squiv A A' ->
+    squiv B B' ->
+    squiv (eAbs A B) (eAbs A' B')
+  | squivSig (A: exp) (A': exp) (B: exp) (B': exp):
+    squiv A A' ->
+    squiv B B' ->
+    squiv (eSig A B) (eSig A' B')
+  | squivPair (v1 v1' v2 v2' A A': exp):
+    squiv v1 v1' ->
+    squiv v2 v2' ->
+    squiv A A' ->
+    squiv (ePair v1 v2 A) (ePair v1' v2' A')
+  | squivTru:
+    squiv eTru eTru
+  | squivFls:
+    squiv eFls eFls
+  | squivBool:
+    squiv eBool eBool
+  | squivLet (A: exp) (A': exp) (B: exp) (B': exp):
+    squiv A A' ->
+    squiv B B' ->
+    squiv (eLet A B) (eLet A' B')
+  | squivIf (v v': exp) (e1 e1' e2 e2': exp):
+    squiv v v' ->
+    squiv e1 e1' ->
+    squiv e2 e2' ->
+    squiv (eIf v e1 e2) (eIf v' e1' e2')
+  | squivApp (v1 v2 v1' v2': exp):
+    squiv v1 v1' ->
+    squiv v2 v2' ->
+    squiv (eApp v1 v2) (eApp v1' v2')
+  | squivFst (v v': exp):
+    squiv v v' ->
+    squiv (eFst v) (eFst v')
+  | squivSnd (v v': exp):
+    squiv v v' ->
+    squiv (eSnd v) (eSnd v')
+.
+Hint Constructors squiv.
+
+Lemma squiv_sym {V V1} (e: @exp V) (e': @exp V1):
+squiv e e' -> squiv e' e.
+Proof.
+intros; induction H; auto. Qed.
+Hint Resolve squiv_sym.
+
+Definition structure_preserving {V1} {V2} (f: (@exp V1 -> @exp V2)): Prop :=
+forall (e: exp),
+squiv (f e) e.
+
+Lemma open_preserves_structure {V}:
+forall (x: name), structure_preserving (@open x V).
+Proof.
+intros.
+unfold structure_preserving. intros. inductT e; try (constructor; fail).
+all: try (constructor;
+  (try (apply IHe1; simpl_term_eq; auto; fail)); 
+  (try (apply IHe2; simpl_term_eq; auto); fail); fail).
++ constructor.
+  - apply IHe1; simpl_term_eq; auto.
+  - apply IHe2; simpl_term_eq; auto.
+  - apply IHe3; simpl_term_eq; auto.
++ constructor.
+  - apply IHe1; simpl_term_eq; auto.
+  - apply IHe2; simpl_term_eq; auto.
+  - apply IHe3; simpl_term_eq; auto.
++ constructor.
+  - apply IHe. simpl_term_eq. auto.
++ constructor.
+  - apply IHe. simpl_term_eq. auto.
+Qed.
+Hint Resolve open_preserves_structure.
 
 
-Lemma weakening2:
+Ltac invertANFhelper e:=
+  match goal with
+    | [ H : isConf ( e ) |- _ ] => inversion H; clear H; subst
+    | [ H : isComp ( e ) |- _ ] => inversion H; clear H; subst
+    | [ H: isVal ( e ) |- _ ] => inversion H; clear H; subst
+  end.
+
+Ltac invertANF:=
+  match goal with
+    | [ H : isConf ( ?e ) |- _ ] => repeat invertANFhelper e
+    | [ H : isComp ( ?e ) |- _ ] => repeat invertANFhelper e
+    | [ H: isVal ( ?e ) |- _ ] => repeat invertANFhelper e
+  end.
+
+Ltac destructConj:=
+  match goal with
+    | [ H : ( _ /\ _ ) |- _ ] => destruct H
+  end.
+
+Ltac constructANFhelper e :=
+  match goal with
+    | [ |- isConf e ] => constructor
+    | [ |- isComp e ] => constructor 
+    | [ |- isVal e ] => constructor 
+  end.
+
+Ltac constructANF:=
+  match goal with
+    | [ |- isConf ?e ] => repeat constructANFhelper e 
+    | [ |- isComp ?e ] => repeat constructANFhelper e  
+    | [ |- isVal ?e ] => repeat constructANFhelper e 
+  end.
+
+Lemma squiv_proper_over_ANF: 
+forall {V} {V'} (e: @exp V) (e': @exp V'), squiv e e' -> 
+((@isConf V e -> @isConf V' e')
+/\ (@isComp V e -> @isComp V' e')
+/\ (@isVal V e -> @isVal V' e')).
+Proof.
+intros. induction H; auto. 
+1-4:repeat split; repeat destructConj; intros; constructANF; invertANF; auto.
+1,2: repeat split; repeat destructConj; intros; try apply Let; invertANF; auto.
++ repeat split; repeat destructConj; intros. constructor; apply App; invertANF; auto. 
+  - apply App; invertANF; auto.
+  - invertANF.
++ repeat split; repeat destructConj; intros. constructor; apply Fst; invertANF; auto. 
+  - apply Fst; invertANF; auto.
+  - invertANF.
++ repeat split; repeat destructConj; intros. constructor; apply Snd; invertANF; auto. 
+  - apply Snd; invertANF; auto.
+  - invertANF.
+Qed.
+Hint Resolve squiv_proper_over_ANF.
+
+Lemma total_renamings_preserve_ANF :
 forall r,
 total r ->
-
-  (forall (e: exp), isVal e  -> isVal ([r] e))
+let P (V: nat) (e: @exp V) (i: isVal e):= isVal ([r] e) in
+let P0 (V: nat) (e: @exp V) (i: isConf e):= isConf ([r] e) in
+let P1 (V: nat) (e: @exp V) (i: isComp e):= isComp ([r] e) in
+forall (V: nat),
+  (forall (e: @exp V) (i: isVal e), P V e i)
   /\
-  (forall (e: exp), isConf e  -> isConf ([r] e))
+  (forall (e: @exp V) (i: isConf e), P0 V e i)
   /\
-  (forall (e: exp), isComp e  -> isComp ([r] e)).
+  (forall (e: @exp V) (i: isComp e), P1 V e i).
 Proof.
-
+intros. cbn. apply val_conf_comp_comb; intros; unfold P in *; unfold P0 in *; unfold P1 in *.
+2,3,4,5: constructor.
+2,3,4,5,6,7,9,10,11: cbn; constructor; auto.
+2,3: cbn; constructor; auto.
+apply renaming_ids_pANF. auto.
 Qed.
+Hint Resolve total_renamings_preserve_ANF.
+Check val_conf_comp_comb.
 
-Lemma weakening2:
-forall (e: exp),
-(isVal e  -> (forall r,
-total r -> isVal ([r] e))) /\
-(isConf e  -> (forall r,
-total r -> isConf ([r] e))) /\
-(isComp e  -> (forall r,
-total r ->isComp ([r] e))).
-Proof.
-intros. induction e using term_ind.
-+ repeat split; induction r.
-  - intros. names. auto.
-  - intros. names. apply IHr1. apply Id. 
-+ names. auto.
-+  shelve.
-+ split. apply IHr. apply val_conf_comp_comb; intros; names; auto.
-+ induction e. apply val_conf_comp_comb; try (intros; names; auto; fail).
-  - intros. destruct H. cbn. apply IHr1; auto. destruct IHr2; auto. apply H1 with (e:= eId x). apply Id.
-  - intros. cbn. constructor; auto. apply H1.
-+ intros. names. auto.
-  - induction 1; cbn; intros * rl; eauto.
-  - rewrite applyt_related with (rl := rl).
-    auto with contexts.
-  - constructor; intro.
-    names; auto with contexts.
-+ cbn in H. contradiction.
-Qed.
-(* Lemma ANF_nominal_irrelevance:
-, forall (e: exp),
-(isVal e -> forall (x y: name), isVal (open y (close x e)))
-/\
-(isConf e -> forall (x y: name), isConf (open y (close x e)))
-/\
-(isComp e -> forall (x y: name), isComp (open y (close x e))).
-Proof. intros. cbn.   
-
-induction e using term_ind.
-all: try (cbn; repeat split; auto ; fail).
-+ cbn; repeat split. intros. 
-  - inversion H0. apply Abs with (x:=x).
-    * apply IHe1. auto.
-    * names. apply IHe1. auto.
-
-
-apply val_conf_comp_comb; try (cbn; constructor; auto; fail). 
-+ intros. names in H. names in H0. names. apply Pi. ; auto.
-
-Lemma ANF_nominal_irrelevance:
+Lemma open_is_renaming:
 forall (x y: name),
-forall (e: exp),
-(isVal e -> forall (x y: name), isVal (open y (close x e)))
-/\
-(isConf e -> forall (x y: name), isConf (open y (close x e)))
-/\
-(isComp e -> forall (x y: name), isComp (open y (close x e)))
-.
-Proof. intros.  
-induction e using term_ind.
-all: try (cbn; repeat split; auto ; fail).
-+ cbn; repeat split. intros. 
-  - inversion H0. destruct H with (n:=x). destruct H4. *)
+forall (V: nat) (e: @exp (S V)), open y e = [y <- x] (open x e).
+Proof.
+intros; names; auto.
+Qed.
+Hint Rewrite open_is_renaming.
+
+Lemma ANF_by_any_other_name:
+forall (x y: name),
+forall (V: nat),
+  (forall (e: @exp (S V)) (i: isVal (open x e)),  isVal (open y e))
+  /\
+  (forall (e: @exp (S V)) (i: isConf (open x e)), isConf (open y e))
+  /\
+  (forall (e: @exp (S V)) (i: isComp (open x e)), isComp (open y e)).
+Proof.
+intros. names. repeat split; intros; 
+rewrite open_is_renaming with (e:=e) (x:=x); apply total_renamings_preserve_ANF; 
+     cbn; auto.
+Qed.
+Hint Resolve ANF_by_any_other_name.
+
+Lemma struct_preserving_ANF_iff {V1}{V2}:
+forall (f: (@exp V1 -> @exp V2)) (h: structure_preserving f),
+  (forall (e: @exp (V1)), isVal (f e) <->  isVal e)
+  /\
+  (forall (e: @exp (V1)), isConf (f e)<-> isConf e)
+  /\
+  (forall (e: @exp (V1)), isComp (f e)<-> isComp e).
+Proof.
+intros. repeat split. 
+all: try (intros; unfold structure_preserving in h; pose (@squiv_proper_over_ANF V1); apply a with (e':=(f e)) (e:=e); auto).
+all: try (intros; unfold structure_preserving in h; pose (@squiv_proper_over_ANF V2); apply a with (e:=(f e)) (e':=e); auto).
+Qed.
+
+Lemma open_ANF_iff:
+forall (x: name),
+forall {V},
+  (forall (e: @exp (S V)), isVal (open x e) <->  isVal e)
+  /\
+  (forall (e: @exp (S V)), isConf (open x e)<-> isConf e)
+  /\
+  (forall (e: @exp (S V)), isComp (open x e)<-> isComp e).
+Proof. intros. apply struct_preserving_ANF_iff with (f:= (open x)).
+apply open_preserves_structure.
+Qed.
+Hint Resolve open_ANF_iff.
+
+Lemma open_conf {V} {x: name} {e: @exp (S V)} (i: @isConf (S V) e): (isConf (open x e)).
+Proof. apply open_ANF_iff. auto. Qed.
+
+Lemma close_preserves_structure {V}:
+forall (x: name), structure_preserving (@close x V).
+Proof.
+intros.
+unfold structure_preserving. intros. inductT e; try (constructor; fail).
+all: try (constructor;
+  (try (apply IHe1; simpl_term_eq; auto; fail)); 
+  (try (apply IHe2; simpl_term_eq; auto); fail); fail).
++ constructor.
+  - apply IHe1; simpl_term_eq; auto.
+  - apply IHe2; simpl_term_eq; auto.
+  - apply IHe3; simpl_term_eq; auto.
++ constructor.
+  - apply IHe1; simpl_term_eq; auto.
+  - apply IHe2; simpl_term_eq; auto.
+  - apply IHe3; simpl_term_eq; auto.
++ constructor.
+  - apply IHe. simpl_term_eq. auto.
++ constructor.
+  - apply IHe. simpl_term_eq. auto.
+Qed.
+Hint Resolve close_preserves_structure.
+
+Lemma wk_preserves_structure {V}:
+structure_preserving (@wk V).
+Proof.
+intros.
+unfold structure_preserving. intros. inductT e; try (constructor; fail).
+all: try (constructor;
+  (try (apply IHe1; simpl_term_eq; auto; fail)); 
+  (try (apply IHe2; simpl_term_eq; auto); fail); fail).
++ constructor.
+  - apply IHe1; simpl_term_eq; auto.
+  - apply IHe2; simpl_term_eq; auto.
+  - apply IHe3; simpl_term_eq; auto.
++ constructor.
+  - apply IHe1; simpl_term_eq; auto.
+  - apply IHe2; simpl_term_eq; auto.
+  - apply IHe3; simpl_term_eq; auto.
++ constructor.
+  - apply IHe. simpl_term_eq. auto.
++ constructor.
+  - apply IHe. simpl_term_eq. auto.
+Qed.
+Hint Resolve close_preserves_structure.
+
+Lemma close_ANF_iff:
+forall (x: name),
+forall {V},
+  (forall (e: @exp V), isVal (close x e) <-> isVal e)
+  /\
+  (forall (e: @exp V), isConf (close x e) <-> isConf e)
+  /\
+  (forall (e: @exp V), isComp (close x e) <-> isComp e).
+Proof.
+intros. apply struct_preserving_ANF_iff with (f:=(close x)). apply close_preserves_structure.
+Qed.
+
+Lemma wk_ANF_iff:
+forall {V},
+  (forall (e: @exp V), isVal (wk e) <-> isVal e)
+  /\
+  (forall (e: @exp V), isConf (wk e) <-> isConf e)
+  /\
+  (forall (e: @exp V), isComp (wk e) <-> isComp e).
+Proof.
+intros. apply struct_preserving_ANF_iff with (f:=(wk)). apply wk_preserves_structure.
+Qed.
+
+Check val_conf_comp_comb.
+Check term_ind.
+
+Fixpoint propOpen (p: @term 0 -> Prop) (V : nat): @term V -> Prop :=
+  match V with
+  | 0 => fun t => (p t)
+  | S V => fun t => forall n, propOpen p V (open n t)
+  end.
+Definition isConfk:= propOpen (@isConf 0).
+Definition isCompk:= propOpen (@isComp 0).
+Definition isValk:= propOpen (@isVal 0).
+Check Vclosedk.
+Check isConfk.
+
+Definition ANF_val_conf_comp_comb
+     : forall
+         (P : forall (e : @exp 0),
+              isVal e -> Prop)
+         (P0 : forall (e : @exp 0),
+               isConf e -> Prop)
+         (P1 : forall (e : @exp 0),
+               isComp e -> Prop),
+
+       (forall (x : atom),
+        P (eId x) (Id x)) ->
+
+       (P eTru Tru) ->
+
+       (P eFls Fls) ->
+
+       (P eBool Bool) ->
+
+       (forall (U : universe),
+        P (eUni U) (Uni U)) ->
+
+       (forall (v1 v2 A : exp) (i : isVal v1),
+        P v1 i ->
+        forall (i0 : isVal v2),
+        P v2 i0 ->
+        forall (i1 : isConf A),
+        P0 A i1 ->
+        P (ePair v1 v2 A) (Pair v1 v2 A i i0 i1)) ->
+
+       (forall (A: exp) (B : @exp (S 0)) (i : isConf A),
+        P0 A i ->
+        forall (i0 : isConf B) (x : name) (i0' : isConf (open x B)),
+        P0 (open x B) i0' ->
+        P (ePi A B) (Pi A B i i0)) ->
+
+       (forall (A: exp) (B : @exp (S 0)) (i : isConf A),
+        P0 A i ->
+        forall (i0 : isConf B) (x : name) (i0' : isConf (open x B)),
+        P0 (open x B) i0' ->
+        P (eAbs A B) (Abs A B i i0)) ->
+
+       (forall (A: exp) (B : @exp (S 0)) (i : isConf A),
+        P0 A i ->
+        forall (i0 : isConf B) (x : name) (i0' : isConf (open x B)),
+        P0 (open x B) i0' ->
+        P (eSig A B) (Sig A B i i0)) ->
+
+       (forall (A: exp) (B : @exp (S 0)) (i : isComp A),
+        P1 A i ->
+        (forall (x : name) (i0' : isConf (open x B)), P0 (open x B) i0') ->
+        forall (i0 : isConf B),
+        P0 (eLet A B) (Let A B i i0)) ->
+
+       (forall (v e1 e2 : exp)
+          (i : isVal v),
+        P v i ->
+        forall (i0 : isConf e1),
+        P0 e1 i0 ->
+        forall (i1 : isConf e2),
+        P0 e2 i1 ->
+        P0 (eIf v e1 e2) (If v e1 e2 i i0 i1)) ->
+
+       (forall (c : exp) (i : isComp c),
+        P1 c i -> P0 c (CompIs c i)) ->
+
+       (forall (v : exp) (i : isVal v),
+        P v i -> P1 (eFst v) (Fst v i)) ->
+
+       (forall (v : exp) (i : isVal v),
+        P v i -> P1 (eSnd v) (Snd v i)) ->
+
+       (forall (v1 v2 : exp)
+          (i : isVal v1),
+        P v1 i ->
+        forall (i0 : isVal v2),
+        P v2 i0 ->
+        P1 (eApp v1 v2) (App v1 v2 i i0)) ->
+
+       (forall (v : exp) (i : isVal v),
+        P v i -> P1 v (ValIs v i)) ->
+
+       (forall (e : exp) (i : isVal e), P e i) /\
+       (forall (e : exp) (i : isConf e), P0 e i) /\
+       (forall (e : exp) (i : isComp e), P1 e i).
+Proof. 
+intros. induction val_conf_comp_comb with (P:=(isValk P)) (P0:=(isCompk P0)) (P1:=(isConfk P1)).
+Admitted.
 
 (* 
 =====================================

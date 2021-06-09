@@ -5,16 +5,32 @@ Require Import String.
 
 Open Scope ECCA_scope.
 
-Lemma het_compose_preserves_ANF:
-forall M, isConf M -> forall K, (cont_is_ANF K -> isConf (het_compose K M)).
+Lemma fill_hole_comp_preserves_conf (e: exp) (K: cont) : cont_is_ANF K -> isComp e -> 
+isConf (fill_hole e K).
 Proof.
-induction 1.
-+ intros. rewrite het_compose_comp; auto. apply fill_hole_comp_preserves_ANF; auto.
-+ intros. rewrite het_compose_equation. apply Let; auto.
-  - intros. names. 
-    * names. rewrite het_compose_equation.
-+ rewrite het_compose_equation. apply Let; auto. intros.
-  unfold shift_cont. names.
+intros. destruct K; cbn; auto.
+Qed.
+
+Lemma het_compose_preserves_ANF:
+let P (e: @exp 0) (i: isVal e):= forall K, (cont_is_ANF K -> isConf (het_compose K e)) in
+let P0 (e: @exp 0) (i: isConf e):= forall K, (cont_is_ANF K -> isConf (het_compose K e)) in
+let P1 (e: @exp 0) (i: isComp e):= forall K, (cont_is_ANF K -> isConf (het_compose K e)) in
+  (forall (e: @exp 0) (i: isVal e), P e i)
+  /\
+  (forall (e: @exp 0) (i: isConf e), P0 e i)
+  /\
+  (forall (e: @exp 0) (i: isComp e), P1 e i).
+Proof.
+intros. 
+induction ANF_val_conf_comp_comb with (P:=P) (P0:=P0) (P1:=P1); auto.
+1-9,12-14: unfold P, P0, P1; intros; rewrite het_compose_comp; auto; 
+  apply fill_hole_comp_preserves_conf; auto.
++ unfold P1, P0. intros. rewrite het_compose_equation. apply Let; auto. 
+  apply close_ANF_iff. unfold shift_cont. destruct K.
+  - apply H0; try apply open_ANF_iff; auto.
+  - apply H0; try apply open_ANF_iff; auto. apply wk_ANF_iff. apply H1.
++ unfold P, P0. intros. rewrite het_compose_equation. apply If; auto.
+Qed.
 
 
 Lemma cont_compose_fill_het_compose (x: name) (K K' : cont) (N : exp) (PN: isComp N) (PK: cont_is_ANF K) (PK': cont_is_ANF K'):
