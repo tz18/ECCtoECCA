@@ -11,6 +11,8 @@ Proof.
 intros. destruct K; cbn; auto.
 Qed.
 
+
+
 Lemma het_compose_preserves_ANF:
 let P (e: @exp 0) (i: isVal e):= forall K, (cont_is_ANF K -> isConf (het_compose K e)) in
 let P0 (e: @exp 0) (i: isConf e):= forall K, (cont_is_ANF K -> isConf (het_compose K e)) in
@@ -29,7 +31,7 @@ induction ANF_val_conf_comp_comb with (P:=P) (P0:=P0) (P1:=P1); auto.
   apply close_ANF_iff. unfold shift_cont. destruct K.
   - apply H0; try apply open_ANF_iff; auto.
   - apply H0; try apply open_ANF_iff; auto. apply wk_ANF_iff. apply H1.
-+ unfold P, P0. intros. rewrite het_compose_equation. apply If; auto.
++ unfold P, P0. intros. rewrite het_compose_equation. apply If; auto. 
 Qed.
 
 

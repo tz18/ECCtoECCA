@@ -662,8 +662,12 @@ apply open_preserves_structure.
 Qed.
 Hint Resolve open_ANF_iff.
 
-Lemma open_conf {V} {x: name} {e: @exp (S V)} (i: @isConf (S V) e): (isConf (open x e)).
-Proof. apply open_ANF_iff. auto. Qed.
+Lemma open_conf {V} {x: name} {e: @exp (S V)}: @isConf (S V) e -> (isConf (open x e)).
+Proof. apply open_ANF_iff. Qed.
+Hint Resolve open_conf.
+Lemma unopen_conf {V} {x: name} {e: @exp (S V)}: isConf (open x e) -> (@isConf (S V) e).
+Proof. apply open_ANF_iff with (x:=x). Qed.
+Hint Resolve unopen_conf.
 
 Lemma close_preserves_structure {V}:
 forall (x: name), structure_preserving (@close x V).
@@ -748,8 +752,15 @@ Definition isValk:= propOpen (@isVal 0).
 Check Vclosedk.
 Check isConfk.
 
-Definition ANF_val_conf_comp_comb
-     : forall
+Print val_conf_comp_comb.
+
+Check nat_ind.
+Print nat_ind.
+Print val_conf_comp_comb.
+Print val_conf_mut.
+
+Definition ANF_val_conf_comp_comb_type
+     := forall
          (P : forall (e : @exp 0),
               isVal e -> Prop)
          (P0 : forall (e : @exp 0),
@@ -777,27 +788,31 @@ Definition ANF_val_conf_comp_comb
         P0 A i1 ->
         P (ePair v1 v2 A) (Pair v1 v2 A i i0 i1)) ->
 
-       (forall (A: exp) (B : @exp (S 0)) (i : isConf A),
+        (forall (A: exp) (B : @exp (S 0)) (i : isConf A),
         P0 A i ->
-        forall (i0 : isConf B) (x : name) (i0' : isConf (open x B)),
-        P0 (open x B) i0' ->
+        (forall (x : name) (i0' : isConf (open x B)),
+        P0 (open x B) i0') ->
+        forall (i0 : isConf B),
         P (ePi A B) (Pi A B i i0)) ->
 
-       (forall (A: exp) (B : @exp (S 0)) (i : isConf A),
+        (forall (A: exp) (B : @exp (S 0)) (i : isConf A),
         P0 A i ->
-        forall (i0 : isConf B) (x : name) (i0' : isConf (open x B)),
-        P0 (open x B) i0' ->
+        (forall (x : name) (i0' : isConf (open x B)),
+        P0 (open x B) i0') ->
+        forall (i0 : isConf B),
         P (eAbs A B) (Abs A B i i0)) ->
 
-       (forall (A: exp) (B : @exp (S 0)) (i : isConf A),
+        (forall (A: exp) (B : @exp (S 0)) (i : isConf A),
         P0 A i ->
-        forall (i0 : isConf B) (x : name) (i0' : isConf (open x B)),
-        P0 (open x B) i0' ->
+        (forall (x : name) (i0' : isConf (open x B)),
+        P0 (open x B) i0') ->
+        forall (i0 : isConf B),
         P (eSig A B) (Sig A B i i0)) ->
 
        (forall (A: exp) (B : @exp (S 0)) (i : isComp A),
         P1 A i ->
-        (forall (x : name) (i0' : isConf (open x B)), P0 (open x B) i0') ->
+        (forall (x : name) (i0' : isConf (open x B)),
+        P0 (open x B) i0') ->
         forall (i0 : isConf B),
         P0 (eLet A B) (Let A B i i0)) ->
 
@@ -829,12 +844,119 @@ Definition ANF_val_conf_comp_comb
        (forall (v : exp) (i : isVal v),
         P v i -> P1 v (ValIs v i)) ->
 
-       (forall (e : exp) (i : isVal e), P e i) /\
-       (forall (e : exp) (i : isConf e), P0 e i) /\
-       (forall (e : exp) (i : isComp e), P1 e i).
-Proof. 
-intros. induction val_conf_comp_comb with (P:=(isValk P)) (P0:=(isCompk P0)) (P1:=(isConfk P1)).
-Admitted.
+       (forall (e : @exp 0) (i : isVal e), P e i) /\
+       (forall (e : @exp 0) (i : isConf e), P0 e i) /\
+       (forall (e : @exp 0) (i : isComp e), P1 e i).
+
+Definition ANF_val_conf_comp_comb: ANF_val_conf_comp_comb_type. Admitted.
+
+(*
+ :=
+fun (P :  forall (e : @exp 0), isVal e -> Prop)
+    (P0 : forall (e : @exp 0), isConf e -> Prop)
+    (P1 : forall (e : @exp 0), isComp e -> Prop)
+
+    (fId: (forall (x : atom), P (eId x) (Id x)))
+    (fTru: (P eTru Tru))
+    (fFls: (P eFls Fls))
+    (fBool: (P eBool Bool))
+    (fUni: (forall (U : universe), P (eUni U) (Uni U)))
+    (fPair: (forall (v1 v2 A : exp) (i : isVal v1),
+        P v1 i ->
+        forall (i0 : isVal v2),
+        P v2 i0 ->
+        forall (i1 : isConf A),
+        P0 A i1 ->
+        P (ePair v1 v2 A) (Pair v1 v2 A i i0 i1)))
+    (fPi: (forall (A: exp) (B : @exp (S 0)) (i : isConf A),
+        P0 A i ->
+        forall (x : name) (i0 : isConf (open x B)),
+        P0 (open x B) i0 ->
+        P (ePi A B) (Pi A B i (unopen_conf i0))))
+    (fAbs: (forall (A: exp) (B : @exp (S 0)) (i : isConf A),
+        P0 A i ->
+        forall (x : name) (i0 : isConf (open x B)),
+        P0 (open x B) i0' ->
+        P (eAbs A B) (Abs A B i (unopen_conf i0))))
+    (fSig: (forall (A: exp) (B : @exp (S 0)) (i : isConf A),
+        P0 A i ->
+        forall (x : name) (i0 : isConf (open x B)),
+        P0 (open x B) i0 ->
+        P (eSig A B) (Sig A B i (unopen_conf i0))))
+    (fLet: (forall (A: exp) (B : @exp (S 0)) (i : isComp A),
+        P1 A i ->
+        (forall (x : name) (i0 : isConf (open x B)), P0 (open x B) i0) ->
+        P0 (eLet A B) (Let A B i (unopen_conf i0))))
+    (fIf: (forall (v e1 e2 : exp)
+          (i : isVal v),
+        P v i ->
+        forall (i0 : isConf e1),
+        P0 e1 i0 ->
+        forall (i1 : isConf e2),
+        P0 e2 i1 ->
+        P0 (eIf v e1 e2) (If v e1 e2 i i0 i1)))
+     (fComp: (forall (c : exp) (i : isComp c),
+        P1 c i -> P0 c (CompIs c i)))
+     (fFst:  (forall (v : exp) (i : isVal v),
+        P v i -> P1 (eFst v) (Fst v i)))
+
+     (fSnd: (forall (v : exp) (i : isVal v),
+        P v i -> P1 (eSnd v) (Snd v i)))
+
+     (fApp:  (forall (v1 v2 : exp)
+          (i : isVal v1),
+        P v1 i ->
+        forall (i0 : isVal v2),
+        P v2 i0 ->
+        P1 (eApp v1 v2) (App v1 v2 i i0)))
+
+      (fVal: (forall (v : exp) (i : isVal v),
+        P v i -> P1 v (ValIs v i)))  =>
+fix Fval (e : exp) (i: isVal e) : P i :=
+  match i as i0 return (P i0) with
+  | Id x => fId x
+  | Tru => fTru
+  | Fls => fFls
+  | Bool => fBool
+  | Uni U => fUni U
+  | Pair v1 v2 A i1 i2 i3 => (fPair v1 v2 A i1 (Fval v1 i1) i2 (Fval v2 i2) i3 (Fconf A i3))
+  | Pi A B i1 i2 => (fPi A B 
+                        i1 (Fconf A i1) 
+                        (fun x => (Fconf (open x B) (open_conf x i2)))
+
+(forall (A: exp) (B : @exp (S 0)) (i : isConf A),
+        P0 A i ->
+        forall (x : name) (i0 : isConf (open x B)),
+        P0 (open x B) i0 ->
+        P (ePi A B) (Pi A B i (unopen_conf i0)))
+    (fAbs: (forall (A: exp) (B : @exp (S 0)) (i : isConf A)
+  end
+     : forall P : nat -> Prop,
+       P 0 ->
+       (forall n : nat, P n -> P (S n)) ->
+       forall n : nat, P n
+
+
+
+nat_ind = 
+fun (P : nat -> Prop) (f : P 0)
+  (f0 : forall n : nat, P n -> P (S n)) =>
+fix F (n : nat) : P n :=
+  match n as n0 return (P n0) with
+  | 0 => f
+  | S n0 => f0 n0 (F n0)
+  end
+     : forall P : nat -> Prop,
+       P 0 ->
+       (forall n : nat, P n -> P (S n)) ->
+       forall n : nat, P n
+
+         
+
+         (P0 : forall (e : @exp 0),
+               isConf e -> Prop)
+         (P1 : forall (e : @exp 0),
+               isComp e -> Prop) *)
 
 (* 
 =====================================
