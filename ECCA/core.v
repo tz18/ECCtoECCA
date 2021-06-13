@@ -844,9 +844,9 @@ Definition ANF_val_conf_comp_comb_type
        (forall (v : exp) (i : isVal v),
         P v i -> P1 v (ValIs v i)) ->
 
-       (forall (e : @exp 0) (i : isVal e), P e i) /\
+       (forall (e : @exp 0) (i : isVal e), P e i)(*  /\
        (forall (e : @exp 0) (i : isConf e), P0 e i) /\
-       (forall (e : @exp 0) (i : isComp e), P1 e i).
+       (forall (e : @exp 0) (i : isComp e), P1 e i) *).
 
 Definition ANF_val_conf_comp_comb: ANF_val_conf_comp_comb_type. Admitted.
 
@@ -919,8 +919,8 @@ fun (P :  forall (e : @exp 0), isVal e -> Prop)
 
       (fVal: (forall (v : exp) (i : isVal v),
         P v i -> P1 v (ValIs v i)))  =>
-fix Fval (e : exp) (i: isVal e) : P i :=
-  match i as i0 return (P i0) with
+fix Fval (e : exp) (i: isVal e) : P e i :=
+  match i in (isVal e) return (P e i) with
   | Id x => fId x
   | Tru => fTru
   | Fls => fFls
@@ -929,27 +929,27 @@ fix Fval (e : exp) (i: isVal e) : P i :=
   | Pair v1 v2 A i1 i2 i3 => (fPair v1 v2 A i1 (Fval v1 i1) i2 (Fval v2 i2) i3 (Fconf A i3))
   | Pi A B iA iB => (fPi A B
                         iA (Fconf A iA)
-                        (fun x => (Fconf (open x B) (open_conf iB))))
+                        iB (fun x => (Fconf (open x B) (open_conf iB))))
   | Abs A B iA iB => (fAbs A B
                         iA (Fconf A iA)
-                        (fun x => (Fconf (open x B) (open_conf iB))))
+                        iB (fun x => (Fconf (open x B) (open_conf iB))))
   | Sig A B iA iB => (fSig A B
                         iA (Fconf A iA)
-                        (fun x => (Fconf (open x B) (open_conf iB))))
+                        iB (fun x => (Fconf (open x B) (open_conf iB))))
 end
-with Fconf (e: exp) (i: isConf e): P0 i :=
-  match i as i0 return (P0 i0) with
+with Fconf (e: exp) (i: isConf e): P0 e i :=
+  match i in (isConf e) return (P0 e i) with
   | Let A B iA iB => (fLet A B
                         iA (Fcomp A iA)
-                        (fun x => (Fconf (open x B) (open_conf iB))))
+                        iB (fun x => (Fconf (open x B) (open_conf iB))))
   | If v e1 e2 iV iE1 iE2 => (fIf v e1 e2 
                                 iV (Fval v iV)
                                 iE1 (Fconf e1 iE1)
                                 iE2 (Fconf e2 iE2))
-  | CompIs C iC => (fComp C iC)
+  | CompIs C iC => (fComp C iC (Fcomp C iC))
 end
-with Fcomp (e: exp) (i: isComp e): P1 i :=
-  match i as i0 return (P1 i0) with
+with Fcomp (e: exp) (i: isComp e): P1 e i :=
+  match i in (isComp e) return (P1 e i) with
   | App v1 v2 iV1 iV2 => (fApp v1 v2
                             iV1 (Fval v1 iV1)
                             iV2 (Fval v2 iV2))
@@ -957,20 +957,8 @@ with Fcomp (e: exp) (i: isComp e): P1 i :=
   | Snd v iV => (fSnd v iV (Fval v iV))
   | ValIs v iV => (fVal v iV (Fval v iV))
 end
-for conj Fval (conj Fcomp F.
+for Fval.
 
-nat_ind = 
-fun (P : nat -> Prop) (f : P 0)
-  (f0 : forall n : nat, P n -> P (S n)) =>
-fix F (n : nat) : P n :=
-  match n as n0 return (P n0) with
-  | 0 => f
-  | S n0 => f0 n0 (F n0)
-  end
-     : forall P : nat -> Prop,
-       P 0 ->
-       (forall n : nat, P n -> P (S n)) ->
-       forall n : nat, P n
 
          
 
