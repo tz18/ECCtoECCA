@@ -832,11 +832,7 @@ Variable (fId: fIdT) (fTru: fTruT) (fFls: fFlsT) (fBool: fBoolT) (fUni: fUniT) (
         (fFst: fFstT) (fSnd: fSndT) (fApp: fAppT) (fVal: fValT).
 
 Definition ANF_val_conf_comp_comb_type
-     := fIdT -> fTruT -> fFlsT -> fBoolT -> fUniT ->  fPairT -> fPiT -> fAbsT -> fSigT -> 
-        fLetT -> fIfT -> fCompT -> 
-        fFstT -> fSndT -> fAppT -> fValT
-        ->
-
+     := 
        (forall (e : @exp 0) (i : isVal e), P e i)(*  /\
        (forall (e : @exp 0) (i : isConf e), P0 e i) /\
        (forall (e : @exp 0) (i : isComp e), P1 e i) *).
