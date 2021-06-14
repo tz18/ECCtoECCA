@@ -1,6 +1,7 @@
 Require Export Atom.
 Require Import String Morph Var Context Relative.
-(* 
+Require Import Coq.Program.Wf.
+(*
 =====================================
 =======--ECCA Definition--=========== 
 =====================================
