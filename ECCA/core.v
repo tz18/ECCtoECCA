@@ -828,54 +828,70 @@ Let fAppT:=  (forall (v1 v2 : exp)
 Let fValT:= (forall (v : exp) (i : isVal v),
         P v i -> P1 v (ValIs v i)).
 
-Variable (fId: fIdT) (fTru: fTruT) (fFls: fFlsT) (fBool: fBoolT) (fUni: fUniT) (fPair: fPairT) (fPi: fPiT) (fAbs: fAbsT) (fSig: fSigT) 
+Variable (fId: fIdT) (fTru: fTruT) (fFls: fFlsT) (fBool: fBoolT) (fUni: fUniT) (fPair: fPairT) (fPi: fPiT) (fAbs: fAbsT) (fSig: fSigT)
         (fLet: fLetT) (fIf: fIfT) (fComp: fCompT)
         (fFst: fFstT) (fSnd: fSndT) (fApp: fAppT) (fVal: fValT).
 
 Definition ANF_val_conf_comp_comb_type
-     := 
+     :=
        (forall (e : @exp 0) (i : isVal e), P e i)(*  /\
        (forall (e : @exp 0) (i : isConf e), P0 e i) /\
        (forall (e : @exp 0) (i : isComp e), P1 e i) *).
 
-Program Fixpoint Fval (e : exp) (i: isVal e) {measure (size i)}: P e i :=
-  match i in (isVal e) return (P e i) with
-  | Id x => fId x
-  | Tru => fTru
-  | Fls => fFls
-  | Bool => fBool
-  | Uni U => fUni U
-  | Pair v1 v2 A i1 i2 i3 => (fPair v1 v2 A i1 (Fval v1 i1) i2 (Fval v2 i2) i3 (Fconf A i3))
-  | Pi A B iA iB => (fPi A B
+Definition isANF (e : @exp 0) : Type := (isVal e) + ((isConf e) + (isComp e)).
+
+Definition anfP (e : exp) (i : isANF e) :=
+  match i with
+  | inl i => P e i
+  | inr (inl i) => P0 e i
+  | inr (inr i) => P1 e i
+  end.
+
+Program Fixpoint FANF (e : exp) (i: isANF e) {measure (esize e)}: anfP e i :=
+  let Fval := fun (e : exp) (i : isVal e) => FANF e (inl i) in
+  let Fconf := fun (e : exp) (i : isConf e) => FANF e (inr (inl i)) in
+  let Fcomp := fun (e : exp) (i : isComp e) => FANF e (inr (inr i)) in
+  match i with
+    | inl i =>
+      match i in (isVal e) return (P e i) with
+      | Id x => fId x
+      | Tru => fTru
+      | Fls => fFls
+      | Bool => fBool
+      | Uni U => fUni U
+      | Pair v1 v2 A i1 i2 i3 => (fPair v1 v2 A i1 (Fval v1 i1) i2 (Fval v2 i2) i3 (Fconf A i3))
+      | Pi A B iA iB => (fPi A B
                         iA (Fconf A iA)
                         iB (fun x => (Fconf (open x B) (open_conf iB))))
-  | Abs A B iA iB => (fAbs A B
-                        iA (Fconf A iA)
-                        iB (fun x => (Fconf (open x B) (open_conf iB))))
-  | Sig A B iA iB => (fSig A B
-                        iA (Fconf A iA)
-                        iB (fun x => (Fconf (open x B) (open_conf iB))))
-end
-with Fconf (e: exp) (i: isConf e): P0 e i :=
-  match i in (isConf e) return (P0 e i) with
-  | Let A B iA iB => (fLet A B
+      | Abs A B iA iB => (fAbs A B
+                               iA (Fconf A iA)
+                               iB (fun x => (Fconf (open x B) (open_conf iB))))
+      | Sig A B iA iB => (fSig A B
+                               iA (Fconf A iA)
+                               iB (fun x => (Fconf (open x B) (open_conf iB))))
+      end
+    | inr (inl i) =>
+      match i in (isConf e) return (P0 e i) with
+      | Let A B iA iB => (fLet A B
                         iA (Fcomp A iA)
                         iB (fun x => (Fconf (open x B) (open_conf iB))))
-  | If v e1 e2 iV iE1 iE2 => (fIf v e1 e2 
-                                iV (Fval v iV)
-                                iE1 (Fconf e1 iE1)
-                                iE2 (Fconf e2 iE2))
-  | CompIs C iC => (fComp C iC (Fcomp C iC))
-end
-with Fcomp (e: exp) (i: isComp e): P1 e i :=
-  match i in (isComp e) return (P1 e i) with
-  | App v1 v2 iV1 iV2 => (fApp v1 v2
-                            iV1 (Fval v1 iV1)
-                            iV2 (Fval v2 iV2))
-  | Fst v iV => (fFst v iV (Fval v iV))
-  | Snd v iV => (fSnd v iV (Fval v iV))
-  | ValIs v iV => (fVal v iV (Fval v iV))
-end.
+      | If v e1 e2 iV iE1 iE2 => (fIf v e1 e2
+                                      iV (Fval v iV)
+                                      iE1 (Fconf e1 iE1)
+                                      iE2 (Fconf e2 iE2))
+      | CompIs C iC => (fComp C iC (Fcomp C iC))
+      end
+    | inr (inr i) =>
+      match i in (isComp e) return (P1 e i) with
+      | App v1 v2 iV1 iV2 => (fApp v1 v2
+                                   iV1 (Fval v1 iV1)
+                                   iV2 (Fval v2 iV2))
+      | Fst v iV => (fFst v iV (Fval v iV))
+      | Snd v iV => (fSnd v iV (Fval v iV))
+      | ValIs v iV => (fVal v iV (Fval v iV))
+      end
+  end.
+
 
 
 Definition ANF_val_conf_comp_comb: ANF_val_conf_comp_comb_type
