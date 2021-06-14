@@ -3,7 +3,7 @@ Require Import String Morph Var Context Relative.
 Require Import Coq.Program.Wf.
 (*
 =====================================
-=======--ECCA Definition--=========== 
+=======--ECCA Definition--===========
 =====================================
 *)
 
@@ -22,7 +22,7 @@ Inductive exp {V: nat}: Type :=
   | eFls
   | eBool
   | eLet (A: exp) (B: @exp (S V))
-  | eIf (v: exp) (e1 e2: exp) 
+  | eIf (v: exp) (e1 e2: exp)
   | eApp (v1 v2: exp)
   | eFst (v: exp)
   | eSnd (v: exp)
@@ -102,7 +102,7 @@ Module ECCATerm <: Term.
   Proof.
     intros.
     inductT t; simplT; reflexivity.
-  Qed.      
+  Qed.
 
   Lemma extensional :
     forall N M (f g : morph (@var) N (@term) M) V t,
@@ -137,7 +137,7 @@ Fixpoint esize {V: nat} (e: @exp V) : nat :=
   | ePair e1 e2 A => 1 + (esize e1) + (esize e2) + (esize A)
   | eFst e => 1 + (esize e)
   | eSnd e => 1 + (esize e)
-  | eIf e e1 e2 => 1 + (esize e) + (esize e1) + (esize e2) 
+  | eIf e e1 e2 => 1 + (esize e) + (esize e1) + (esize e2)
   | eTru => 1
   | eFls => 1
   | eBool => 1
@@ -173,56 +173,56 @@ Fixpoint Vclosedk (V : nat) : @term V -> Set :=
 
 Fixpoint always_Vclosedk {V : nat} (t : term) {struct t} : Vclosedk V t :=
   match t with
-  | eId x => 
+  | eId x =>
     let fix go {V} : forall (x : @atom V), Vclosedk V (eId x) :=
-      match V with 
+      match V with
       | 0 => vc_eId
-      | S V => fun v n => go _ 
-      end 
+      | S V => fun v n => go _
+      end
     in go x
   | eUni U =>
     let fix go {V} : forall (U : universe), Vclosedk V (eUni U) :=
-      match V with 
+      match V with
       | 0 => vc_eUni
-      | S V => fun v n => go _ 
-      end 
+      | S V => fun v n => go _
+      end
     in go U
-  | ePi A B => 
-    let fix go {V} : forall A B, Vclosedk (V) A -> 
-                      Vclosedk (S V) B -> 
+  | ePi A B =>
+    let fix go {V} : forall A B, Vclosedk (V) A ->
+                      Vclosedk (S V) B ->
                       Vclosedk V (ePi A B) :=
-      match V with 
-      | 0 => vc_ePi 
+      match V with
+      | 0 => vc_ePi
       | S V => fun _ _ vca vcb a=> go _ _ (vca a) (vcb a)
-      end 
+      end
     in go _ _ (always_Vclosedk A) (always_Vclosedk B)
   | eAbs A B =>
-    let fix go {V} : forall A B, Vclosedk (V) A -> 
-                      Vclosedk (S V) B -> 
+    let fix go {V} : forall A B, Vclosedk (V) A ->
+                      Vclosedk (S V) B ->
                       Vclosedk V (eAbs A B) :=
-      match V with 
-      | 0 => vc_eAbs 
+      match V with
+      | 0 => vc_eAbs
       | S V => fun _ _ vca vcb a=> go _ _ (vca a) (vcb a)
-      end 
+      end
     in go _ _ (always_Vclosedk A) (always_Vclosedk B)
   | eSig A B =>
-    let fix go {V} : forall A B, Vclosedk (V) A -> 
-                      Vclosedk (S V) B -> 
+    let fix go {V} : forall A B, Vclosedk (V) A ->
+                      Vclosedk (S V) B ->
                       Vclosedk V (eSig A B) :=
-      match V with 
-      | 0 => vc_eSig 
+      match V with
+      | 0 => vc_eSig
       | S V => fun _ _ vca vcb a=> go _ _ (vca a) (vcb a)
-      end 
+      end
     in go _ _ (always_Vclosedk A) (always_Vclosedk B)
   | ePair v1 v2 A =>
-    let fix go {V} : forall v e1 e2, Vclosedk V v -> 
+    let fix go {V} : forall v e1 e2, Vclosedk V v ->
                                      Vclosedk V e1 ->
                                      Vclosedk V e2 ->
                                      Vclosedk V (ePair v e1 e2) :=
-      match V with 
-      | 0 => vc_ePair 
-      | S V => fun _ _ _ vv1 vv2 va a => go _ _ _ (vv1 a) (vv2 a) (va a) 
-      end 
+      match V with
+      | 0 => vc_ePair
+      | S V => fun _ _ _ vv1 vv2 va a => go _ _ _ (vv1 a) (vv2 a) (va a)
+      end
     in go _ _ _ (always_Vclosedk v1) (always_Vclosedk v2) (always_Vclosedk A)
   | eTru =>
     let fix go {V} : Vclosedk V _ :=
@@ -237,48 +237,48 @@ Fixpoint always_Vclosedk {V : nat} (t : term) {struct t} : Vclosedk V t :=
       match V with 0 => vc_eBool | S V => fun _ => go end in
     go
   | eLet A B =>
-    let fix go {V} : forall A B, Vclosedk (V) A -> 
-                      Vclosedk (S V) B -> 
+    let fix go {V} : forall A B, Vclosedk (V) A ->
+                      Vclosedk (S V) B ->
                       Vclosedk V (eLet A B) :=
-      match V with 
-      | 0 => vc_eLet 
+      match V with
+      | 0 => vc_eLet
       | S V => fun _ _ vca vcb a=> go _ _ (vca a) (vcb a)
-      end 
+      end
     in go _ _ (always_Vclosedk A) (always_Vclosedk B)
-  | eIf v e1 e2 => 
-    let fix go {V} : forall v e1 e2, Vclosedk V v -> 
+  | eIf v e1 e2 =>
+    let fix go {V} : forall v e1 e2, Vclosedk V v ->
                                      Vclosedk V e1 ->
                                      Vclosedk V e2 ->
                                      Vclosedk V (eIf v e1 e2) :=
-      match V with 
-      | 0 => vc_eIf 
-      | S V => fun _ _ _ vv ve1 ve2 a => go _ _ _ (vv a) (ve1 a) (ve2 a) 
-      end 
+      match V with
+      | 0 => vc_eIf
+      | S V => fun _ _ _ vv ve1 ve2 a => go _ _ _ (vv a) (ve1 a) (ve2 a)
+      end
     in go _ _ _ (always_Vclosedk v) (always_Vclosedk e1) (always_Vclosedk e2)
   | eApp f e  =>
-    let fix go {V} : forall f e, Vclosedk V f -> 
-                                 Vclosedk V e -> 
+    let fix go {V} : forall f e, Vclosedk V f ->
+                                 Vclosedk V e ->
                                  Vclosedk V (eApp f e) :=
-      match V with 
-      | 0 => vc_eApp 
-      | S V => fun _ _ vf ve a => go _ _ (vf a) (ve a) 
-      end 
+      match V with
+      | 0 => vc_eApp
+      | S V => fun _ _ vf ve a => go _ _ (vf a) (ve a)
+      end
     in go _ _ (always_Vclosedk f) (always_Vclosedk e)
   | eFst v =>
-    let fix go {V} : forall v, Vclosedk V v -> 
+    let fix go {V} : forall v, Vclosedk V v ->
                                  Vclosedk V (eFst v) :=
-      match V with 
-      | 0 => vc_eFst 
-      | S V => fun _ vv a => go _ (vv a) 
-      end 
+      match V with
+      | 0 => vc_eFst
+      | S V => fun _ vv a => go _ (vv a)
+      end
     in go _ (always_Vclosedk v)
   | eSnd v =>
-    let fix go {V} : forall v, Vclosedk V v -> 
+    let fix go {V} : forall v, Vclosedk V v ->
                                  Vclosedk V (eSnd v) :=
-      match V with 
-      | 0 => vc_eSnd 
-      | S V => fun _ vv a => go _ (vv a) 
-      end 
+      match V with
+      | 0 => vc_eSnd
+      | S V => fun _ vv a => go _ (vv a)
+      end
     in go _ (always_Vclosedk v)
 end.
 
@@ -326,15 +326,15 @@ Definition term_ind
              (SND : forall (v : exp), P v -> P (eSnd v))
              (tm : exp) : P tm :=
     Vclosed_ind (fun tm _ => P tm)
-       IDD UNI 
+       IDD UNI
        (fun a b _ Ha _ Hb => PIE a b Ha Hb)
        (fun a b _ Ha _ Hb => ABS a b Ha Hb)
        (fun a b _ Ha _ Hb => SIG a b Ha Hb)
-       (fun v1 v2 a _ Hv1 _ Hv2 _ Ha => PAI v1 v2 a Hv1 Hv2 Ha) 
-       TRU FLS BOO 
-       (fun a b _ Ha _ Hb => LET a b Ha Hb) 
-       (fun v e1 e2 _ Hv _ He1 _ He2 => IFF v e1 e2 Hv He1 He2) 
-       (fun f e _ F _ E => APP f e F E) 
+       (fun v1 v2 a _ Hv1 _ Hv2 _ Ha => PAI v1 v2 a Hv1 Hv2 Ha)
+       TRU FLS BOO
+       (fun a b _ Ha _ Hb => LET a b Ha Hb)
+       (fun v e1 e2 _ Hv _ He1 _ He2 => IFF v e1 e2 Hv He1 He2)
+       (fun f e _ F _ E => APP f e F E)
        (fun v _ V => FST v V)
        (fun v _ V => SND v V)
        tm (always_Vclosedk tm).
@@ -342,9 +342,9 @@ Definition term_ind
 Check Vclosed_ind.
 
 
-(* 
+(*
 ============================================================
-=======--ANF Syntactic Restriction--======================== 
+=======--ANF Syntactic Restriction--========================
 ============================================================
 
 Which terms are ANF? We have a judgment for it.
@@ -364,14 +364,14 @@ Inductive isConf {V}: @exp V -> Prop :=
   isComp c -> isConf c
 with isComp {V}: exp -> Prop :=
 | Fst (v: exp):
-  isVal v -> 
+  isVal v ->
   isComp (eFst v)
 | Snd (v: exp):
-  isVal v -> 
+  isVal v ->
   isComp (eSnd v)
 | App (v1 v2: exp):
   isVal v1 ->
-  isVal v2 -> 
+  isVal v2 ->
   isComp (eApp v1 v2)
 | ValIs (v: exp) :
   isVal v -> isComp v
@@ -392,7 +392,7 @@ with isVal {V}: exp -> Prop :=
   isConf A ->
   isVal (ePair v1 v2 A)
 | Pi (A: exp) (B: exp):
-  isConf A ->  
+  isConf A ->
   isConf B ->
   isVal (ePi A B)
 | Abs (A: exp) (B: exp):
@@ -400,7 +400,7 @@ with isVal {V}: exp -> Prop :=
   isConf B ->
   isVal (eAbs A B)
 | Sig (A: exp) (B: exp):
-  isConf A ->  
+  isConf A ->
   isConf B ->
   isVal (eSig A B)
 .
@@ -441,7 +441,7 @@ rewrite H. names. destruct IHr1 with V0 x1. apply t. eauto.
 + intros. names. destruct IHr with (S V0) (closev a x0). apply t. names in H. rewrite H. names. eauto.
 + contradiction.
 Qed.
-  
+
 Lemma renaming_ids_pANF: forall {V} (r: ren) (t: total r) x, @isVal V ([r] (eId x)).
 Proof.
 intros. cbn in *. destruct renamings_rename with r V x. auto. cbn in *. rewrite H. apply Id.
@@ -520,7 +520,7 @@ Proof.
 intros.
 unfold structure_preserving. intros. inductT e; try (constructor; fail).
 all: try (constructor;
-  (try (apply IHe1; simpl_term_eq; auto; fail)); 
+  (try (apply IHe1; simpl_term_eq; auto; fail));
   (try (apply IHe2; simpl_term_eq; auto); fail); fail).
 + constructor.
   - apply IHe1; simpl_term_eq; auto.
@@ -560,33 +560,33 @@ Ltac destructConj:=
 Ltac constructANFhelper e :=
   match goal with
     | [ |- isConf e ] => constructor
-    | [ |- isComp e ] => constructor 
-    | [ |- isVal e ] => constructor 
+    | [ |- isComp e ] => constructor
+    | [ |- isVal e ] => constructor
   end.
 
 Ltac constructANF:=
   match goal with
-    | [ |- isConf ?e ] => repeat constructANFhelper e 
-    | [ |- isComp ?e ] => repeat constructANFhelper e  
-    | [ |- isVal ?e ] => repeat constructANFhelper e 
+    | [ |- isConf ?e ] => repeat constructANFhelper e
+    | [ |- isComp ?e ] => repeat constructANFhelper e
+    | [ |- isVal ?e ] => repeat constructANFhelper e
   end.
 
-Lemma squiv_proper_over_ANF: 
-forall {V} {V'} (e: @exp V) (e': @exp V'), squiv e e' -> 
+Lemma squiv_proper_over_ANF:
+forall {V} {V'} (e: @exp V) (e': @exp V'), squiv e e' ->
 ((@isConf V e -> @isConf V' e')
 /\ (@isComp V e -> @isComp V' e')
 /\ (@isVal V e -> @isVal V' e')).
 Proof.
-intros. induction H; auto. 
+intros. induction H; auto.
 1-4:repeat split; repeat destructConj; intros; constructANF; invertANF; auto.
 1,2: repeat split; repeat destructConj; intros; try apply Let; invertANF; auto.
-+ repeat split; repeat destructConj; intros. constructor; apply App; invertANF; auto. 
++ repeat split; repeat destructConj; intros. constructor; apply App; invertANF; auto.
   - apply App; invertANF; auto.
   - invertANF.
-+ repeat split; repeat destructConj; intros. constructor; apply Fst; invertANF; auto. 
++ repeat split; repeat destructConj; intros. constructor; apply Fst; invertANF; auto.
   - apply Fst; invertANF; auto.
   - invertANF.
-+ repeat split; repeat destructConj; intros. constructor; apply Snd; invertANF; auto. 
++ repeat split; repeat destructConj; intros. constructor; apply Snd; invertANF; auto.
   - apply Snd; invertANF; auto.
   - invertANF.
 Qed.
@@ -631,8 +631,8 @@ forall (V: nat),
   /\
   (forall (e: @exp (S V)) (i: isComp (open x e)), isComp (open y e)).
 Proof.
-intros. names. repeat split; intros; 
-rewrite open_is_renaming with (e:=e) (x:=x); apply total_renamings_preserve_ANF; 
+intros. names. repeat split; intros;
+rewrite open_is_renaming with (e:=e) (x:=x); apply total_renamings_preserve_ANF;
      cbn; auto.
 Qed.
 Hint Resolve ANF_by_any_other_name.
@@ -645,7 +645,7 @@ forall (f: (@exp V1 -> @exp V2)) (h: structure_preserving f),
   /\
   (forall (e: @exp (V1)), isComp (f e)<-> isComp e).
 Proof.
-intros. repeat split. 
+intros. repeat split.
 all: try (intros; unfold structure_preserving in h; pose (@squiv_proper_over_ANF V1); apply a with (e':=(f e)) (e:=e); auto).
 all: try (intros; unfold structure_preserving in h; pose (@squiv_proper_over_ANF V2); apply a with (e:=(f e)) (e':=e); auto).
 Qed.
@@ -676,7 +676,7 @@ Proof.
 intros.
 unfold structure_preserving. intros. inductT e; try (constructor; fail).
 all: try (constructor;
-  (try (apply IHe1; simpl_term_eq; auto; fail)); 
+  (try (apply IHe1; simpl_term_eq; auto; fail));
   (try (apply IHe2; simpl_term_eq; auto); fail); fail).
 + constructor.
   - apply IHe1; simpl_term_eq; auto.
@@ -699,7 +699,7 @@ Proof.
 intros.
 unfold structure_preserving. intros. inductT e; try (constructor; fail).
 all: try (constructor;
-  (try (apply IHe1; simpl_term_eq; auto; fail)); 
+  (try (apply IHe1; simpl_term_eq; auto; fail));
   (try (apply IHe2; simpl_term_eq; auto); fail); fail).
 + constructor.
   - apply IHe1; simpl_term_eq; auto.
@@ -761,10 +761,10 @@ Print val_conf_comp_comb.
 Print val_conf_mut.
 
 
-Section ANF_val_conf_comp_comb. 
+Section ANF_val_conf_comp_comb.
 
-Variables 
-(P :  forall (e : @exp 0), isVal e -> Prop) 
+Variables
+(P :  forall (e : @exp 0), isVal e -> Prop)
 (P0 : forall (e : @exp 0), isConf e -> Prop)
 (P1 : forall (e : @exp 0), isComp e -> Prop).
 Let fIdT:= (forall (x : atom), P (eId x) (Id x)).
@@ -884,14 +884,14 @@ fun ( =>
 .
 
 
-         
+
 
          (P0 : forall (e : @exp 0),
                isConf e -> Prop)
          (P1 : forall (e : @exp 0),
                isComp e -> Prop) *)
 
-(* 
+(*
 =====================================
 =======--Type Environments--=========
 =====================================
@@ -900,7 +900,7 @@ fun ( =>
 Inductive ctxmem :=
 | Assum (A: @exp 0)
 | Def (e: @exp 0) (A: @exp 0)
-| Eq (e1: @exp 0) (e2: @exp 0) 
+| Eq (e1: @exp 0) (e2: @exp 0)
 .
 
 Definition env := @context ctxmem.
@@ -929,4 +929,4 @@ Fixpoint append (g g': env) :=
 match g with
 | ctx_empty => g'
 | g'' & x ~ A => ((append g'' g') & x ~ A)
-end. 
+end.
