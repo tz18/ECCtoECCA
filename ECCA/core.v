@@ -1,6 +1,9 @@
 Require Export Atom.
 Require Import String Morph Var Context Relative.
 Require Import Coq.Program.Wf.
+Require Import FunInd.
+Require Import Recdef.
+Require Import Lia. 
 (*
 =====================================
 =======--ECCA Definition--===========
@@ -142,6 +145,25 @@ Fixpoint esize {V: nat} (e: @exp V) : nat :=
   | eFls => 1
   | eBool => 1
 end.
+
+Lemma esize_non_zero : forall V e, 0 < @esize V e.
+Proof.
+  induction e; simpl; lia.
+Qed.
+
+Lemma esize_open_id : forall {V: nat} (e: @exp (1 + V)) x, @esize (V) (open x e) = @esize (1 + V) e.
+Proof. intros. 
+  inductT e; induction V0; cbn; try easy; try (rewrite IHe1; try easy; rewrite IHe2; try easy; try (rewrite IHe3; try easy)).
+  all: ( rewrite IHe; try easy).
+Qed.
+
+Lemma esize_close_id : forall {V: nat} (e: @exp (V)) x, @esize (1 + V) (close x e) = @esize (V) e.
+Proof. intros. induction e; names; auto.
+Qed.
+
+Lemma esize_wk_id : forall {V: nat} (e: @exp (V)), @esize (1 + V) (wk e) = @esize (V) e.
+Proof. intros. induction e; names; auto.
+Qed.
 
 (*=============================
 ========Induction principle====
@@ -760,7 +782,6 @@ Print nat_ind.
 Print val_conf_comp_comb.
 Print val_conf_mut.
 
-
 Section ANF_val_conf_comp_comb.
 
 Variables
@@ -838,7 +859,7 @@ Definition ANF_val_conf_comp_comb_type
        (forall (e : @exp 0) (i : isConf e), P0 e i) /\
        (forall (e : @exp 0) (i : isComp e), P1 e i) *).
 
-Definition isANF (e : @exp 0) : Type := (isVal e) + ((isConf e) + (isComp e)).
+Definition isANF {V} (e : @exp V) : Type := (isVal e) + ((isConf e) + (isComp e)).
 
 Definition anfP (e : exp) (i : isANF e) :=
   match i with
@@ -846,66 +867,99 @@ Definition anfP (e : exp) (i : isANF e) :=
   | inr (inl i) => P0 e i
   | inr (inr i) => P1 e i
   end.
-
-Program Fixpoint FANF (e : exp) (i: isANF e) {measure (esize e)}: anfP e i :=
-  let Fval := fun (e : exp) (i : isVal e) => FANF e (inl i) in
-  let Fconf := fun (e : exp) (i : isConf e) => FANF e (inr (inl i)) in
-  let Fcomp := fun (e : exp) (i : isComp e) => FANF e (inr (inr i)) in
-  match i with
-    | inl i =>
-      match i in (isVal e) return (P e i) with
+Require Import JMeq.
+Program Fixpoint FANF (e : @exp 0) (g: isANF e) {measure (esize e)}: anfP e g :=
+  match g with
+    | inl ib =>
+      match ib with
       | Id x => fId x
       | Tru => fTru
       | Fls => fFls
       | Bool => fBool
       | Uni U => fUni U
-      | Pair v1 v2 A i1 i2 i3 => (fPair v1 v2 A i1 (Fval v1 i1) i2 (Fval v2 i2) i3 (Fconf A i3))
+      | Pair v1 v2 A i1 i2 i3 => (fPair v1 v2 A i1 (FANF v1 (inl i1)) i2 (FANF v2 (inl i2)) i3 (FANF A (inr (inl i3))))
       | Pi A B iA iB => (fPi A B
-                        iA (Fconf A iA)
-                        iB (fun x => (Fconf (open x B) (open_conf iB))))
+                        iA (FANF A (inr (inl iA)))
+                        iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
       | Abs A B iA iB => (fAbs A B
-                               iA (Fconf A iA)
-                               iB (fun x => (Fconf (open x B) (open_conf iB))))
+                               iA (FANF A (inr (inl iA)))
+                               iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
       | Sig A B iA iB => (fSig A B
-                               iA (Fconf A iA)
-                               iB (fun x => (Fconf (open x B) (open_conf iB))))
+                               iA (FANF A (inr (inl iA)))
+                               iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
       end
-    | inr (inl i) =>
-      match i in (isConf e) return (P0 e i) with
+    | inr (inl ic) =>
+      match ic with
       | Let A B iA iB => (fLet A B
-                        iA (Fcomp A iA)
-                        iB (fun x => (Fconf (open x B) (open_conf iB))))
+                        iA (FANF A (inr (inr iA)))
+                        iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
       | If v e1 e2 iV iE1 iE2 => (fIf v e1 e2
-                                      iV (Fval v iV)
-                                      iE1 (Fconf e1 iE1)
-                                      iE2 (Fconf e2 iE2))
-      | CompIs C iC => (fComp C iC (Fcomp C iC))
+                                      iV (FANF v (inl iV))
+                                      iE1 (FANF e1 (inr (inl iE1)))
+                                      iE2 (FANF e2 (inr (inl iE2))))
+      | CompIs C iC => 
+          (*(fComp C iC (FANF C (inr (inr iC))))*)
+            (fComp C iC (
+              match iC with
+              | App v1 v2 iV1 iV2 => (fApp v1 v2
+                                           iV1 (FANF v1 (inl iV1))
+                                           iV2 (FANF v2 (inl iV2)))
+              | Fst v iV => (fFst v iV (FANF v (inl iV)))
+              | Snd v iV => (fSnd v iV (FANF v (inl iV)))
+              | ValIs v iV => 
+                  (*(fVal v iV (FANF v (inl iV)))*)
+                  (fVal v iV (
+                    match iV with
+                      | Id x => fId x
+                      | Tru => fTru
+                      | Fls => fFls
+                      | Bool => fBool
+                      | Uni U => fUni U
+                      | Pair v1 v2 A i1 i2 i3 => (fPair v1 v2 A i1 (FANF v1 (inl i1)) i2 (FANF v2 (inl i2)) i3 (FANF A (inr (inl i3))))
+                      | Pi A B iA iB => (fPi A B
+                                        iA (FANF A (inr (inl iA)))
+                                        iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
+                      | Abs A B iA iB => (fAbs A B
+                                               iA (FANF A (inr (inl iA)))
+                                               iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
+                      | Sig A B iA iB => (fSig A B
+                                               iA (FANF A (inr (inl iA)))
+                                               iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
+                      end))
+               end))
       end
-    | inr (inr i) =>
-      match i in (isComp e) return (P1 e i) with
+    | inr (inr id) =>
+      match id with
       | App v1 v2 iV1 iV2 => (fApp v1 v2
-                                   iV1 (Fval v1 iV1)
-                                   iV2 (Fval v2 iV2))
-      | Fst v iV => (fFst v iV (Fval v iV))
-      | Snd v iV => (fSnd v iV (Fval v iV))
-      | ValIs v iV => (fVal v iV (Fval v iV))
+                                   iV1 (FANF v1 (inl iV1))
+                                   iV2 (FANF v2 (inl iV2)))
+      | Fst v iV => (fFst v iV (FANF v (inl iV)))
+      | Snd v iV => (fSnd v iV (FANF v (inl iV)))
+      | ValIs v iV => 
+          (*fVal v iV (FANF v (inl iV)))*)
+          (fVal v iV (
+            match iV with
+            | Id x => fId x
+            | Tru => fTru
+            | Fls => fFls
+            | Bool => fBool
+            | Uni U => fUni U
+            | Pair v1 v2 A i1 i2 i3 => (fPair v1 v2 A i1 (FANF v1 (inl i1)) i2 (FANF v2 (inl i2)) i3 (FANF A (inr (inl i3))))
+            | Pi A B iA iB => (fPi A B
+                              iA (FANF A (inr (inl iA)))
+                              iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
+            | Abs A B iA iB => (fAbs A B
+                                     iA (FANF A (inr (inl iA)))
+                                     iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
+            | Sig A B iA iB => (fSig A B
+                                     iA (FANF A (inr (inl iA)))
+                                     iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
+            end))
       end
   end.
+Show Obligation Tactic. Solve All Obligations with (Tactics.program_simpl; try rewrite esize_open_id; cbn; lia). 
 
 
-
-Definition ANF_val_conf_comp_comb: ANF_val_conf_comp_comb_type
- :=
-fun ( =>
-.
-
-
-
-
-         (P0 : forall (e : @exp 0),
-               isConf e -> Prop)
-         (P1 : forall (e : @exp 0),
-               isComp e -> Prop) *)
 
 (*
 =====================================
