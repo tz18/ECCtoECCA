@@ -855,9 +855,9 @@ Variable (fId: fIdT) (fTru: fTruT) (fFls: fFlsT) (fBool: fBoolT) (fUni: fUniT) (
 
 Definition ANF_val_conf_comp_comb_type
      :=
-       (forall (e : @exp 0) (i : isVal e), P e i)(*  /\
+       (forall (e : @exp 0) (i : isVal e), P e i) /\
        (forall (e : @exp 0) (i : isConf e), P0 e i) /\
-       (forall (e : @exp 0) (i : isComp e), P1 e i) *).
+       (forall (e : @exp 0) (i : isComp e), P1 e i).
 
 Definition isANF {V} (e : @exp V) : Type := (isVal e) + ((isConf e) + (isComp e)).
 
@@ -959,6 +959,12 @@ Program Fixpoint FANF (e : @exp 0) (g: isANF e) {measure (esize e)}: anfP e g :=
   end.
 Show Obligation Tactic. Solve All Obligations with (Tactics.program_simpl; try rewrite esize_open_id; cbn; lia). 
 
+Definition ANF_val_conf_comp_comb: ANF_val_conf_comp_comb_type := 
+conj (fun (e : @exp 0) (i : isVal e) => FANF e (inl i))
+ (conj (fun (e : @exp 0) (i : isConf e) => FANF e (inr (inl i))) (fun (e : @exp 0) (i : isComp e) => FANF e (inr (inr i))))
+.
+
+End ANF_val_conf_comp_comb.
 
 
 (*
