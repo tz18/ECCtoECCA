@@ -4,6 +4,7 @@ Require Import Coq.Program.Wf.
 Require Import FunInd.
 Require Import Recdef.
 Require Import Lia. 
+Require Import JMeq.
 (*
 =====================================
 =======--ECCA Definition--===========
@@ -867,7 +868,7 @@ Definition anfP (e : exp) (i : isANF e) :=
   | inr (inl i) => P0 e i
   | inr (inr i) => P1 e i
   end.
-Require Import JMeq.
+
 Program Fixpoint FANF (e : @exp 0) (g: isANF e) {measure (esize e)}: anfP e g :=
   match g with
     | inl ib =>

@@ -99,7 +99,7 @@ Function het_compose (K : cont) (M : exp) {measure esize M}: exp :=
   | eTru => fill_hole M K
   | eFls => fill_hole M K
   | eBool => fill_hole M K
-  | eLet N M' => eLet N (close "het" (het_compose (shift_cont "het" K) (open "het" M')))
+  | eLet N M' => eLet N (close "k" (het_compose (shift_cont "k" K) (open "k" M')))
   | eIf v M1 M2 => eIf v (het_compose K M1) (het_compose K M2)
   | eApp _ _ => fill_hole M K
   | eFst _ => fill_hole M K
@@ -116,22 +116,10 @@ Check het_compose.
 
 Notation "K '<<' M '>>'" := (het_compose K M) (at level 250): ECCA_scope.
 
-Lemma het_compose_val (K: cont) (M: exp): isVal M -> het_compose K M = fill_hole M K.
-Proof.
-intros. inversion H; rewrite het_compose_equation; auto.
-Qed.
-
-Hint Resolve het_compose_val. 
-
-Lemma het_compose_comp (K: cont) (M: exp): isComp M -> het_compose K M = fill_hole M K.
-Proof.
-intros. inversion H; auto; rewrite het_compose_equation; auto.
-Qed.
-
 Definition cont_compose (K : cont) (K' : cont) : cont:=
   match K' with
   | Hole => K
-  | LetHole M => LetHole (close "cntcmp" (het_compose (shift_cont "cntcmp" K) (open "cntcmp" M)))
+  | LetHole M => LetHole (close "k" (het_compose (shift_cont "k" K) (open "k" M)))
   end.
 
 Notation "K1 '<<<' K2 '>>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
