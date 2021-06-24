@@ -30,7 +30,7 @@ Definition fill_hole (e: exp) (K: cont): exp:=
     | LetHole B => eLet e B
 end.
 Check fill_hole.
-Notation "K '[' N ']'" := (fill_hole N K) (at level 200): ECCA_scope.
+Notation "'(' K ')' '[' N ']'" := (fill_hole N K) (at level 300): ECCA_scope.
 Notation "'LET' '_' ':=' '[]' 'in' B" := (LetHole B) (at level 50) : ECCA_scope.
 
 Definition exId: @exp 1 := (eId (@bound 1 l0)).
@@ -114,7 +114,7 @@ Qed.
 Hint Rewrite het_compose_equation.
 Check het_compose.
 
-Notation "K '<<' M '>>'" := (het_compose K M) (at level 250): ECCA_scope.
+Notation "'(' K ')' '<<' M '>>'" := (het_compose K M) (at level 250): ECCA_scope.
 
 Definition cont_compose (K : cont) (K' : cont) : cont:=
   match K' with
@@ -122,4 +122,4 @@ Definition cont_compose (K : cont) (K' : cont) : cont:=
   | LetHole M => LetHole (close "k" (het_compose (shift_cont "k" K) (open "k" M)))
   end.
 
-Notation "K1 '<<<' K2 '>>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
+Notation "'(' K1 ')' '<<<' K2 '>>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.

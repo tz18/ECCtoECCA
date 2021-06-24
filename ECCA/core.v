@@ -762,8 +762,15 @@ Proof.
 intros. apply struct_preserving_ANF_iff with (f:=(wk)). apply wk_preserves_structure.
 Qed.
 
-Check val_conf_comp_comb.
-Check term_ind.
+Lemma wk_conf {V} {e: @exp V}: @isConf V e -> (isConf (wk e)).
+Proof. apply wk_ANF_iff. Qed.
+Hint Resolve wk_conf.
+
+Lemma shift_conf {V} {x: name} {e: @exp V}:
+isConf e -> isConf ([^ x] e).
+Proof.
+rewrite <- rw_group_shift. intros. auto.
+Qed.
 
 Fixpoint propOpen (p: @term 0 -> Prop) (V : nat): @term V -> Prop :=
   match V with

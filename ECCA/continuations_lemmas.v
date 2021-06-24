@@ -51,7 +51,7 @@ induction ANF_val_conf_comp_comb with (P:=P) (P0:=P0) (P1:=P1); auto.
 + unfold P1, P0. intros. rewrite het_compose_equation. apply Let; auto. 
   apply close_ANF_iff. unfold shift_cont. destruct K.
   - apply H0; try apply open_ANF_iff; auto.
-  - apply H0; try apply open_ANF_iff; auto. apply wk_ANF_iff. apply H1.
+  - apply H0; try apply open_ANF_iff; auto.
 + unfold P, P0. intros. rewrite het_compose_equation. apply If; auto. 
 Qed.
 Hint Resolve het_compose_preserves_ANF.
@@ -84,14 +84,14 @@ Hint Resolve cont_compose_preserves_ANF.
 Require Import Coq.Program.Equality.
 
 Open Scope string.
-Lemma K_compat (g: env) (K : cont) (e1 e2 : exp) :
+Lemma K_compat (g: env) (K : cont) (e1 e2 : exp) (A: @exp 0):
   (RedClos g e1 e2) ->
   (Equiv g (fill_hole e1 K)) (fill_hole e2 K).
 Proof.
   intros. destruct K.
   + simpl. eapply aE_Step. apply H. apply R_Refl.
   + simpl. eapply aE_Step.
-     - eapply R_CongLet with (x:="x") (A:=eUni uProp). (*TODO: This A is arbitrary...*)
+     - eapply R_CongLet with (x:="x") (A:=A). (*TODO: This A is arbitrary...*)
        * apply H.
        * apply R_Refl.
      - apply R_Refl.
@@ -110,39 +110,87 @@ Proof.
 Admitted.*)
 
 Lemma fill_hole_over_branches (g: env) (K : cont) (v m1 m2: exp) (i: isConf (eIf v m1 m2)) :
+  Types g v eBool ->
   (Equiv g (eIf v (fill_hole m1 K) (fill_hole m2 K)) (fill_hole (eIf v m1 m2) K)).
 Proof.
   destruct K.
-  + unfold unrestrict_cont. simpl. eapply aE_Step; apply R_Refl.
-  + unfold unrestrict_cont. simpl. eapply aE_Step.
+  + simpl. auto.
+  + simpl. intros. inversion H.  eapply aE_Step.
+    - 
 (* I think here we need to prove that since v is a val, it is either Tru Fls or some id *)
 Admitted.
 
-
-Lemma IH_naturality_let (g: env) (K : cont_r) (n: comp) (m : conf) (A: exp) (x: name):
-  (Equiv (g & x ~ Def n A) (het_compose_r K (open_conf x m)) (fill_hole (open_conf x m) (unrestrict_cont K))) ->
-  (Equiv g (unrestrict_conf (Let n (het_compose_r (wk_cont K) m))) (eLet n (fill_hole (unrestrict_conf m) (unrestrict_cont (wk_cont K))))).
+Lemma IH_naturality_if (g: env) (K : cont) (iK: cont_is_ANF K) 
+(v: exp) (iV: isVal v) (m1 m2 : exp) (iM1: isConf m1) (iM2: isConf m2)
+(y: name):
+  (Equiv (g & y ~ Eq v eTru) (het_compose K m1) (fill_hole m1 K)) ->
+  (Equiv (g & y ~ Eq v eFls) (het_compose K m2) (fill_hole m2 K)) -> 
+  (Equiv g (eIf v (het_compose K m1) (het_compose K m2)) (eIf v (fill_hole m1 K) (fill_hole m2 K))).
 Proof.
-Admitted.
+intros. eapply aE_If; auto.
++ apply H.
++ apply H0.
+Qed.
 
-Lemma IH_naturality_if (g: env) (K : cont_r) (v: val) (m1 m2 : conf) (y: name):
-  (Equiv (g & y ~ Eq (unrestrict_val v) eTru) (het_compose_r K m1) (fill_hole m1 (unrestrict_cont K))) ->
-  (Equiv (g & y ~ Eq (unrestrict_val v) eFls) (het_compose_r K m2) (fill_hole m2 (unrestrict_cont K))) -> 
-  (Equiv g (unrestrict_conf (If v (het_compose_r K m1) (het_compose_r K m2))) (eIf v (fill_hole m1 (unrestrict_cont K)) (fill_hole m2 (unrestrict_cont K)))).
-Admitted. 
+Lemma IH_naturality_let (g: env) (K : cont) (iK: cont_is_ANF K) 
+(n: exp) (iN: isComp n) (m: exp) (iM : isConf m) (A: exp) (x: name):
+  (Equiv (g & x ~ Def n A) (het_compose (shift_cont x K) (open x m)) (fill_hole (open x m) (shift_cont x K))) ->
+  (Equiv g ((eLet n (close x (het_compose (shift_cont x K) (open x m))))) (eLet n (close x (fill_hole (open x m) (shift_cont x K))))).
+Proof.
+intros. eapply aE_Let; auto.
++ names. apply H.
+Qed.
 
-(*1. Zeta reduction on the left. 2. IH (rewrite K<<M''>> to K[M] on the left. 
+(*1. Zeta reduction on the left. 
+2. IH (rewrite K<<M''>> to K[M] on the left. 
 3. On the right, use K_compat lemma, should have goal K[M][x :=n] \equiv K[M[x := n]] 
 e -> e', then K[e] = K[e'] 
 3. Have goal: Show K[M'][x := n] \equiv K[let x = n in M'] 
 4. need lemma to show K[M][x :=n] \equiv K[M[x := n] *)
 
-(* Lemma naturality (K : cont_r) (M : conf) (G : env) :
-  (@WellBound_conf 0 G M) ->
-  (G |- (het_compose_r K M) =e= (fill_hole M (unrestrict_cont K)))%ECCA.
+Lemma naturality (M : exp) (iM: isConf M):
+  forall (K : cont) (iK: cont_is_ANF K) (G : env), (G |- (het_compose K M) =e= (fill_hole M K))%ECCA.
 Proof.
-  intros. induction H.
-  + destruct K; eauto.
+  induction M using term_ind.
+  + intros; inversion iM; rewrite het_compose_comp; auto.
+  + intros; inversion iM; rewrite het_compose_comp; auto.
+  + intros; inversion iM; rewrite het_compose_comp; auto.
+  + intros; inversion iM; rewrite het_compose_comp; auto.
+  + intros; inversion iM; rewrite het_compose_comp; auto.
+  + intros; inversion iM; rewrite het_compose_comp; auto.
+  + intros; inversion iM; rewrite het_compose_comp; auto.
+  + intros; inversion iM; rewrite het_compose_comp; auto.
+  + inversion iM; subst. destruct K.
+    - cbn. rewrite het_compose_hole. auto.
+    - intros. rewrite het_compose_equation. clear IHM1. eapply aE_Trans.
+      * eapply IH_naturality_let with (g:= G) (x:="k") (n:= M1) (m:= M2) (K:= (LET _ := [] in B)); auto. names. eapply H.
+        ++ apply open_conf. auto.
+        ++ cbn. cbn in iK. apply shift_conf. auto.
+      * names. apply aE_Step with (e := (bind (bind M1 M2) B)).
+        { apply R_Trans with (e':= eLet (bind M1 M2) B) .
+          { apply R_Trans with (e':= (bind M1 (eLet M2 (wk B)))).
+            { apply R_RedR. apply R_Let. }
+            { names. apply R_Refl. }}
+          { apply R_RedR. apply R_Let. }}
+        {
+          apply R_Trans with (e' := (eLet (bind M1 M2) B)).
+          {
+            apply R_CongLet with (x:="x") (A:=eUni uProp).
+            { apply R_RedR. apply R_Let. }
+            { apply R_Refl. }
+          }
+          apply R_RedR. apply R_Let.
+        }
+     - inversion H0. inversion H1.
+  + intros; inversion iM; rewrite het_compose_comp; auto.
+  + intros; inversion iM; rewrite het_compose_comp; auto.
+  + intros; inversion iM; subst. apply IH_naturality_if.
+ 
+  rewrite H with (n:="k"). eapply aE_Let with (x:="k").
+ apply IH_naturality_let. shelve. (* inversion iM. shelve.*)
+  + inversion iM; rewrite het_compose_comp; auto.
+  + inversion iM; rewrite het_compose_comp; auto.
+  + inversion iM. rewrite het_compose_equation. apply aE_If.
   + unfold het_compose_r. fold (@het_compose_r (S (0 + 0))).
     assert (Equiv g (unrestrict_conf (Let n (het_compose_r (wk_cont K) m))) (eLet n (fill_hole (unrestrict_conf m) (unrestrict_cont (wk_cont K))))).
     * apply IH_naturality_let with (x:=x) (A:=A). apply IHWellBound_conf2.
