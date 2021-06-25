@@ -110,15 +110,22 @@ Proof.
 Admitted.*)
 
 Lemma fill_hole_over_branches (g: env) (K : cont) (v m1 m2: exp) (i: isConf (eIf v m1 m2)) :
-  Types g v eBool ->
   (Equiv g (eIf v (fill_hole m1 K) (fill_hole m2 K)) (fill_hole (eIf v m1 m2) K)).
 Proof.
   destruct K.
   + simpl. auto.
-  + simpl. intros. inversion H.  eapply aE_Step.
-    - 
+  + simpl. intros.
 (* I think here we need to prove that since v is a val, it is either Tru Fls or some id *)
+Admitted. 
+
+Lemma let_over_branches (v M2 M3: exp) (iV: isVal v) (B: exp):
+forall g,
+(Equiv g (eIf v (eLet M2 B) (eLet M3 B)) (eLet (eIf v M2 M3) B)).
+Proof.
+intros.
 Admitted.
+
+
 
 Lemma IH_naturality_if (g: env) (K : cont) (iK: cont_is_ANF K) 
 (v: exp) (iV: isVal v) (m1 m2 : exp) (iM1: isConf m1) (iM2: isConf m2)
@@ -163,7 +170,7 @@ Proof.
   + inversion iM; subst. destruct K.
     - cbn. rewrite het_compose_hole. auto.
     - intros. rewrite het_compose_equation. clear IHM1. eapply aE_Trans.
-      * eapply IH_naturality_let with (g:= G) (x:="k") (n:= M1) (m:= M2) (K:= (LET _ := [] in B)); auto. names. eapply H.
+      * eapply IH_naturality_let with (g:= G) (x:="k") (n:= M1) (m:= M2) (K:= (LET _ := [] in B)) (A:= eUni uProp); auto. names. eapply H.
         ++ apply open_conf. auto.
         ++ cbn. cbn in iK. apply shift_conf. auto.
       * names. apply aE_Step with (e := (bind (bind M1 M2) B)).
@@ -184,26 +191,10 @@ Proof.
      - inversion H0. inversion H1.
   + intros; inversion iM; rewrite het_compose_comp; auto.
   + intros; inversion iM; rewrite het_compose_comp; auto.
-  + intros; inversion iM; subst. apply IH_naturality_if.
- 
-  rewrite H with (n:="k"). eapply aE_Let with (x:="k").
- apply IH_naturality_let. shelve. (* inversion iM. shelve.*)
-  + inversion iM; rewrite het_compose_comp; auto.
-  + inversion iM; rewrite het_compose_comp; auto.
-  + inversion iM. rewrite het_compose_equation. apply aE_If.
-  + unfold het_compose_r. fold (@het_compose_r (S (0 + 0))).
-    assert (Equiv g (unrestrict_conf (Let n (het_compose_r (wk_cont K) m))) (eLet n (fill_hole (unrestrict_conf m) (unrestrict_cont (wk_cont K))))).
-    * apply IH_naturality_let with (x:=x) (A:=A). apply IHWellBound_conf2.
-    * eapply equiv_trans. apply H2.
-      assert (Equiv g (fill_hole (unrestrict_conf (Let n m)) (unrestrict_cont K)) (fill_hole (bind n m) (unrestrict_cont K))).
-      ++ apply K_compat. apply R_RedR. apply R_Let.
-      ++ apply equiv_sym. eapply equiv_trans. apply H3. apply equiv_sym.
-         assert (Equiv g (eLet n (fill_hole m (unrestrict_cont (wk_cont K)))) (bind n (fill_hole m (unrestrict_cont (wk_cont K))))).
-         ** eapply aE_Step. apply R_RedR. apply R_Let. apply R_Refl.
-         ** eapply equiv_trans. apply H4. apply bind_commutes_over_fill_hole.
-  + unfold het_compose_r. fold (@het_compose_r (0 + 0)).
-    assert (Equiv g (unrestrict_conf (If v (het_compose_r K m1) (het_compose_r K m2))) (eIf v (fill_hole m1 (unrestrict_cont K)) (fill_hole m2 (unrestrict_cont K)))).
-    * apply IH_naturality_if with (y:=y). apply IHWellBound_conf2. apply IHWellBound_conf3.
-    * eapply equiv_trans. apply H3. apply fill_hole_over_branches.
+  + intros; inversion iM; subst. destruct K.
+    - rewrite het_compose_hole. auto.
+    - rewrite het_compose_equation. cbn. rewrite IH_naturality_if with (y:="y"); auto. cbn. apply let_over_branches; auto.
+    - inversion H. inversion H0.
+  + intros; inversion iM; rewrite het_compose_comp; auto.
+  + intros; inversion iM; rewrite het_compose_comp; auto. 
 Qed.
- *)
