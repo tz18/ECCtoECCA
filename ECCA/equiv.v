@@ -70,7 +70,7 @@ Inductive Equiv: env -> exp -> exp -> Prop :=
   | aE_If_EtaTru (g: env) (V M1 M2: exp) (x: var):
     (has g x (Eq V eTru)) ->
     Equiv g (eIf V M1 M2) M1
-  | aE_IfEtaFls (g: env) (V M1 M2: exp) (x: var):
+  | aE_If_EtaFls (g: env) (V M1 M2: exp) (x: var):
     (has g x (Eq V eFls)) ->
     Equiv g (eIf V M1 M2) M2
   | aE_If2 (g: env) (V M: exp):

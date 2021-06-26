@@ -109,22 +109,21 @@ Proof.
       (*don't think bind (bind n m) B = (bind n (bind m B)) *)
 Admitted.*)
 
-Lemma fill_hole_over_branches (g: env) (K : cont) (v m1 m2: exp) (i: isConf (eIf v m1 m2)) :
-  (Equiv g (eIf v (fill_hole m1 K) (fill_hole m2 K)) (fill_hole (eIf v m1 m2) K)).
-Proof.
-  destruct K.
-  + simpl. auto.
-  + simpl. intros.
-(* I think here we need to prove that since v is a val, it is either Tru Fls or some id *)
-Admitted. 
-
-Lemma let_over_branches (v M2 M3: exp) (iV: isVal v) (B: exp):
+Lemma let_over_branches (v M1 M2: exp) (iV: isVal v) (B: exp):
 forall g,
-(Equiv g (eIf v (eLet M2 B) (eLet M3 B)) (eLet (eIf v M2 M3) B)).
-Proof.
-intros.
-Admitted.
-
+(Equiv g (eIf v (eLet M1 B) (eLet M2 B)) (eLet (eIf v M1 M2) B)).
+Proof. intros. apply aE_Trans with (M' := (eIf v (bind M1 B) (bind M2 B))).
+ + apply aE_Step with (e := (eIf v (bind M1 B) (bind M2 B))).
+  - auto.
+  - auto.
+ + apply aE_Trans with (M' := (eIf v (bind (eIf v M1 M2) B) (bind (eIf v M1 M2) B))).
+  - apply aE_If with (x:="eqIf"); auto.
+    * apply aE_Subst. apply aE_Symm. apply aE_If_EtaTru with (x:=free "eqIf"). names. auto.
+    * apply aE_Subst. apply aE_Symm. apply aE_If_EtaFls with (x:=free "eqIf"). names. auto.
+  - apply aE_Trans with (M' := bind (eIf v M1 M2) B).
+    * apply aE_If2.
+    * eauto.
+Qed.
 
 
 Lemma IH_naturality_if (g: env) (K : cont) (iK: cont_is_ANF K) 
@@ -159,14 +158,7 @@ Lemma naturality (M : exp) (iM: isConf M):
   forall (K : cont) (iK: cont_is_ANF K) (G : env), (G |- (het_compose K M) =e= (fill_hole M K))%ECCA.
 Proof.
   induction M using term_ind.
-  + intros; inversion iM; rewrite het_compose_comp; auto.
-  + intros; inversion iM; rewrite het_compose_comp; auto.
-  + intros; inversion iM; rewrite het_compose_comp; auto.
-  + intros; inversion iM; rewrite het_compose_comp; auto.
-  + intros; inversion iM; rewrite het_compose_comp; auto.
-  + intros; inversion iM; rewrite het_compose_comp; auto.
-  + intros; inversion iM; rewrite het_compose_comp; auto.
-  + intros; inversion iM; rewrite het_compose_comp; auto.
+1-8,10-11,13-14: intros; inversion iM; rewrite het_compose_comp; auto.
   + inversion iM; subst. destruct K.
     - cbn. rewrite het_compose_hole. auto.
     - intros. rewrite het_compose_equation. clear IHM1. eapply aE_Trans.
@@ -189,12 +181,8 @@ Proof.
           apply R_RedR. apply R_Let.
         }
      - inversion H0. inversion H1.
-  + intros; inversion iM; rewrite het_compose_comp; auto.
-  + intros; inversion iM; rewrite het_compose_comp; auto.
   + intros; inversion iM; subst. destruct K.
     - rewrite het_compose_hole. auto.
     - rewrite het_compose_equation. cbn. rewrite IH_naturality_if with (y:="y"); auto. cbn. apply let_over_branches; auto.
     - inversion H. inversion H0.
-  + intros; inversion iM; rewrite het_compose_comp; auto.
-  + intros; inversion iM; rewrite het_compose_comp; auto. 
 Qed.
