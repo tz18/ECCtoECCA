@@ -344,14 +344,14 @@ Notation "'type' x" := (Uni (uType x)) (at level 50):  ECC_scope.
 Notation "'prop'" := (Uni uProp) (at level 50):  ECC_scope.
 Notation "{ e1 e2 }" := (App e1 e2) (at level 50,e1 at level 9):  ECC_scope.
 Notation "'LET' x ':=' A 'in' B" := (Let A B) (at level 50, format "'[v' 'LET'  x  ':='  A '/' 'in' '['  B ']' ']'") : ECC_scope.
-Notation "'P' '_' : A '->' B" := (Pi A B) (at level 50, A at level 9) : ECC_scope.
-Notation "'\'  '_' : A  '->'  B" := (Abs A B) (at level 50,  A at level 9) : ECC_scope.
-Notation "'Si' '_' : A '..' B" := (Sig A B) (at level 50, A at level 1): ECC_scope.
+Notation "'Π': A '->' B" := (Pi A B) (at level 50, A at level 9) : ECC_scope.
+Notation "'λ' : A  '->'  B" := (Abs A B) (at level 50,  A at level 9) : ECC_scope.
+Notation "'Σ' : A '..' B" := (Sig A B) (at level 50, A at level 1): ECC_scope.
 Notation "< e1 , e2 > 'as' A" := (Pair e1 e2 A) (at level 50, e1 at level 5, e2 at level 5, A at level 5): ECC_scope.
 Notation "'fst' e" := (Fst e) (at level 50, e at level 5): ECC_scope.
 Notation "'snd' e" := (Snd e) (at level 50, e at level 5): ECC_scope.
 
-Example ex_fst: Types ctx_empty (fst (< Tru, Fls> as (Si _ : Bool .. Bool)))%ECC Bool.
+Example ex_fst: Types ctx_empty (fst (< Tru, Fls> as (Σ : Bool .. Bool)))%ECC Bool.
 Proof.
 eapply T_Fst. auto.
 Qed.
@@ -395,6 +395,192 @@ Proof. intros. induction e; names; auto.
 Qed.
 
 Hint Resolve size_open_id size_close_id size_wk_id.
+
+(*=============================
+========Induction principle====
+===============================*)
+
+Inductive Vclosed : @term 0 -> Set :=
+  | vc_Id (X: @atom 0) : Vclosed (Id X)
+  | vc_Uni (U: universe) : Vclosed (Uni U)
+  | vc_Pi (A: exp) (B: @exp 1) : Vclosed A -> (forall x, Vclosed (open x B)) -> Vclosed (Pi A B)
+  | vc_Abs (A: exp) (B: @exp 1) : Vclosed A -> (forall x, Vclosed (open x B)) -> Vclosed (Abs A B)
+  | vc_Sig (A: exp) (B: @exp 1) : Vclosed A -> (forall x, Vclosed (open x B)) -> Vclosed (Sig A B)
+  | vc_Pair (v1 v2: exp) (A: exp) : Vclosed v1 -> Vclosed v2 -> Vclosed A -> Vclosed (Pair v1 v2 A)
+  | vc_Tru : Vclosed (Tru)
+  | vc_Fls : Vclosed (Fls)
+  | vc_Bool: Vclosed (Bool)
+  | vc_Let (A: exp) (B: @exp 1) : Vclosed A -> (forall n, Vclosed (open n B)) -> Vclosed (Let A B)
+  | vc_If (v: exp) (e1 e2: exp) : Vclosed v -> Vclosed e1 -> Vclosed e2 -> Vclosed (If v e1 e2)
+  | vc_App (v1 v2: exp) : Vclosed v1 -> Vclosed v2 -> Vclosed (App v1 v2)
+  | vc_Fst (v: exp) : Vclosed v -> Vclosed (Fst v)
+  | vc_Snd (v: exp) : Vclosed v -> Vclosed (Snd v).
+
+Check Vclosed_ind.
+
+Fixpoint Vclosedk (V : nat) : @term V -> Set :=
+  match V with
+  | 0 => fun t => Vclosed t
+  | S V => fun t => forall n, Vclosedk V (open n t)
+  end.
+
+Fixpoint always_Vclosedk {V : nat} (t : term) {struct t} : Vclosedk V t :=
+  match t with
+  | Id x =>
+    let fix go {V} : forall (x : @atom V), Vclosedk V (Id x) :=
+      match V with
+      | 0 => vc_Id
+      | S V => fun v n => go _
+      end
+    in go x
+  | Uni U =>
+    let fix go {V} : forall (U : universe), Vclosedk V (Uni U) :=
+      match V with
+      | 0 => vc_Uni
+      | S V => fun v n => go _
+      end
+    in go U
+  | Pi A B =>
+    let fix go {V} : forall A B, Vclosedk (V) A ->
+                      Vclosedk (S V) B ->
+                      Vclosedk V (Pi A B) :=
+      match V with
+      | 0 => vc_Pi
+      | S V => fun _ _ vca vcb a=> go _ _ (vca a) (vcb a)
+      end
+    in go _ _ (always_Vclosedk A) (always_Vclosedk B)
+  | Abs A B =>
+    let fix go {V} : forall A B, Vclosedk (V) A ->
+                      Vclosedk (S V) B ->
+                      Vclosedk V (Abs A B) :=
+      match V with
+      | 0 => vc_Abs
+      | S V => fun _ _ vca vcb a=> go _ _ (vca a) (vcb a)
+      end
+    in go _ _ (always_Vclosedk A) (always_Vclosedk B)
+  | Sig A B =>
+    let fix go {V} : forall A B, Vclosedk (V) A ->
+                      Vclosedk (S V) B ->
+                      Vclosedk V (Sig A B) :=
+      match V with
+      | 0 => vc_Sig
+      | S V => fun _ _ vca vcb a=> go _ _ (vca a) (vcb a)
+      end
+    in go _ _ (always_Vclosedk A) (always_Vclosedk B)
+  | Pair v1 v2 A =>
+    let fix go {V} : forall v e1 e2, Vclosedk V v ->
+                                     Vclosedk V e1 ->
+                                     Vclosedk V e2 ->
+                                     Vclosedk V (Pair v e1 e2) :=
+      match V with
+      | 0 => vc_Pair
+      | S V => fun _ _ _ vv1 vv2 va a => go _ _ _ (vv1 a) (vv2 a) (va a)
+      end
+    in go _ _ _ (always_Vclosedk v1) (always_Vclosedk v2) (always_Vclosedk A)
+  | Tru =>
+    let fix go {V} : Vclosedk V _ :=
+      match V with 0 => vc_Tru | S V => fun _ => go end in
+    go
+  | Fls =>
+    let fix go {V} : Vclosedk V _ :=
+      match V with 0 => vc_Fls | S V => fun _ => go end in
+    go
+  | Bool =>
+    let fix go {V} : Vclosedk V _ :=
+      match V with 0 => vc_Bool | S V => fun _ => go end in
+    go
+  | Let A B =>
+    let fix go {V} : forall A B, Vclosedk (V) A ->
+                      Vclosedk (S V) B ->
+                      Vclosedk V (Let A B) :=
+      match V with
+      | 0 => vc_Let
+      | S V => fun _ _ vca vcb a=> go _ _ (vca a) (vcb a)
+      end
+    in go _ _ (always_Vclosedk A) (always_Vclosedk B)
+  | If v e1 e2 =>
+    let fix go {V} : forall v e1 e2, Vclosedk V v ->
+                                     Vclosedk V e1 ->
+                                     Vclosedk V e2 ->
+                                     Vclosedk V (If v e1 e2) :=
+      match V with
+      | 0 => vc_If
+      | S V => fun _ _ _ vv ve1 ve2 a => go _ _ _ (vv a) (ve1 a) (ve2 a)
+      end
+    in go _ _ _ (always_Vclosedk v) (always_Vclosedk e1) (always_Vclosedk e2)
+  | App f e  =>
+    let fix go {V} : forall f e, Vclosedk V f ->
+                                 Vclosedk V e ->
+                                 Vclosedk V (App f e) :=
+      match V with
+      | 0 => vc_App
+      | S V => fun _ _ vf ve a => go _ _ (vf a) (ve a)
+      end
+    in go _ _ (always_Vclosedk f) (always_Vclosedk e)
+  | Fst v =>
+    let fix go {V} : forall v, Vclosedk V v ->
+                                 Vclosedk V (Fst v) :=
+      match V with
+      | 0 => vc_Fst
+      | S V => fun _ vv a => go _ (vv a)
+      end
+    in go _ (always_Vclosedk v)
+  | Snd v =>
+    let fix go {V} : forall v, Vclosedk V v ->
+                                 Vclosedk V (Snd v) :=
+      match V with
+      | 0 => vc_Snd
+      | S V => fun _ vv a => go _ (vv a)
+      end
+    in go _ (always_Vclosedk v)
+end.
+
+Check Vclosed_ind.
+ 
+Definition term_ind
+             (P : @exp 0 -> Prop)
+             (IDD : forall (v : atom), P (Id v))
+             (UNI : forall (U : universe), P (Uni U))
+             (TRU : P (Tru))
+             (FLS : P (Fls))
+             (BOO : P (Bool))
+             (ABS : forall (A B : exp),
+                 P (A) ->
+                 (forall (n : name), P (open n B)) ->
+                 P (Abs A B))
+             (PIE : forall (A B : exp),
+                 P (A) ->
+                 (forall (n : name), P (open n B)) ->
+                 P (Pi A B))
+             (SIG : forall (A B : exp),
+                 P (A) ->
+                 (forall (n : name), P (open n B)) ->
+                 P (Sig A B))
+             (LeT : forall (A B : exp),
+                 P (A) ->
+                 (forall (n : name), P (open n B)) ->
+                 P (Let A B))
+             (APP : forall (f e : exp), P f -> P e -> P (App f e))
+             (PAI : forall (v1 v2 A : exp), P v1 -> P v2 -> P A -> P (Pair v1 v2 A))
+             (IFF : forall (v e1 e2 : exp), P v -> P e1 -> P e2 -> P (If v e1 e2))
+             (FST : forall (v : exp), P v -> P (Fst v))
+             (SND : forall (v : exp), P v -> P (Snd v))
+             (tm : exp) : P tm :=
+    Vclosed_ind (fun tm _ => P tm)
+       IDD UNI
+       (fun a b _ Ha _ Hb => PIE a b Ha Hb)
+       (fun a b _ Ha _ Hb => ABS a b Ha Hb)
+       (fun a b _ Ha _ Hb => SIG a b Ha Hb)
+       (fun v1 v2 a _ Hv1 _ Hv2 _ Ha => PAI v1 v2 a Hv1 Hv2 Ha)
+       TRU FLS BOO
+       (fun a b _ Ha _ Hb => LeT a b Ha Hb)
+       (fun v e1 e2 _ Hv _ He1 _ He2 => IFF v e1 e2 Hv He1 He2)
+       (fun f e _ F _ E => APP f e F E)
+       (fun v _ V => FST v V)
+       (fun v _ V => SND v V)
+       tm (always_Vclosedk tm).
+
+Check Vclosed_ind.
 
 (* Definition example_Type := (type 3)%ECC: exp.
 Definition example_Prop := (prop)%ECC: exp.
@@ -533,7 +719,7 @@ if (AtomSetImpl.mem x (FV body)) then
     | Pair e1 e2 A => (Pair (substWork x arg e1) (substWork x arg e2) (substWork x arg A))
     | Fst e => (Fst (substWork x arg e))
     | Snd e => (Snd (substWork x arg e))
-  (*   | eIf e e1 e2 => (eIf (substWork x arg e FVInArg) (substWork x arg e1 FVInArg) (substWork x arg e2 FVInArg)) *)
+  (*   | If e e1 e2 => (If (substWork x arg e FVInArg) (substWork x arg e1 FVInArg) (substWork x arg e2 FVInArg)) *)
     | _ => body
   (*   | eSubst a b c => eSubst (substWork x arg a FVInArg) (substWork x arg b FVInArg) (substWork x arg c FVInArg) (**) *)
   end
