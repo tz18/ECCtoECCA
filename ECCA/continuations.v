@@ -31,10 +31,10 @@ Definition fill_hole (e: exp) (K: cont): exp:=
 end.
 Check fill_hole.
 Notation "'(' K ')' '[' N ']'" := (fill_hole N K) (at level 300): ECCA_scope.
-Notation "'LET' '_' ':=' '[]' 'in' B" := (LetHole B) (at level 50) : ECCA_scope.
+Notation "'LET' '[]' 'in' B" := (LetHole B) (at level 50) : ECCA_scope.
 
 Definition exId: @exp 1 := (eId (@bound 1 l0)).
-Definition example_aLetHole := (LET _ := [] in (eId (@bound 1 l0)))%ECCA.
+Definition example_aLetHole := (LET [] in (eId (@bound 1 l0)))%ECCA.
 Definition ex_fillhole := (fill_hole (eTru) example_aLetHole).
 Eval cbn in ex_fillhole.
 

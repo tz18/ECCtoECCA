@@ -72,6 +72,8 @@ Proof. intros. unfold cont_is_ANF in *. destruct K; destruct K'.
 + cbn. apply close_ANF_iff. apply het_compose_preserves_conf. apply open_ANF_iff. auto.
   cbn. apply open_ANF_iff. apply wk_ANF_iff. auto.
 Qed.
+Hint Resolve cont_compose_preserves_ANF.
+
 
 Lemma cont_compose_fill_het_compose (x: name) (K K' : cont) (N : exp) (PN: isComp N) (PK: cont_is_ANF K) (PK': cont_is_ANF K'):
   (het_compose K (fill_hole N K')) = (fill_hole N (cont_compose K K')).
@@ -80,11 +82,13 @@ Proof.
 +  cbn. rewrite het_compose_comp; auto.
 +  cbn. rewrite het_compose_equation. auto.
 Qed. 
-Hint Resolve cont_compose_preserves_ANF.
+Hint Rewrite cont_compose_fill_het_compose.
+
 Require Import Coq.Program.Equality.
 
 Open Scope string.
-Lemma K_compat (g: env) (K : cont) (e1 e2 : exp) (A: @exp 0):
+(*didn't use*)
+(* Lemma K_compat (g: env) (K : cont) (e1 e2 : exp) (A: @exp 0):
   (RedClos g e1 e2) ->
   (Equiv g (fill_hole e1 K)) (fill_hole e2 K).
 Proof.
@@ -95,7 +99,7 @@ Proof.
        * apply H.
        * apply R_Refl.
      - apply R_Refl.
-Qed.
+Qed. *)
 
 (*Lemma bind_commutes_over_fill_hole (g: env) (K : cont) (n m : exp):
   (Equiv g (bind n (fill_hole m wk_cont K))) (fill_hole (bind n m) K).
@@ -154,7 +158,7 @@ e -> e', then K[e] = K[e']
 3. Have goal: Show K[M'][x := n] \equiv K[let x = n in M'] 
 4. need lemma to show K[M][x :=n] \equiv K[M[x := n] *)
 
-Lemma naturality (M : exp) (iM: isConf M):
+Theorem naturality (M : exp) (iM: isConf M):
   forall (K : cont) (iK: cont_is_ANF K) (G : env), (G |- (het_compose K M) =e= (fill_hole M K))%ECCA.
 Proof.
   induction M using term_ind.
@@ -162,7 +166,7 @@ Proof.
   + inversion iM; subst. destruct K.
     - cbn. rewrite het_compose_hole. auto.
     - intros. rewrite het_compose_equation. clear IHM1. eapply aE_Trans.
-      * eapply IH_naturality_let with (g:= G) (x:="k") (n:= M1) (m:= M2) (K:= (LET _ := [] in B)) (A:= eUni uProp); auto. names. eapply H.
+      * eapply IH_naturality_let with (g:= G) (x:="k") (n:= M1) (m:= M2) (K:= (LET [] in B)) (A:= eUni uProp); auto. names. eapply H.
         ++ apply open_conf. auto.
         ++ cbn. cbn in iK. apply shift_conf. auto.
       * names. apply aE_Step with (e := (bind (bind M1 M2) B)).
@@ -186,3 +190,27 @@ Proof.
     - rewrite het_compose_equation. cbn. rewrite IH_naturality_if with (y:="y"); auto. cbn. apply let_over_branches; auto.
     - inversion H. inversion H0.
 Qed.
+Hint Resolve naturality.
+
+Lemma shift_cont_ANF (K: cont):
+cont_is_ANF K ->
+forall x, cont_is_ANF (shift_cont x K).
+Proof.
+intros. destruct K. cbn. auto. cbn. apply open_ANF_iff. apply wk_ANF_iff. cbn in H. auto.
+Qed.
+Hint Resolve shift_cont_ANF.
+
+Lemma shift_distributes_cont_compose (K K': cont):
+      (cont_compose (shift_cont "k" K') (shift_cont "k" K)) = 
+      (shift_cont "k" (cont_compose K' K))%ECCA.
+Proof.
+destruct K; destruct K'.
++ auto.
++ auto.
++ names. rewrite het_compose_hole. rewrite het_compose_hole. auto.
++ cbn. names. 
+cut ((het_compose (LET [] in ([(^ "k"),, ^ "k"] B0)) ([(^ "k"),, "k"] (open "k" B)))
+  = ([(^ "k"),, "k"] (het_compose (LET [] in ([^ "k"] B0)) (open "k" B)))).
+  - intros. cbn in *. rewrite H. auto.
+  - cbn. names. admit.
+Admitted.
