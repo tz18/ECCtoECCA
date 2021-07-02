@@ -114,7 +114,7 @@ Qed.
 Hint Rewrite het_compose_equation.
 Check het_compose.
 
-Notation "'(' K ')' '<<' M '>>'" := (het_compose K M) (at level 250): ECCA_scope.
+Notation "K '《' M '》'" := (het_compose K M) (at level 50): ECCA_scope.
 
 Definition cont_compose (K : cont) (K' : cont) : cont:=
   match K' with
@@ -122,4 +122,4 @@ Definition cont_compose (K : cont) (K' : cont) : cont:=
   | LetHole M => LetHole (close "k" (het_compose (shift_cont "k" K) (open "k" M)))
   end.
 
-Notation "'(' K1 ')' '<<<' K2 '>>>'" := (cont_compose K1 K2) (at level 250): ECCA_scope.
+Notation "K1 '«' K2 '»'" := (cont_compose K1 K2) (at level 50): ECCA_scope.

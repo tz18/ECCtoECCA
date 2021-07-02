@@ -200,6 +200,17 @@ intros. destruct K. cbn. auto. cbn. apply open_ANF_iff. apply wk_ANF_iff. cbn in
 Qed.
 Hint Resolve shift_cont_ANF.
 
+Open Scope ECCA.
+Require Setoid.
+Lemma shift_distributes_het_compose (A B: exp):
+      ([^"k"] ((LET [] in A) 《 B 》) = (LET [] in [^"k"] A)《[^"k"]B》)%ECCA.
+Proof.
+induction B using term_ind; cbn; auto; try (rewrite het_compose_equation; rewrite het_compose_equation; cbn; auto; fail).
++ rewrite het_compose_equation. rewrite het_compose_equation. rewrite het_compose_equation. rewrite <- het_compose_equation.
+  cbn. rewrite <- rw_close_shift with (a:="k"). names.
+Admitted.
+  
+
 Lemma shift_distributes_cont_compose (K K': cont):
       (cont_compose (shift_cont "k" K') (shift_cont "k" K)) = 
       (shift_cont "k" (cont_compose K' K))%ECCA.
@@ -208,9 +219,11 @@ destruct K; destruct K'.
 + auto.
 + auto.
 + names. rewrite het_compose_hole. rewrite het_compose_hole. auto.
-+ cbn. names. 
++ 
 cut ((het_compose (LET [] in ([(^ "k"),, ^ "k"] B0)) ([(^ "k"),, "k"] (open "k" B)))
   = ([(^ "k"),, "k"] (het_compose (LET [] in ([^ "k"] B0)) (open "k" B)))).
-  - intros. cbn in *. rewrite H. auto.
-  - cbn. names. admit.
+  - intros. cbn. names. cbn in H. rewrite H. auto.
+  - 
 Admitted.
+
+
