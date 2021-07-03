@@ -78,11 +78,13 @@ Require Import Program.
 Require Import Lia.
 Require Import Recdef.
 
-Definition shift_cont (x: name) (K: cont):=
+Definition rename_cont (r: ren) (K: cont):=
 match K with
   | Hole => Hole
-  | LetHole B => LetHole (open x (wk B))
+  | LetHole B => (LetHole ([r] B))
 end.
+
+Definition shift_cont (x: name) (K: cont):= (rename_cont (^ x)%ren K).
 
 Check Let.
 Import String.

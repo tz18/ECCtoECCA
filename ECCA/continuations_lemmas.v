@@ -32,7 +32,13 @@ intros. destruct K; cbn; auto.
 Qed.
 Hint Resolve fill_hole_comp_preserves_conf.
 
-
+Lemma shift_cont_ANF (K: cont):
+cont_is_ANF K ->
+forall x, cont_is_ANF (shift_cont x K).
+Proof.
+intros. destruct K. cbn. auto. names. apply shift_conf. auto.
+Qed.
+Hint Resolve shift_cont_ANF.
 
 Lemma het_compose_preserves_ANF:
 let P (e: @exp 0) (i: isVal e):= forall K, (cont_is_ANF K -> isConf (het_compose K e)) in
@@ -50,8 +56,8 @@ induction ANF_val_conf_comp_comb with (P:=P) (P0:=P0) (P1:=P1); auto.
   apply fill_hole_comp_preserves_conf; auto.
 + unfold P1, P0. intros. rewrite het_compose_equation. apply Let; auto. 
   apply close_ANF_iff. unfold shift_cont. destruct K.
-  - apply H0; try apply open_ANF_iff; auto.
-  - apply H0; try apply open_ANF_iff; auto.
+  - apply H0; cbn; auto.
+  - apply H0; cbn; apply shift_conf; cbn; auto.
 + unfold P, P0. intros. rewrite het_compose_equation. apply If; auto. 
 Qed.
 Hint Resolve het_compose_preserves_ANF.
@@ -70,7 +76,7 @@ Proof. intros. unfold cont_is_ANF in *. destruct K; destruct K'.
 + cbn. apply close_ANF_iff. rewrite het_compose_hole. apply open_ANF_iff. auto.
 + auto.
 + cbn. apply close_ANF_iff. apply het_compose_preserves_conf. apply open_ANF_iff. auto.
-  cbn. apply open_ANF_iff. apply wk_ANF_iff. auto.
+  cbn. apply shift_conf. auto.
 Qed.
 Hint Resolve cont_compose_preserves_ANF.
 
@@ -192,38 +198,42 @@ Proof.
 Qed.
 Hint Resolve naturality.
 
-Lemma shift_cont_ANF (K: cont):
-cont_is_ANF K ->
-forall x, cont_is_ANF (shift_cont x K).
-Proof.
-intros. destruct K. cbn. auto. cbn. apply open_ANF_iff. apply wk_ANF_iff. cbn in H. auto.
-Qed.
-Hint Resolve shift_cont_ANF.
+
 
 Open Scope ECCA.
 Require Setoid.
-Lemma shift_distributes_het_compose (A B: exp):
-      ([^"k"] ((LET [] in A) 《 B 》) = (LET [] in [^"k"] A)《[^"k"]B》)%ECCA.
+Lemma total_renamings_distribute_het_compose (B: exp) :
+      forall (K: cont) (r: ren) (t: total r), [r] (K 《 B 》) = (rename_cont r K )《[r]B》%ECCA.
 Proof.
-induction B using term_ind; cbn; auto; try (rewrite het_compose_equation; rewrite het_compose_equation; cbn; auto; fail).
-+ rewrite het_compose_equation. rewrite het_compose_equation. rewrite het_compose_equation. rewrite <- het_compose_equation.
-  cbn. rewrite <- rw_close_shift with (a:="k"). names.
-Admitted.
-  
+induction B using term_ind. 
+2,3,4,5,6,7,8,10,11,13,14: intros; rewrite het_compose_equation; rewrite het_compose_equation; names; destruct K; cbn; auto.
++ intros. destruct K. 
+  - rewrite het_compose_hole. cbn. rewrite applyt_is_applyv with (rn:= t). names. rewrite het_compose_equation. cbn. auto.
+  - intros. rewrite het_compose_equation. rewrite het_compose_equation. names. 
+  cut (applyv r v = eId (applyt r t v)).
+  * intros. rewrite H. names. rewrite <- applyt_is_applyv. auto.
+  * names. rewrite <- applyt_is_applyv. auto.
++ intros. cbn. rewrite het_compose_equation. rewrite het_compose_equation. rewrite het_compose_equation. rewrite <- het_compose_equation.
+  names. rewrite H.
+  destruct K. all: names; auto.
++ intros. cbn. repeat rewrite het_compose_equation. rewrite <- het_compose_equation. rewrite <- het_compose_equation. rewrite <- het_compose_equation. rewrite <- het_compose_equation.  cbn. rewrite IHB2; auto. rewrite IHB3; auto.
+Qed.
 
-Lemma shift_distributes_cont_compose (K K': cont):
+Lemma total_renamings_distribute_cont_compose (K K': cont):
+forall (r: ren) (t: total r), 
+      (rename_cont r (cont_compose K' K)) =
+      (cont_compose (rename_cont r K') (rename_cont r K)).
+Proof.
+intros. destruct K, K'; auto.
++ names. repeat rewrite het_compose_hole. auto.
++ cbn. names. rewrite total_renamings_distribute_het_compose. names. auto.
+  auto.
+Qed. 
+
+Lemma shift_over_conts (K K': cont):
       (cont_compose (shift_cont "k" K') (shift_cont "k" K)) = 
       (shift_cont "k" (cont_compose K' K))%ECCA.
-Proof.
-destruct K; destruct K'.
-+ auto.
-+ auto.
-+ names. rewrite het_compose_hole. rewrite het_compose_hole. auto.
-+ 
-cut ((het_compose (LET [] in ([(^ "k"),, ^ "k"] B0)) ([(^ "k"),, "k"] (open "k" B)))
-  = ([(^ "k"),, "k"] (het_compose (LET [] in ([^ "k"] B0)) (open "k" B)))).
-  - intros. cbn. names. cbn in H. rewrite H. auto.
-  - 
-Admitted.
-
+Proof. unfold shift_cont.
+rewrite total_renamings_distribute_cont_compose; cbn; auto.
+Qed.
 

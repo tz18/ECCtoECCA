@@ -453,15 +453,15 @@ Combined Scheme val_conf_comp_comb from val_conf_mut, conf_comp_mut, comp_val_mu
 
 Check val_conf_comp_comb.
 
-Lemma renamings_rename: forall (r: ren) (t: total r) {V} x, exists y, ([r] @eId V x) = eId y.
+Lemma renamings_rename (r: ren) (t: total r): 
+forall  {V} x, exists y, ([r] @eId V x) = eId y.
 Proof.
-intros. generalize x. generalize V.
 induction r.
 + names. eauto.
-+ names. names in IHr1. names in IHr2. intros. destruct IHr2 with (x:= x0). apply t.
-rewrite H. names. destruct IHr1 with V0 x1. apply t. eauto.
-+ intros. names. destruct IHr with V0 x0. apply t. names in H. rewrite H. names. eauto.
-+ intros. names. destruct IHr with (S V0) (closev a x0). apply t. names in H. rewrite H. names. eauto.
++ names. names in IHr1. names in IHr2. intros. destruct IHr2 with (x:= x). apply t.
+rewrite H. names. destruct IHr1 with V x0. apply t. eauto.
++ intros. names. destruct IHr with V x. apply t. names in H. rewrite H. names. eauto.
++ intros. names. destruct IHr with (S V) (closev a x). apply t. names in H. rewrite H. names. eauto.
 + contradiction.
 Qed.
 
@@ -536,6 +536,16 @@ Hint Resolve squiv_sym.
 Definition structure_preserving {V1} {V2} (f: (@exp V1 -> @exp V2)): Prop :=
 forall (e: exp),
 squiv (f e) e.
+
+Lemma total_renamings_preserve_structure:
+forall {V} (e: @exp V) (r: ren) (t: total r), squiv ([r]e) e.
+Proof. intros.
+induction e.
+all: try  (cbn; auto; fail).
++ cut (exists y, ([r] @eId V x) = eId y). 
+  - intros. destruct H. rewrite H. apply squivId.
+  - auto.
+Qed.
 
 Lemma open_preserves_structure {V}:
 forall (x: name), structure_preserving (@open x V).
