@@ -4,7 +4,7 @@ Require Import Equivalence.
 
 Lemma equiv_refl (g: env): Reflexive (Equiv g).
 Proof.
-unfold Reflexive. intros. eapply aE_Refl. 
+unfold Reflexive. intros. eapply aE_Reflex. 
 Qed.
 
 Lemma equiv_sym (g: env): Symmetric (Equiv g).

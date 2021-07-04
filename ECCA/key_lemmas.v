@@ -1,4 +1,4 @@
-(* Require Export typing.
+Require Export typing.
 Require Export equiv.
 Require Export continuations.
 Require Export continuations_lemmas.
@@ -14,7 +14,7 @@ intros. inversion H ; subst ; cbv.
   intros. rewrite <- H1. eapply aT_Let with (n:= N) (m:= M) (A:=A) (B:=(wk B)) (x:=y) (g:=g); assumption.
 Qed.
 
-Lemma weakening (g : env) (x : name) (N A A' : exp):
+(* Lemma weakening (g : env) (x : name) (N A A' : exp):
   Types g N A ->
   Types (ctx_cons g x (Assum A')) N A.
 Proof.
@@ -35,43 +35,11 @@ Lemma append_env_equiv_weakening (g g': env) (e e' : exp):
   Equiv g e e' ->
   Equiv (append g g') e e'.
 Proof.
-Admitted.
+Admitted. *)
 
 Require Import Coq.Program.Equality.
 
-Lemma type_well_typed (g: env) (N: exp) (A: exp) :
-  Types g N A ->
-  exists U , Types g A U.
-Proof.
-  intros. induction H.
-  - exists (eUni (uType 1)). apply aT_Ax_Type. auto.
-  - exists (eUni (uType (S (S i)))). apply aT_Ax_Type. auto.
-  - admit.
-  - exists (eUni (uType 1)). apply aT_Ax_Type. auto.
-  - exists (eUni (uType 0)). apply aT_Bool. auto.
-  - exists (eUni (uType 0)). apply aT_Bool. auto.
-  - apply IHTypes1.
-  - exists (eUni (uType 0)). eapply aT_Sig. shelve. shelve.
-  - exists (eUni (uType 0)). apply aT_Ax_Prop. shelve.
-  - exists (eUni (uType (S i))). apply aT_Ax_Type. shelve.
-  - exists (eUni (uProp)). eapply aT_Prod_Prop. shelve. shelve.
-  - shelve.
-  - shelve.
-  - exists U. auto.
-  - shelve.
-  - shelve.
-  - shelve. 
-Admitted. 
 
-Lemma has_type_wf_g (g: env) (N: exp) (A: exp) (x : name):
-  Types g N A ->
-  WellFormed g ->
-  WellFormed (g & x ~ (Def N A)).
-Proof.
-  intros.  apply type_well_typed in H as H1. destruct H1.
-  apply wf_Def with (U := x0); auto.
-Qed. 
-  
 Lemma equivalence_in_derivation (g: env) (N N' M : exp) (A B : exp) (x : name):
 Types g N A ->
 Types g N' A ->

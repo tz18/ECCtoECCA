@@ -30,6 +30,8 @@ Inductive exp {V: nat}: Type :=
   | eApp (v1 v2: exp)
   | eFst (v: exp)
   | eSnd (v: exp)
+  | eRefl (v: exp)
+  | eEqv (v1 v2: exp)
 .
 
 Hint Constructors exp.
@@ -64,7 +66,8 @@ Module ECCATerm <: Term.
       | eTru => eTru
       | eFls => eFls
       | eBool => eBool
-      (*   | If (e e1 e2: ECCexp) *)
+      | eRefl e => eRefl (kleisli f V e)
+      | eEqv e1 e2 => eEqv (kleisli f V e1) (kleisli f V e2)
       end.
 
   Lemma left_identity :
@@ -145,6 +148,8 @@ Fixpoint esize {V: nat} (e: @exp V) : nat :=
   | eTru => 1
   | eFls => 1
   | eBool => 1
+  | eRefl e => 1 + esize e
+  | eEqv e1 e2 => 1 + esize e1 + esize e2  
 end.
 
 Lemma esize_non_zero : forall V e, 0 < @esize V e.
@@ -184,7 +189,10 @@ Inductive Vclosed : @term 0 -> Set :=
   | vc_eIf (v: exp) (e1 e2: exp) : Vclosed v -> Vclosed e1 -> Vclosed e2 -> Vclosed (eIf v e1 e2)
   | vc_eApp (v1 v2: exp) : Vclosed v1 -> Vclosed v2 -> Vclosed (eApp v1 v2)
   | vc_eFst (v: exp) : Vclosed v -> Vclosed (eFst v)
-  | vc_eSnd (v: exp) : Vclosed v -> Vclosed (eSnd v).
+  | vc_eSnd (v: exp) : Vclosed v -> Vclosed (eSnd v)
+  | vc_eRefl (v: exp): Vclosed v -> Vclosed (eRefl v)
+  | vc_eEqv (v1: exp) (v2: exp): Vclosed v1 -> Vclosed v2 -> Vclosed (eEqv v1 v2)
+.
 
 Check Vclosed_ind.
 
@@ -303,6 +311,23 @@ Fixpoint always_Vclosedk {V : nat} (t : term) {struct t} : Vclosedk V t :=
       | S V => fun _ vv a => go _ (vv a)
       end
     in go _ (always_Vclosedk v)
+  | eRefl v =>
+    let fix go {V} : forall v, Vclosedk V v ->
+                                 Vclosedk V (eRefl v) :=
+      match V with
+      | 0 => vc_eRefl
+      | S V => fun _ vv a => go _ (vv a)
+      end
+    in go _ (always_Vclosedk v)
+  | eEqv f e  =>
+    let fix go {V} : forall f e, Vclosedk V f ->
+                                 Vclosedk V e ->
+                                 Vclosedk V (eEqv f e) :=
+      match V with
+      | 0 => vc_eEqv
+      | S V => fun _ _ vf ve a => go _ _ (vf a) (ve a)
+      end
+    in go _ _ (always_Vclosedk f) (always_Vclosedk e)
 end.
 
 (* Lemma always_Vclosedk_open x : forall {V} (t : @term (1 + V)),
@@ -347,6 +372,8 @@ Definition term_ind
              (IFF : forall (v e1 e2 : exp), P v -> P e1 -> P e2 -> P (eIf v e1 e2))
              (FST : forall (v : exp), P v -> P (eFst v))
              (SND : forall (v : exp), P v -> P (eSnd v))
+             (RFL : forall (v : exp), P v -> P (eRefl v))
+             (EQV : forall (e1 e2 : exp), P e1 -> P e2 -> P (eEqv e1 e2))
              (tm : exp) : P tm :=
     Vclosed_ind (fun tm _ => P tm)
        IDD UNI
@@ -360,6 +387,8 @@ Definition term_ind
        (fun f e _ F _ E => APP f e F E)
        (fun v _ V => FST v V)
        (fun v _ V => SND v V)
+       (fun v _ V => RFL v V)
+       (fun e1 e2 _ E1 _ E2 => EQV e1 e2 E1 E2)
        tm (always_Vclosedk tm).
 
 Check Vclosed_ind.
@@ -426,6 +455,13 @@ with isVal {V}: exp -> Prop :=
   isConf A ->
   isConf B ->
   isVal (eSig A B)
+| Refl (v: exp):
+  isVal v ->
+  isVal (eRefl v)
+| Eqv (v1 v2: exp):
+  isVal v1 ->
+  isVal v2 ->
+  isVal (eEqv v1 v2)
 .
 Hint Constructors isConf isVal isComp.
 Check isComp.
@@ -472,9 +508,6 @@ Qed.
 
 Hint Resolve renamings_rename.
 Hint Resolve renaming_ids_pANF.
-
-(*TODO Prove the most general possible lemma that ANF doesn't care about names
-Maybe by some kind of size induction, or on V?*)
 
 (*structure equivalent*)
 Inductive squiv {V V1} : @exp V -> @exp V1 -> Prop:=
@@ -524,6 +557,13 @@ Inductive squiv {V V1} : @exp V -> @exp V1 -> Prop:=
   | squivSnd (v v': exp):
     squiv v v' ->
     squiv (eSnd v) (eSnd v')
+  | squivRefl (v v': exp):
+    squiv v v' ->
+    squiv (eRefl v) (eRefl v')
+  | squivEqv (v1 v1' v2 v2': exp):
+    squiv v1 v1' ->
+    squiv v2 v2' ->
+    squiv (eEqv v1 v2) (eEqv v1' v2')
 .
 Hint Constructors squiv.
 
@@ -555,6 +595,7 @@ unfold structure_preserving. intros. inductT e; try (constructor; fail).
 all: try (constructor;
   (try (apply IHe1; simpl_term_eq; auto; fail));
   (try (apply IHe2; simpl_term_eq; auto); fail); fail).
+all: try (constructor; apply IHe; simpl_term_eq; auto; fail).
 + constructor.
   - apply IHe1; simpl_term_eq; auto.
   - apply IHe2; simpl_term_eq; auto.
@@ -563,13 +604,48 @@ all: try (constructor;
   - apply IHe1; simpl_term_eq; auto.
   - apply IHe2; simpl_term_eq; auto.
   - apply IHe3; simpl_term_eq; auto.
-+ constructor.
-  - apply IHe. simpl_term_eq. auto.
-+ constructor.
-  - apply IHe. simpl_term_eq. auto.
 Qed.
 Hint Resolve open_preserves_structure.
 
+Lemma close_preserves_structure {V}:
+forall (x: name), structure_preserving (@close x V).
+Proof.
+intros.
+unfold structure_preserving. intros. inductT e; try (constructor; fail).
+all: try (constructor;
+  (try (apply IHe1; simpl_term_eq; auto; fail));
+  (try (apply IHe2; simpl_term_eq; auto); fail); fail).
+all: try (constructor; apply IHe; simpl_term_eq; auto; fail).
++ constructor.
+  - apply IHe1; simpl_term_eq; auto.
+  - apply IHe2; simpl_term_eq; auto.
+  - apply IHe3; simpl_term_eq; auto.
++ constructor.
+  - apply IHe1; simpl_term_eq; auto.
+  - apply IHe2; simpl_term_eq; auto.
+  - apply IHe3; simpl_term_eq; auto.
+Qed.
+Hint Resolve close_preserves_structure.
+
+Lemma wk_preserves_structure {V}:
+structure_preserving (@wk V).
+Proof.
+intros.
+unfold structure_preserving. intros. inductT e; try (constructor; fail).
+all: try (constructor;
+  (try (apply IHe1; simpl_term_eq; auto; fail));
+  (try (apply IHe2; simpl_term_eq; auto); fail); fail).
+all: try (constructor; apply IHe; simpl_term_eq; auto; fail).
++ constructor.
+  - apply IHe1; simpl_term_eq; auto.
+  - apply IHe2; simpl_term_eq; auto.
+  - apply IHe3; simpl_term_eq; auto.
++ constructor.
+  - apply IHe1; simpl_term_eq; auto.
+  - apply IHe2; simpl_term_eq; auto.
+  - apply IHe3; simpl_term_eq; auto.
+Qed.
+Hint Resolve close_preserves_structure.
 
 Ltac invertANFhelper e:=
   match goal with
@@ -611,7 +687,7 @@ forall {V} {V'} (e: @exp V) (e': @exp V'), squiv e e' ->
 /\ (@isVal V e -> @isVal V' e')).
 Proof.
 intros. induction H; auto.
-1-4:repeat split; repeat destructConj; intros; constructANF; invertANF; auto.
+1-4,10,11:repeat split; repeat destructConj; intros; constructANF; invertANF; auto.
 1,2: repeat split; repeat destructConj; intros; try apply Let; invertANF; auto.
 + repeat split; repeat destructConj; intros. constructor; apply App; invertANF; auto.
   - apply App; invertANF; auto.
@@ -640,7 +716,7 @@ forall (V: nat),
 Proof.
 intros. cbn. apply val_conf_comp_comb; intros; unfold P in *; unfold P0 in *; unfold P1 in *.
 2,3,4,5: constructor.
-2,3,4,5,6,7,9,10,11: cbn; constructor; auto.
+2,3,4,5,6,7,9,10,11,12,13: cbn; constructor; auto.
 2,3: cbn; constructor; auto.
 apply renaming_ids_pANF. auto.
 Qed.
@@ -703,51 +779,7 @@ Lemma unopen_conf {V} {x: name} {e: @exp (S V)}: isConf (open x e) -> (@isConf (
 Proof. apply open_ANF_iff with (x:=x). Qed.
 Hint Resolve unopen_conf.
 
-Lemma close_preserves_structure {V}:
-forall (x: name), structure_preserving (@close x V).
-Proof.
-intros.
-unfold structure_preserving. intros. inductT e; try (constructor; fail).
-all: try (constructor;
-  (try (apply IHe1; simpl_term_eq; auto; fail));
-  (try (apply IHe2; simpl_term_eq; auto); fail); fail).
-+ constructor.
-  - apply IHe1; simpl_term_eq; auto.
-  - apply IHe2; simpl_term_eq; auto.
-  - apply IHe3; simpl_term_eq; auto.
-+ constructor.
-  - apply IHe1; simpl_term_eq; auto.
-  - apply IHe2; simpl_term_eq; auto.
-  - apply IHe3; simpl_term_eq; auto.
-+ constructor.
-  - apply IHe. simpl_term_eq. auto.
-+ constructor.
-  - apply IHe. simpl_term_eq. auto.
-Qed.
-Hint Resolve close_preserves_structure.
 
-Lemma wk_preserves_structure {V}:
-structure_preserving (@wk V).
-Proof.
-intros.
-unfold structure_preserving. intros. inductT e; try (constructor; fail).
-all: try (constructor;
-  (try (apply IHe1; simpl_term_eq; auto; fail));
-  (try (apply IHe2; simpl_term_eq; auto); fail); fail).
-+ constructor.
-  - apply IHe1; simpl_term_eq; auto.
-  - apply IHe2; simpl_term_eq; auto.
-  - apply IHe3; simpl_term_eq; auto.
-+ constructor.
-  - apply IHe1; simpl_term_eq; auto.
-  - apply IHe2; simpl_term_eq; auto.
-  - apply IHe3; simpl_term_eq; auto.
-+ constructor.
-  - apply IHe. simpl_term_eq. auto.
-+ constructor.
-  - apply IHe. simpl_term_eq. auto.
-Qed.
-Hint Resolve close_preserves_structure.
 
 Lemma close_ANF_iff:
 forall (x: name),
@@ -866,10 +898,19 @@ Let fAppT:=  (forall (v1 v2 : exp)
         P1 (eApp v1 v2) (App v1 v2 i i0)).
 Let fValT:= (forall (v : exp) (i : isVal v),
         P v i -> P1 v (ValIs v i)).
+Let fRflT:= (forall (v: exp) (i: isVal v),
+    P v i -> P (eRefl v) (Refl v i)).
+Let fEqvT:=  (forall (v1 v2 : exp)
+          (i : isVal v1),
+        P v1 i ->
+        forall (i0 : isVal v2),
+        P v2 i0 ->
+        P (eEqv v1 v2) (Eqv v1 v2 i i0)).
 
 Variable (fId: fIdT) (fTru: fTruT) (fFls: fFlsT) (fBool: fBoolT) (fUni: fUniT) (fPair: fPairT) (fPi: fPiT) (fAbs: fAbsT) (fSig: fSigT)
         (fLet: fLetT) (fIf: fIfT) (fComp: fCompT)
-        (fFst: fFstT) (fSnd: fSndT) (fApp: fAppT) (fVal: fValT).
+        (fFst: fFstT) (fSnd: fSndT) (fApp: fAppT) (fVal: fValT)
+        (fRfl: fRflT) (fEqv: fEqvT).
 
 Definition ANF_val_conf_comp_comb_type
      :=
@@ -905,6 +946,8 @@ Program Fixpoint FANF (e : @exp 0) (g: isANF e) {measure (esize e)}: anfP e g :=
       | Sig A B iA iB => (fSig A B
                                iA (FANF A (inr (inl iA)))
                                iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
+      | Refl v i => (fRfl v i (FANF v (inl i)))
+      | Eqv v1 v2 i1 i2 => (fEqv v1 v2 i1 (FANF v1 (inl i1)) i2 (FANF v2 (inl i2)))
       end
     | inr (inl ic) =>
       match ic with
@@ -943,6 +986,8 @@ Program Fixpoint FANF (e : @exp 0) (g: isANF e) {measure (esize e)}: anfP e g :=
                       | Sig A B iA iB => (fSig A B
                                                iA (FANF A (inr (inl iA)))
                                                iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
+                      | Refl v i => (fRfl v i (FANF v (inl i)))
+                      | Eqv v1 v2 i1 i2 => (fEqv v1 v2 i1 (FANF v1 (inl i1)) i2 (FANF v2 (inl i2)))
                       end))
                end))
       end
@@ -972,6 +1017,8 @@ Program Fixpoint FANF (e : @exp 0) (g: isANF e) {measure (esize e)}: anfP e g :=
             | Sig A B iA iB => (fSig A B
                                      iA (FANF A (inr (inl iA)))
                                      iB (fun x => (FANF (open x B) (inr (inl (open_conf iB))))))
+            | Refl v i => (fRfl v i (FANF v (inl i)))
+            | Eqv v1 v2 i1 i2 => (fEqv v1 v2 i1 (FANF v1 (inl i1)) i2 (FANF v2 (inl i2)))
             end))
       end
   end.
@@ -993,9 +1040,7 @@ End ANF_val_conf_comp_comb.
 
 Inductive ctxmem :=
 | Assum (A: @exp 0)
-| Def (e: @exp 0) (A: @exp 0)
-| Eq (e1: @exp 0) (e2: @exp 0)
-.
+| Def (e: @exp 0) (A: @exp 0).
 
 Definition env := @context ctxmem.
 

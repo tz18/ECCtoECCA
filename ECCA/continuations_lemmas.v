@@ -52,7 +52,7 @@ let P1 (e: @exp 0) (i: isComp e):= forall K, (cont_is_ANF K -> isConf (het_compo
 Proof.
 intros. 
 induction ANF_val_conf_comp_comb with (P:=P) (P0:=P0) (P1:=P1); auto.
-1-9,12-14: unfold P, P0, P1; intros; rewrite het_compose_comp; auto; 
+1-9,12-16: unfold P, P0, P1; intros; rewrite het_compose_comp; auto; 
   apply fill_hole_comp_preserves_conf; auto.
 + unfold P1, P0. intros. rewrite het_compose_equation. apply Let; auto. 
   apply close_ANF_iff. unfold shift_cont. destruct K.
@@ -127,9 +127,9 @@ Proof. intros. apply aE_Trans with (M' := (eIf v (bind M1 B) (bind M2 B))).
   - auto.
   - auto.
  + apply aE_Trans with (M' := (eIf v (bind (eIf v M1 M2) B) (bind (eIf v M1 M2) B))).
-  - apply aE_If with (x:="eqIf"); auto.
-    * apply aE_Subst. apply aE_Symm. apply aE_If_EtaTru with (x:=free "eqIf"). names. auto.
-    * apply aE_Subst. apply aE_Symm. apply aE_If_EtaFls with (x:=free "eqIf"). names. auto.
+  - apply aE_If with (p:="eqIf"); auto.
+    * apply aE_Subst. apply aE_Symm. apply aE_If_EtaTru with (p:=free "eqIf"). auto with contexts.
+    * apply aE_Subst. apply aE_Symm. apply aE_If_EtaFls with (p:=free "eqIf"). auto with contexts.
   - apply aE_Trans with (M' := bind (eIf v M1 M2) B).
     * apply aE_If2.
     * eauto.
@@ -139,8 +139,8 @@ Qed.
 Lemma IH_naturality_if (g: env) (K : cont) (iK: cont_is_ANF K) 
 (v: exp) (iV: isVal v) (m1 m2 : exp) (iM1: isConf m1) (iM2: isConf m2)
 (y: name):
-  (Equiv (g & y ~ Eq v eTru) (het_compose K m1) (fill_hole m1 K)) ->
-  (Equiv (g & y ~ Eq v eFls) (het_compose K m2) (fill_hole m2 K)) -> 
+  (Equiv (g & y ~ Assum (eEqv v eTru)) (het_compose K m1) (fill_hole m1 K)) ->
+  (Equiv (g & y ~ Assum (eEqv v eFls)) (het_compose K m2) (fill_hole m2 K)) -> 
   (Equiv g (eIf v (het_compose K m1) (het_compose K m2)) (eIf v (fill_hole m1 K) (fill_hole m2 K))).
 Proof.
 intros. eapply aE_If; auto.
@@ -165,30 +165,30 @@ e -> e', then K[e] = K[e']
 4. need lemma to show K[M][x :=n] \equiv K[M[x := n] *)
 
 Theorem naturality (M : exp) (iM: isConf M):
-  forall (K : cont) (iK: cont_is_ANF K) (G : env), (G |- (het_compose K M) =e= (fill_hole M K))%ECCA.
+  forall (K : cont) (iK: cont_is_ANF K) (G : env), (G  ⊢ (het_compose K M) ≡ (fill_hole M K))%ECCA.
 Proof.
   induction M using term_ind.
-1-8,10-11,13-14: intros; inversion iM; rewrite het_compose_comp; auto.
+1-8,10-11,13-16: intros; inversion iM; rewrite het_compose_comp; auto.
   + inversion iM; subst. destruct K.
     - cbn. rewrite het_compose_hole. auto.
     - intros. rewrite het_compose_equation. clear IHM1. eapply aE_Trans.
-      * eapply IH_naturality_let with (g:= G) (x:="k") (n:= M1) (m:= M2) (K:= (LET [] in B)) (A:= eUni uProp); auto. names. eapply H.
+      * eapply IH_naturality_let with (g:= G) (x:="k") (n:= M1) (m:= M2) (K:= (LET [⋅] in B)) (A:= eUni uProp); auto. names. eapply H.
         ++ apply open_conf. auto.
         ++ cbn. cbn in iK. apply shift_conf. auto.
       * names. apply aE_Step with (e := (bind (bind M1 M2) B)).
         { apply R_Trans with (e':= eLet (bind M1 M2) B) .
           { apply R_Trans with (e':= (bind M1 (eLet M2 (wk B)))).
-            { apply R_RedR. apply R_Let. }
-            { names. apply R_Refl. }}
-          { apply R_RedR. apply R_Let. }}
+            { apply R_RedR. apply st_Let. }
+            { names. apply R_Reflex. }}
+          { apply R_RedR. apply st_Let. }}
         {
           apply R_Trans with (e' := (eLet (bind M1 M2) B)).
           {
             apply R_CongLet with (x:="x") (A:=eUni uProp).
-            { apply R_RedR. apply R_Let. }
-            { apply R_Refl. }
+            { apply R_RedR. apply st_Let. }
+            { apply R_Reflex. }
           }
-          apply R_RedR. apply R_Let.
+          apply R_RedR. apply st_Let.
         }
      - inversion H0. inversion H1.
   + intros; inversion iM; subst. destruct K.
@@ -198,15 +198,13 @@ Proof.
 Qed.
 Hint Resolve naturality.
 
-
-
 Open Scope ECCA.
 Require Setoid.
 Lemma total_renamings_distribute_het_compose (B: exp) :
       forall (K: cont) (r: ren) (t: total r), [r] (K 《 B 》) = (rename_cont r K )《[r]B》%ECCA.
 Proof.
 induction B using term_ind. 
-2,3,4,5,6,7,8,10,11,13,14: intros; rewrite het_compose_equation; rewrite het_compose_equation; names; destruct K; cbn; auto.
+2,3,4,5,6,7,8,10,11,13-16: intros; rewrite het_compose_equation; rewrite het_compose_equation; names; destruct K; cbn; auto.
 + intros. destruct K. 
   - rewrite het_compose_hole. cbn. rewrite applyt_is_applyv with (rn:= t). names. rewrite het_compose_equation. cbn. auto.
   - intros. rewrite het_compose_equation. rewrite het_compose_equation. names. 
