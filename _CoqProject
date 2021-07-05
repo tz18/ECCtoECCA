@@ -17,6 +17,7 @@ ECCA/reduction_lemmas.v
 ECCA/equiv.v
 ECCA/equiv_lemmas.v
 ECCA/typing.v
+ECCA/typing_lemmas.v
 ECCA/continuations.v
 ECCA/continuations_lemmas.v
 ECCA/key_lemmas.v

@@ -19,6 +19,7 @@ Inductive exp {V: nat}: Type :=
   | Fls
   | Bool
 .
+Hint Constructors exp.
 
 Module ECCTerm <: Term.
   Definition term := @exp.
@@ -105,6 +106,8 @@ Module ECCRen := Renamings(ECCTerm).
 Import ECCTerm.
 Import ECCRen.
 
+(* -=ECC Environments=- *)
+
 Inductive ctxmem:=
 | Assum (A: @exp 0)
 | Def (e: @exp 0) (A: @exp 0)
@@ -112,18 +115,14 @@ Inductive ctxmem:=
 
 Definition env:= @context (@ctxmem).
 
-Inductive assumes (g: env) (x: atom) (A: exp) := (* FIXME: Should x be atom or name? *)
-| ass :
-  (has g x (Assum A)) ->
-  assumes g x A
-| def (e: @exp 0):
-  (has g x (Def e A)) ->
-  assumes g x A
-.
-Hint Constructors exp.
+Definition assumes (g: env) (x: atom) (A: exp) :=
+(has g x (Assum A)) \/ (exists (e: exp), (has g x (Def e A))).
+Hint Unfold assumes.
 
+Bind Scope ECC_scope with exp.
+Bind Scope ECC_scope with env.
+Delimit Scope ECC_scope with ECC.
 
-Locate "//".
 Inductive RedStep : env -> exp -> exp -> Prop :=
   | R_ID (g: env) (x: atom) (e' A: exp) :
     (has g x (Def e' A)) -> RedStep g (Id x) e'
@@ -242,7 +241,8 @@ Inductive SubTypes: env -> exp -> exp -> Prop :=
 .
 
 Hint Constructors SubTypes.
-
+Reserved Notation "g '⊢' a ':' b" (at level 250, a at level 99).
+Reserved Notation "'⊢' g" (at level 250).
 Inductive Types: env -> exp -> exp -> Prop :=
 | T_Ax_Prop (g: env) :
   WellFormed g ->
@@ -306,6 +306,7 @@ Inductive Types: env -> exp -> exp -> Prop :=
   (Types g B U) ->
   (SubTypes g A B) ->
   (Types g e B)
+where "g '⊢' a ':' b" := (Types g a b) : ECC_scope
 with
 (* ECC Well-Formed Environments *)
 WellFormed: env -> Prop :=
@@ -320,9 +321,11 @@ WellFormed: env -> Prop :=
   Types g A U ->
   Types g e A ->
   WellFormed (g & x ~ Def e A)
+where "'⊢' g" := (WellFormed g) : ECC_scope
 .
 Hint Constructors WellFormed.
 Hint Constructors Types.
+
 
 (* Mutual induction Scheme *)
 Scheme type_env_mut := Induction for Types Sort Prop
@@ -334,10 +337,6 @@ Combined Scheme type_env_comb from env_type_mut, type_env_mut.
 
 (* ECC Notation *)
 
-Bind Scope ECC_scope with exp.
-Bind Scope ECC_scope with universe.
-Bind Scope ECC_scope with env.
-Delimit Scope ECC_scope with ECC.
 Coercion Id: atom >-> exp.
 
 Notation "'type' x" := (Uni (uType x)) (at level 50):  ECC_scope.

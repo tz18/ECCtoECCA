@@ -88,9 +88,11 @@ Compute ex2.
 Compute translate ex2 Hole.
 
 (*  *)
-(* Fixpoint transEnv (g: ECCenv):=
+Fixpoint translateEnv (g: ECC.env):=
 match g with
-| ctxempty => ctxempty
-| ECC.Assum g x A => Assum (transEnv g) x (flattenECCAconf (trans A))
-| ECC.Def g x v => Def (transEnv g) x (flattenECCAconf (trans v))
-end. *)
+| ctx_empty => ctx_empty
+| ctx_cons g x (ECC.Assum A)  => ctx_cons (translateEnv g) x (ECCA.core.Assum (translate A ([⋅])))
+| ctx_cons g x (ECC.Def v A) => ctx_cons (translateEnv g) x (ECCA.core.Def (translate v ([⋅])) (translate A ([⋅])))
+end.
+
+Notation "'[[' e ']]'" := (translate e Hole) (at level 60).

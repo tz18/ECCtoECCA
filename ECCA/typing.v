@@ -42,6 +42,7 @@ Inductive Types: env -> exp -> exp -> Prop :=
   WellFormed g ->
   (g ⊢ (eUni (uType i)) : (eUni (uType (S i))))
 | aT_Var (g: env) (x: atom) (A: exp) :
+  (⊢ g) -> 
   (assumes g x A) -> (* this needs adjustment *)
   (g ⊢ (eId x) : A)
 | aT_Bool (g: env):
@@ -107,17 +108,22 @@ Inductive Types: env -> exp -> exp -> Prop :=
 where "g '⊢' a ':' b" := (Types g a b) : ECCA_scope
 with (* ECCA Well-Formed Environments *)
 WellFormed: env -> Prop :=
-  |  wf_Empty : 
-    (⊢ ctx_empty)%ECCA
+  | wf_Empty : 
+    (⊢ ctx_empty)
   | wf_Assum : forall (g : env) (x : name) (A U : exp),
-    (⊢ g)%ECCA -> 
-    (g ⊢ A : U)%ECCA -> 
-    (⊢ g & x ~ Assum A)%ECCA
+    (⊢ g) -> 
+    (g ⊢ A : U) -> 
+    (⊢ g & x ~ Assum A)
   | wf_Def : forall (g : env) (x : name) (e A U : exp),
-    (⊢ g)%ECCA -> 
-    (g ⊢ A : U)%ECCA -> 
-    (g ⊢ e : A)%ECCA -> 
-    (⊢ g & x ~ Def e A)%ECCA
+    (⊢ g) -> 
+    (g ⊢ A : U) -> 
+    (g ⊢ e : A) -> 
+    (⊢ g & x ~ Def e A)
 where "'⊢' g" := (WellFormed g) : ECCA_scope.
 Hint Constructors Types.
 Hint Constructors WellFormed.
+
+Scheme Types_WellFormed_ind := Induction for Types Sort Prop
+  with WellFormed_Types_ind := Induction for WellFormed Sort Prop.
+
+Combined Scheme Types_WellFormed_mutind from Types_WellFormed_ind, WellFormed_Types_ind.

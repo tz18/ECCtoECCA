@@ -1044,23 +1044,15 @@ Inductive ctxmem :=
 
 Definition env := @context ctxmem.
 
-Inductive assumes (g: env) (x: atom) (A: exp) :=
-| ass :
-  (has g x (Assum A)) ->
-  assumes g x A
-| def (e: @exp 0):
-  (has g x (Def e A)) ->
-  assumes g x A
-.
-
-Hint Constructors assumes.
+Definition assumes (g: env) (x: atom) (A: exp) :=
+(has g x (Assum A)) \/ (exists (e: exp), (has g x (Def e A))).
+Hint Unfold assumes.
 
 Lemma ctx_has (g: env) (x: name) (a: ctxmem):
   (has (ctx_cons g x a) (free x) a).
 Proof.
   unfold has. rewrite rw_closev_same. unfold bindv. auto.
 Qed.
-
 
 (* Defining "g,g'|-"
   Append environment g to environment g'*)

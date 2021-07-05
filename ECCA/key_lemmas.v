@@ -2,6 +2,7 @@ Require Export typing.
 Require Export equiv.
 Require Export continuations.
 Require Export continuations_lemmas.
+Require Export typing_lemmas.
 
 Lemma Cut (g: env) (K : cont) (N: exp) (A B: exp):
 (Types_cont g K (Cont N A B) ->
@@ -12,6 +13,14 @@ intros. inversion H ; subst ; cbv.
 - assumption. 
 - cut (@bind N 0 (@wk 0 B) = B); simpl_term_eq. 
   intros. rewrite <- H1. eapply aT_Let with (n:= N) (m:= M) (A:=A) (B:=(wk B)) (x:=y) (g:=g); assumption.
+Qed.
+
+Lemma type_requires_well_formed (g: env) (e A: exp):
+(g ⊢ e : A) ->
+(⊢ g).
+Proof.
+induction 1; auto.
++ inversion IHTypes. auto.
 Qed.
 
 (* Lemma weakening (g : env) (x : name) (N A A' : exp):
@@ -48,7 +57,7 @@ Types (ctx_cons g x (Def N A)) M B ->
 Types (ctx_cons g x (Def N' A)) M B.
 Proof.
   intros. dependent induction H2.
-  - apply aT_Ax_Prop. apply has_type_wf_g with (x:=x) in H0. auto.
+(*   - apply aT_Ax_Prop. apply has_type_wf_g with (x:=x) in H2. auto.
     inversion H2. auto. 
   - apply aT_Ax_Type. apply has_type_wf_g with (x:=x) in H0. auto.
     inversion H2. auto.
@@ -73,10 +82,9 @@ Proof.
   - eapply aT_App. auto. apply IHTypes1 with (N0:=N); auto.
     apply IHTypes2 with (N0:=N); auto.
   - eapply aT_Fst. apply IHTypes with (N0:=N); auto.
-  - eapply aT_Snd. apply IHTypes with (N0:=N); auto.  
+  - eapply aT_Snd. apply IHTypes with (N0:=N); auto.   *)
 Admitted.
 
-  
 Lemma Cut_modulo_equivalence (g: env) (K : cont) (N N': exp) (A B: exp):
 (Types_cont g K (Cont N A B) ->
 Types g N A ->
@@ -90,13 +98,7 @@ intros. inversion H ; subst ; cbv.
   intros. rewrite <- H3. eapply aT_Let with (n:= N') (m:= M) (A:=A) (B:=(wk B)) (x:=y) (g:=g).
   * assumption.
   * apply equivalence_in_derivation with (N := N); assumption.
-Qed. 
-
-Lemma het_compose_equal_fill_hole (K : cont_r) (N: comp) :
-  (unrestrict_conf (het_compose_r K (Comp N))) = (fill_hole N (@unrestrict_cont 0 K)).
-Proof.
-  destruct K; simpl; auto.
-Qed.  
+Qed.
 
 Lemma append_rearrange {V:nat}(g g': env) (x: name) (a: ctxmem) :
   ((append g g')& x ~ a) = (append (g & x ~ a) g').
@@ -104,13 +106,15 @@ Proof.
   induction g; auto.
 Qed.
 
-Lemma cont_return_type_well_typed (g : env) (K : cont_r) (M : conf) (A B: exp):
-  Types_cont g (unrestrict_cont K) (Cont M A B) ->
+
+
+Lemma cont_return_type_well_typed (g : env) (K : cont) (iK: cont_is_ANF K) (M : exp) (iM: isConf M) (A B: exp):
+  Types_cont g K (Cont M A B) ->
   exists U , Types g B U.
 Proof.
   intros. dependent induction H.
-  + apply type_well_typed in H. auto. 
-  + apply type_well_typed in H0.
+  + apply type_well_typed in H. auto. eapply type_requires_well_formed. apply H.
+  + apply type_well_typed in H0. names in H0.
     (* need B : U but have (open y (wk B)) : U *)
     shelve.
 Admitted.
