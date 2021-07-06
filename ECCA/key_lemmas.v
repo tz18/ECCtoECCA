@@ -4,6 +4,9 @@ Require Export continuations.
 Require Export continuations_lemmas.
 Require Export typing_lemmas.
 
+(* Broken until we fix/extend shifted names *)
+
+(* 
 Lemma Cut (g: env) (K : cont) (N: exp) (A B: exp):
 (Types_cont g K (Cont N A B) ->
 Types g N A ->
@@ -199,7 +202,4 @@ Types (append g g') (het_compose_r K M) B.
       destruct H. apply weakening with (x:=x) (A':=eBool) in H.
       exists x0. auto.
       
-Admitted.
-
- 
- *)
+Admitted. *)

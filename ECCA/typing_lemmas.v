@@ -1,7 +1,10 @@
 Require Export typing.
 
 Open Scope ECCA_scope.
-Theorem weakening {Γ e A}:
+
+(* Broken until we fix/extend shifted names *)
+
+(* Theorem weakening {Γ e A}:
   (Γ ⊢ e : A) ->
   forall r Δ,
     Γ =[r]=> Δ ->
@@ -14,8 +17,6 @@ Lemma weakening1 (g: env) (A U B: exp) (x: name):
 (g & x ~ Assum B ⊢ [^x] A : U) /\ (forall e: exp, (g & x ~ Def e B ⊢ [^x] A : U)).
 Proof.
 Admitted.
-
-
 
 Require Import String.
 Open Scope string.
@@ -115,7 +116,6 @@ Qed. *)
 
 Lemma type_well_typed (g: env) (N: exp) (A: exp) :
   (g ⊢ N : A) ->
-  (⊢ g) ->
   exists U , Types g A U.
 Proof.
   induction 1.
@@ -148,4 +148,4 @@ Lemma has_type_wf_g (g: env) (N: exp) (A: exp) (x : name):
 Proof.
   intros.  apply type_well_typed in H as H1; auto. destruct H1.
   apply wf_Def with (U := x0); auto.
-Qed. 
+Qed.  *)
