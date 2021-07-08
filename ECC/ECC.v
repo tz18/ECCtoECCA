@@ -266,7 +266,7 @@ Inductive Types: env -> exp -> exp -> Prop :=
   (Types (g & x ~ Assum A) (open x B) (Uni (uType i))) ->
   (Types g (Pi A B) (Uni (uType i)))
 | T_Lam (g: env) (x: name ) (A e B: exp) :
-  (Types (g & x ~ Assum A) (open x e) (open x B)) -> (* FIXME: hmm...*)
+  (Types (g & x ~ Assum A) (open x e) (open x B)) ->
   (Types g (Abs A e) (Pi A B))
 | T_App (g: env) (x: name) (e e' A' B: exp) :
   (Types g e (Pi A' B)) ->
@@ -274,7 +274,7 @@ Inductive Types: env -> exp -> exp -> Prop :=
   (Types g (App e e') (bind e B))
 | T_Sig (g: env) (x: name) (A B: exp) (i: nat) :
   (Types g A (Uni (uType i))) ->
-  (Types (g & x ~ Assum A) (open x B) (Uni (uType i))) -> (* should these be the same i*)
+  (Types (g & x ~ Assum A) (open x B) (Uni (uType i))) -> 
   (Types g (Sig A B) (Uni (uType i)))
 | T_Pair (g: env) (e1 e2 A B: exp):
   (Types g e1 A) ->
@@ -337,12 +337,10 @@ Combined Scheme type_env_comb from env_type_mut, type_env_mut.
 
 (* ECC Notation *)
 
-Coercion Id: atom >-> exp.
-
 Notation "'type' x" := (Uni (uType x)) (at level 50):  ECC_scope.
 Notation "'prop'" := (Uni uProp) (at level 50):  ECC_scope.
 Notation "{ e1 e2 }" := (App e1 e2) (at level 50,e1 at level 9):  ECC_scope.
-Notation "'LET' x ':=' A 'in' B" := (Let A B) (at level 50, format "'[v' 'LET'  x  ':='  A '/' 'in' '['  B ']' ']'") : ECC_scope.
+Notation "'LET' A 'in' B" := (Let A B) (at level 50) : ECC_scope.
 Notation "'Π': A '->' B" := (Pi A B) (at level 50, A at level 9) : ECC_scope.
 Notation "'λ' : A  '->'  B" := (Abs A B) (at level 50,  A at level 9) : ECC_scope.
 Notation "'Σ' : A '..' B" := (Sig A B) (at level 50, A at level 1): ECC_scope.
@@ -580,222 +578,3 @@ Definition term_ind
        tm (always_Vclosedk tm).
 
 Check Vclosed_ind.
-
-(* Definition example_Type := (type 3)%ECC: exp.
-Definition example_Prop := (prop)%ECC: exp.
-Definition example_App := { X Y }%ECC: exp.
-Definition example_Let := (LET X := Y in Z)%ECC : exp.
-Print example_Let.
-Definition F:= fresh (X::Y::Z::nil).
-Definition example_Let2 := (LET X := (type 3) in LET F := (LET X := (type 2) in X) in ({X F}))%ECC.
-Print example_Let2.
-Definition example_Pi := (P X : F -> Y)%ECC : exp.
-Definition example_Abs := (\ X: Y -> Z)%ECC : exp.
-Definition example_Sig := (Si X : Y .. Z)%ECC : exp.
-Definition example_Pair := (< X, Y > as (Si X : Y .. Z))%ECC : exp. *)
-
-(* 
-Definition example_ycombinator := (\F:(type 3) -> ({(\X:(type 2) -> ({F {X X}})) (\X:(type 2) -> ({F {X X}}))}))%ECC.
-Print example_ycombinator.
- *)(* 
-Compute subst X Y (LET Y := type 1 in X).
-
-Goal RedClos Empty (LET X := Y in LET Y := type 1 in X) Y.
-Proof.
-cut (RedStep Empty (LET X := Y in LET Y := type 1 in X)%ECC (subst X (Id Y) (LET Y := type 1 in X))%ECC).
-- cut (RedStep Empty (subst X (Id Y) (LET Y := type 1 in X))%ECC Y). 
-  + eauto.
-  + cbv. apply R_Let.
-- cbv. apply R_Let.
-Qed.
-
-
-
-Goal Types Empty (fst (<Tru , Fls> as 
-                            (Si X : Bool .. (If X Bool (P Y : Bool -> Bool))))) Bool.
-Proof.
-eapply T_Fst. eapply T_Pair.
-  - apply T_True.
-  - cbv. apply T_Conv with (A := Bool) (U := Uni (uType 0)).
-    + apply T_False.
-    + eapply T_Conv.
-      * apply T_If with (U:=(type 1)%ECC). 
-        -- auto.
-        -- auto.
-        -- auto.
-        -- cbn. eapply T_Prod_Type.
-          ++ auto.
-          ++ auto.
-      * auto.
-      * cbn. apply ST_Cong. apply E_EquivAlpha. apply aeq_id.
-    + apply ST_Cong. apply E_Equiv with (e:= Bool).
-      * auto.
-      * eauto.
-Unshelve. exact 1.
-Qed. *)
-
-
-
-
-(* -=ECC Evaluation=- *)
-
-(* -Lookup- *)
-(* Substitution *)
-
-(* Fixpoint FV (e: exp) : atoms :=
-match e with
-  | Id x => singleton x
-  | Uni U => empty
-  | Pi x A B =>  union (FV A) (remove x (FV B))
-  | Abs x A e => union (FV A) (remove  x (FV e))
-  | App  e1 e2 => (union (FV e1) (FV e2))
-  | Let x e1 e2 => union (FV e1) (remove  x (FV e2))
-  | Sig x A B => (union (FV A) (remove  x (FV B)))
-  | Pair e1 e2 A => (union (union  (FV e1) (FV e2)) (FV A))
-  | Fst e => (FV e)
-  | Snd e => (FV e)
-(*   | If e e1 e2 => (union (union  (FV e) (FV e1)) (FV e2)) *)
-  | Tru => empty
-  | Fls => empty
-  | Bool => empty
-end. *)
-
-(*Let's get nominal!*)
-(* LET'S NOT *)
-(* Fixpoint swap (x:atom) (y:atom) (t:exp) : exp :=
-  match t with
-  | Id z     => Id (swap_var x y z)
-  | Abs z A t1  => Abs (swap_var x y z) (swap x y A) (swap x y t1)
-  | App t1 t2 => App (swap x y t1) (swap x y t2)
-  | Pi x' A B => Pi (swap_var x y x') (swap x y A) (swap x y B)
-  | Let x' e1 e2 => Let (swap_var x y x') (swap x y e1) (swap x y e2)
-  | Sig x' A B => Sig (swap_var x y x') (swap x y A) (swap x y B)
-  | Pair e1 e2 A => Pair (swap x y e1) (swap x y e2) (swap x y A)
-  | Fst e => (Fst (swap x y e))
-  | Snd e => (Snd (swap x y e))
-(*   | If e e1 e2 => (If (swap x y e) (swap x y e1) (swap x y e2)) *)
-  | _ => t
-  end.
-
-Lemma swap_size_eq : forall x y t,
-    size (swap x y t) = size t.
-Proof.
-  induction t; simpl; auto.
-Qed. *)
-
-
-(* If there are free variables in the substitute,
-   and if the term being substituted in binds one of them,
-   then we need to perform an alpha conversion of the term being substituted in
-   that avoids capturing any free variables in the substitute or in the body
-   of the term being substituted in. *)
-(* Require Import Recdef.
-Function substWork (x: atom) (arg body: exp) {measure size body}:=
-if (AtomSetImpl.mem x (FV body)) then 
-  match body with
-    | Id x' => if (x == x') then arg else body
-    | Abs x' A e =>
-        if (x == x')
-          then (Abs x' (substWork x arg A) e)
-          else let (xnew,_) := atom_fresh (union (FV arg) (FV e)) in
-                      (Abs xnew (substWork x arg A) (substWork x arg (swap x' xnew e)))
-    | Pi x' A B =>
-        if (x == x')
-          then (Pi x' (substWork x arg A) B)
-          else let (xnew,_) := atom_fresh (union (FV arg) (FV B)) in
-                  (Pi xnew (substWork x arg A) (substWork x arg (swap x' xnew B)))
-    | Let x' A B =>
-        if (x == x')
-          then (Let x' (substWork x arg A) B)
-          else let (xnew,_) := atom_fresh (union (FV arg) (FV B)) in
-                  (Let xnew (substWork x arg A) (substWork x arg (swap x' xnew B)))
-    | Sig x' A B =>
-        if (x == x')
-          then (Sig x' (substWork x arg A) B)
-          else let (xnew,_) := atom_fresh (union (FV arg) (FV B)) in
-                  (Sig xnew (substWork x arg A) (substWork x arg (swap x' xnew B)))
-    | App e1 e2 => (App (substWork x arg e1) (substWork x arg e2))
-    | Pair e1 e2 A => (Pair (substWork x arg e1) (substWork x arg e2) (substWork x arg A))
-    | Fst e => (Fst (substWork x arg e))
-    | Snd e => (Snd (substWork x arg e))
-  (*   | If e e1 e2 => (If (substWork x arg e FVInArg) (substWork x arg e1 FVInArg) (substWork x arg e2 FVInArg)) *)
-    | _ => body
-  (*   | eSubst a b c => eSubst (substWork x arg a FVInArg) (substWork x arg b FVInArg) (substWork x arg c FVInArg) (**) *)
-  end
-else body.
-Proof.
-1-19: try (Tactics.program_simpl; cbn; omega).
-1-4: try (Tactics.program_simpl; cbn; rewrite -> swap_size_eq; omega).
-Qed.
- *)
-
-(* Definition subst (x: atom) (arg body: exp):= substWork x arg body. *)
-(* 
-Inductive ECC_Aeq : exp -> exp -> Prop :=
-  | aeq_id (e: exp):
-    ECC_Aeq e e
-  | aeq_var (x: atom):
-     ECC_Aeq (Id x) (Id x)
-  | aeq_abs_same (x: atom) (t1 t2 b1 b2: exp):
-     ECC_Aeq t1 t2 -> 
-     ECC_Aeq b1 b2 ->
-     ECC_Aeq (Abs x t1 b1) (Abs x t2 b2)
-  | aeq_abs_diff (x y: atom) (t1 t2 b1 b2: exp):
-     x <> y ->
-     x `notin` (FV b2) ->
-     ECC_Aeq b1 (swap y x b2) ->
-     ECC_Aeq t1 t2 ->
-     ECC_Aeq (Abs x t1 b1) (Abs y t2 b2)
-  | aeq_pi_same (x: atom) (t1 t2 b1 b2: exp):
-     ECC_Aeq t1 t2 -> 
-     ECC_Aeq b1 b2 ->
-     ECC_Aeq (Pi x t1 b1) (Pi x t2 b2)
-  | aeq_pi_diff (x y: atom) (t1 t2 b1 b2: exp):
-     x <> y ->
-     x `notin` (FV b2) ->
-     ECC_Aeq b1 (swap y x b2) ->
-     ECC_Aeq t1 t2 ->
-     ECC_Aeq (Pi x t1 b1) (Pi y t2 b2)
-  | aeq_let_same (x: atom) (t1 t2 b1 b2: exp):
-     ECC_Aeq t1 t2 -> 
-     ECC_Aeq b1 b2 ->
-     ECC_Aeq (Let x t1 b1) (Let x t2 b2)
-  | aeq_let_diff (x y: atom) (t1 t2 b1 b2: exp):
-     x <> y ->
-     x `notin` (FV b2) ->
-     ECC_Aeq b1 (swap y x b2) ->
-     ECC_Aeq t1 t2 ->
-     ECC_Aeq (Let x t1 b1) (Let y t2 b2)
-  | aeq_sig_same (x: atom) (t1 t2 b1 b2: exp):
-     ECC_Aeq t1 t2 -> 
-     ECC_Aeq b1 b2 ->
-     ECC_Aeq (Sig x t1 b1) (Sig x t2 b2)
-  | aeq_sig_diff (x y: atom) (t1 t2 b1 b2: exp):
-     x <> y ->
-     x `notin` (FV b2) ->
-     ECC_Aeq b1 (swap y x b2) ->
-     ECC_Aeq t1 t2 ->
-     ECC_Aeq (Sig x t1 b1) (Sig y t2 b2)
-  | aeq_app (t1 t2 t1' t2': exp):
-     ECC_Aeq t1 t1' -> ECC_Aeq t2 t2' ->
-     ECC_Aeq (App t1 t2) (App t1' t2')
-  | aeq_pair (t1 t2 t1' t2' A A': exp):
-     ECC_Aeq t1 t1' -> ECC_Aeq t2 t2' ->
-     ECC_Aeq A A' ->
-     ECC_Aeq (Pair t1 t2 A) (Pair t1' t2' A')
-  | aeq_Fst (e e': exp):
-     ECC_Aeq e e' ->
-     ECC_Aeq (Fst e) (Fst e')
-  | aeq_Snd (e e': exp):
-     ECC_Aeq e e' ->
-     ECC_Aeq (Snd e) (Snd e')
-(*   | aeq_if (e1 e2 e3 e1' e2' e3': exp):
-     ECC_Aeq e1 e1' ->
-     ECC_Aeq e2 e2' ->
-     ECC_Aeq e3 e3' ->
-     ECC_Aeq (If e1 e2 e3) (If e1' e2' e3') *)
-.
-
-Hint Constructors ECC_Aeq.
- *)
-(* -Step- *)

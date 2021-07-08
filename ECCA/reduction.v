@@ -25,7 +25,7 @@ Inductive Steps : env -> exp -> exp -> Prop :=
   | st_IfFls (g: env) (e1 e2: exp) :
     (g ⊢ eIf eFls e1 e2 ⊳ e2)
 where "g '⊢' e1 '⊳' e2":= (Steps g e1 e2): ECCA_scope.
-Check st_Let. Check st_IfTru. Check st_IfFls.
+
 Hint Constructors Steps.
 Bind Scope ECCA_scope with Steps.
 
@@ -79,6 +79,5 @@ Inductive Reduces : env -> exp -> exp -> Prop :=
       (g ⊢ eIf e e1 e2 ⊳* eIf e' e1' e2')
 where "g '⊢' e1 '⊳*' e2":= (Reduces g e1 e2): ECCA_scope.
 
-(* TODO: rewrite with notation for readability *)
 Hint Constructors Reduces.
 Bind Scope ECCA_scope with Reduces.

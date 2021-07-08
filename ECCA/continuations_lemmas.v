@@ -1,4 +1,4 @@
-Require Import core core_lemmas typing.
+Require Import core typing.
 Require Import equiv_lemmas.
 Require Import continuations.
 Require Import String. 
@@ -93,31 +93,6 @@ Hint Rewrite cont_compose_fill_het_compose.
 Require Import Coq.Program.Equality.
 
 Open Scope string.
-(*didn't use*)
-(* Lemma K_compat (g: env) (K : cont) (e1 e2 : exp) (A: @exp 0):
-  (RedClos g e1 e2) ->
-  (Equiv g (fill_hole e1 K)) (fill_hole e2 K).
-Proof.
-  intros. destruct K.
-  + simpl. eapply aE_Step. apply H. apply R_Refl.
-  + simpl. eapply aE_Step.
-     - eapply R_CongLet with (x:="x") (A:=A). (*TODO: This A is arbitrary...*)
-       * apply H.
-       * apply R_Refl.
-     - apply R_Refl.
-Qed. *)
-
-(*Lemma bind_commutes_over_fill_hole (g: env) (K : cont) (n m : exp):
-  (Equiv g (bind n (fill_hole m wk_cont K))) (fill_hole (bind n m) K).
-Proof.
-  destruct K.
-  + simpl. eapply aE_Step; apply R_Refl.
-  + simpl.
-    assert (Equiv g (eLet (bind n m) B) (bind (bind n m) B)).
-    * eapply aE_Step. apply R_RedR. apply R_Let. apply R_Refl.
-    * apply equiv_sym. eapply equiv_trans. apply H. apply equiv_sym.
-      (*don't think bind (bind n m) B = (bind n (bind m B)) *)
-Admitted.*)
 
 Lemma let_over_branches (v M1 M2: exp) (iV: isVal v) (B: exp):
 forall g,
@@ -157,13 +132,7 @@ intros. eapply aE_Let; auto.
 + names. apply H.
 Qed.
 
-(*1. Zeta reduction on the left. 
-2. IH (rewrite K<<M''>> to K[M] on the left. 
-3. On the right, use K_compat lemma, should have goal K[M][x :=n] \equiv K[M[x := n]] 
-e -> e', then K[e] = K[e'] 
-3. Have goal: Show K[M'][x := n] \equiv K[let x = n in M'] 
-4. need lemma to show K[M][x :=n] \equiv K[M[x := n] *)
-
+(* As seen in the paper!*)
 Theorem naturality (M : exp) (iM: isConf M):
   forall (K : cont) (iK: cont_is_ANF K) (G : env), (G  ⊢ (het_compose K M) ≡ (fill_hole M K))%ECCA.
 Proof.

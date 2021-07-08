@@ -1,11 +1,12 @@
 Require Import ECC.
-Require Import ECCA.core ECCA.core_lemmas ECCA.typing ECCA.equiv_lemmas ECCA.continuations ECCA.continuations_lemmas.
+Require Import ECCA.core ECCA.typing ECCA.equiv_lemmas ECCA.continuations ECCA.continuations_lemmas.
 Require Import translator.
 Require Import String.
 From Equations Require Import Equations.
 Open Scope ECCA_scope.
 
-Lemma compositionality (e : ECC.exp) (K K' : cont) (iK: cont_is_ANF K) (iK': cont_is_ANF K'):
+(* As seen in the paper! *)
+Theorem compositionality (e : ECC.exp) (K K' : cont) (iK: cont_is_ANF K) (iK': cont_is_ANF K'):
   het_compose K' (translate e K) =
   (translate e (cont_compose K' K)).
 Proof.

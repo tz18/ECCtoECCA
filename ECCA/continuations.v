@@ -1,5 +1,4 @@
 Require Export typing.
-Require Import core_lemmas.
 
 (*===========================
   ==--Continuation Typing--==

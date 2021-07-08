@@ -330,20 +330,6 @@ Fixpoint always_Vclosedk {V : nat} (t : term) {struct t} : Vclosedk V t :=
     in go _ _ (always_Vclosedk f) (always_Vclosedk e)
 end.
 
-(* Lemma always_Vclosedk_open x : forall {V} (t : @term (1 + V)),
-  always_Vclosedk t x = always_Vclosedk (open x t).
-Proof.
-  intros.
-  inductT t; induction V0; cbn; try easy.
-  - rewrite IHt; easy.
-  - rewrite IHt; easy.
-  - rewrite IHt1, IHt2; try apply heq_intro; easy.
-  - rewrite IHt1, IHt2; try apply heq_intro; easy.
-Qed.
-Hint Rewrite always_Vclosedk_open : rw_names. *)
-
-Check Vclosed_ind.
-
 Definition term_ind
              (P : @exp 0 -> Prop)
              (IDD : forall (v : atom), P (eId v))
@@ -390,9 +376,6 @@ Definition term_ind
        (fun v _ V => RFL v V)
        (fun e1 e2 _ E1 _ E2 => EQV e1 e2 E1 E2)
        tm (always_Vclosedk tm).
-
-Check Vclosed_ind.
-
 
 (*
 ============================================================
@@ -464,22 +447,6 @@ with isVal {V}: exp -> Prop :=
   isVal (eEqv v1 v2)
 .
 Hint Constructors isConf isVal isComp.
-Check isComp.
-
-(* Fixpoint isBlahk {V : nat} (p: exp -> Prop) : @exp V -> Prop :=
-  match V with
-  | 0 => fun t => p t
-  | S V => fun t => forall n, isBlahk p (open n t)
-  end.
-
-Definition isConfk {V}:= @isBlahk V isConf.
-Definition isCompk {V}:= @isBlahk V isComp.
-Definition isValk {V}:= @isBlahk V isVal. *)
-
-(* Definition Conf:= {e: exp | isConf e}.
-Definition Comp:= {e: exp | isComp e}.
-Definition Val:= {e: exp | isVal e}. *)
-
 
 Scheme val_conf_mut := Induction for isVal Sort Prop
 with conf_comp_mut := Induction for isConf Sort Prop
@@ -487,29 +454,7 @@ with comp_val_mut := Induction for isComp Sort Prop.
 
 Combined Scheme val_conf_comp_comb from val_conf_mut, conf_comp_mut, comp_val_mut.
 
-Check val_conf_comp_comb.
-
-Lemma renamings_rename (r: ren) (t: total r): 
-forall  {V} x, exists y, ([r] @eId V x) = eId y.
-Proof.
-induction r.
-+ names. eauto.
-+ names. names in IHr1. names in IHr2. intros. destruct IHr2 with (x:= x). apply t.
-rewrite H. names. destruct IHr1 with V x0. apply t. eauto.
-+ intros. names. destruct IHr with V x. apply t. names in H. rewrite H. names. eauto.
-+ intros. names. destruct IHr with (S V) (closev a x). apply t. names in H. rewrite H. names. eauto.
-+ contradiction.
-Qed.
-
-Lemma renaming_ids_pANF: forall {V} (r: ren) (t: total r) x, @isVal V ([r] (eId x)).
-Proof.
-intros. cbn in *. destruct renamings_rename with r V x. auto. cbn in *. rewrite H. apply Id.
-Qed.
-
-Hint Resolve renamings_rename.
-Hint Resolve renaming_ids_pANF.
-
-(*structure equivalent*)
+(*"Structure equivalent" same tree of constructors*)
 Inductive squiv {V V1} : @exp V -> @exp V1 -> Prop:=
   | squivId (x: atom) (y: atom):
     squiv (eId x) (eId y)
@@ -567,6 +512,43 @@ Inductive squiv {V V1} : @exp V -> @exp V1 -> Prop:=
 .
 Hint Constructors squiv.
 
+Fixpoint propOpen (p: @term 0 -> Prop) (V : nat): @term V -> Prop :=
+  match V with
+  | 0 => fun t => (p t)
+  | S V => fun t => forall n, propOpen p V (open n t)
+  end.
+Definition isConfk:= propOpen (@isConf 0).
+Definition isCompk:= propOpen (@isComp 0).
+Definition isValk:= propOpen (@isVal 0).
+
+
+(*
+================================
+========== Naming lemmas ===============
+================================
+*)
+
+Lemma renamings_rename (r: ren) (t: total r): 
+forall  {V} x, exists y, ([r] @eId V x) = eId y.
+Proof.
+induction r.
++ names. eauto.
++ names. names in IHr1. names in IHr2. intros. destruct IHr2 with (x:= x). apply t.
+rewrite H. names. destruct IHr1 with V x0. apply t. eauto.
++ intros. names. destruct IHr with V x. apply t. names in H. rewrite H. names. eauto.
++ intros. names. destruct IHr with (S V) (closev a x). apply t. names in H. rewrite H. names. eauto.
++ contradiction.
+Qed.
+
+Lemma renaming_ids_pANF: forall {V} (r: ren) (t: total r) x, @isVal V ([r] (eId x)).
+Proof.
+intros. cbn in *. destruct renamings_rename with r V x. auto. cbn in *. rewrite H. apply Id.
+Qed.
+
+Hint Resolve renamings_rename.
+Hint Resolve renaming_ids_pANF.
+
+
 Lemma squiv_sym {V V1} (e: @exp V) (e': @exp V1):
 squiv e e' -> squiv e' e.
 Proof.
@@ -587,63 +569,42 @@ all: try  (cbn; auto; fail).
   - auto.
 Qed.
 
-Lemma open_preserves_structure {V}:
-forall (x: name), structure_preserving (@open x V).
+Lemma name_operations_preserve_structure {V}:
+(forall (x: name), structure_preserving (@open x V)) /\
+(forall (x: name), structure_preserving (@close x V)) /\
+(structure_preserving (@wk V)).
 Proof.
 intros.
-unfold structure_preserving. intros. inductT e; try (constructor; fail).
+unfold structure_preserving. repeat split. all: intros; inductT e; try (constructor; fail).
 all: try (constructor;
   (try (apply IHe1; simpl_term_eq; auto; fail));
   (try (apply IHe2; simpl_term_eq; auto); fail); fail).
 all: try (constructor; apply IHe; simpl_term_eq; auto; fail).
-+ constructor.
-  - apply IHe1; simpl_term_eq; auto.
-  - apply IHe2; simpl_term_eq; auto.
-  - apply IHe3; simpl_term_eq; auto.
-+ constructor.
-  - apply IHe1; simpl_term_eq; auto.
-  - apply IHe2; simpl_term_eq; auto.
-  - apply IHe3; simpl_term_eq; auto.
+all: constructor.
+1,4,7,10,13,16: apply IHe1 ; simpl_term_eq; auto.
+1,3,5,7,9,11: apply IHe2 ; simpl_term_eq; auto.
+all: apply IHe3; simpl_term_eq; auto.
+Qed.
+Hint Resolve name_operations_preserve_structure.
+
+Lemma open_preserves_structure {V}:
+forall (x: name), structure_preserving (@open x V).
+Proof.
+apply name_operations_preserve_structure.
 Qed.
 Hint Resolve open_preserves_structure.
 
 Lemma close_preserves_structure {V}:
 forall (x: name), structure_preserving (@close x V).
-Proof.
-intros.
-unfold structure_preserving. intros. inductT e; try (constructor; fail).
-all: try (constructor;
-  (try (apply IHe1; simpl_term_eq; auto; fail));
-  (try (apply IHe2; simpl_term_eq; auto); fail); fail).
-all: try (constructor; apply IHe; simpl_term_eq; auto; fail).
-+ constructor.
-  - apply IHe1; simpl_term_eq; auto.
-  - apply IHe2; simpl_term_eq; auto.
-  - apply IHe3; simpl_term_eq; auto.
-+ constructor.
-  - apply IHe1; simpl_term_eq; auto.
-  - apply IHe2; simpl_term_eq; auto.
-  - apply IHe3; simpl_term_eq; auto.
+Proof. 
+apply name_operations_preserve_structure.
 Qed.
 Hint Resolve close_preserves_structure.
 
 Lemma wk_preserves_structure {V}:
 structure_preserving (@wk V).
 Proof.
-intros.
-unfold structure_preserving. intros. inductT e; try (constructor; fail).
-all: try (constructor;
-  (try (apply IHe1; simpl_term_eq; auto; fail));
-  (try (apply IHe2; simpl_term_eq; auto); fail); fail).
-all: try (constructor; apply IHe; simpl_term_eq; auto; fail).
-+ constructor.
-  - apply IHe1; simpl_term_eq; auto.
-  - apply IHe2; simpl_term_eq; auto.
-  - apply IHe3; simpl_term_eq; auto.
-+ constructor.
-  - apply IHe1; simpl_term_eq; auto.
-  - apply IHe2; simpl_term_eq; auto.
-  - apply IHe3; simpl_term_eq; auto.
+apply name_operations_preserve_structure.
 Qed.
 Hint Resolve close_preserves_structure.
 
@@ -779,8 +740,6 @@ Lemma unopen_conf {V} {x: name} {e: @exp (S V)}: isConf (open x e) -> (@isConf (
 Proof. apply open_ANF_iff with (x:=x). Qed.
 Hint Resolve unopen_conf.
 
-
-
 Lemma close_ANF_iff:
 forall (x: name),
 forall {V},
@@ -814,23 +773,7 @@ Proof.
 rewrite <- rw_group_shift. intros. auto.
 Qed.
 
-Fixpoint propOpen (p: @term 0 -> Prop) (V : nat): @term V -> Prop :=
-  match V with
-  | 0 => fun t => (p t)
-  | S V => fun t => forall n, propOpen p V (open n t)
-  end.
-Definition isConfk:= propOpen (@isConf 0).
-Definition isCompk:= propOpen (@isComp 0).
-Definition isValk:= propOpen (@isVal 0).
-Check Vclosedk.
-Check isConfk.
-
-Print val_conf_comp_comb.
-
-Check nat_ind.
-Print nat_ind.
-Print val_conf_comp_comb.
-Print val_conf_mut.
+(* Induction principle on ANF judgment *)
 
 Section ANF_val_conf_comp_comb.
 

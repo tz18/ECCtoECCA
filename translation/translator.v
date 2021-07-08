@@ -1,6 +1,6 @@
 Require Import Atom.
 Require Import ECC.
-Require Import ECCA.core ECCA.core_lemmas ECCA.typing ECCA.continuations ECCA.continuations_lemmas.
+Require Import ECCA.core ECCA.typing ECCA.continuations ECCA.continuations_lemmas.
 Require Import Lia Omega.
 Require Import String.
 From Equations Require Import Equations.
@@ -8,6 +8,8 @@ From Equations Require Import Equations.
 Notation "! k" := (free k) (at level 10, format "! k").
 Open Scope term_scope.
 Open Scope string.
+
+(* The translation from the paper! *)
 Equations translate (e: @ECC.exp 0) (K: cont): (@ECCA.core.exp 0) by wf (@ECC.size 0 e) :=
 translate (ECC.Id x) K := (fill_hole (eId x) K) ;
 translate (ECC.Pi A B) K := (fill_hole (ePi (translate A Hole) (close "k" (translate (ECC.ECCRen.open "k" B) Hole))) K);
@@ -58,6 +60,9 @@ Next Obligation. cbn; lia. Defined.
 Next Obligation. cbn; lia. Defined.
 Next Obligation. cbn; lia. Defined.
 Next Obligation. cbn; lia. Defined.
+
+
+(* Proof that this translation generates ANF terms! *)
 
 Lemma translate_makes_ANF (e: @ECC.exp 0) (K: cont):
 cont_is_ANF K -> isConf (translate e K).

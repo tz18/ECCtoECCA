@@ -1,12 +1,10 @@
 Require Export equiv.
-Require Export core_lemmas.
 (*
 ================================
 =======--Type System--==========
 ================================
 *)
 
-(* TODO: Add notation for subtypes. *)
 Reserved Notation "g '⊢' A '≲' B"  (at level 250, A at level 99). (*⊢ : \vdash , ≲ : \less *) 
 Inductive SubTypes: env -> exp -> exp -> Prop :=
   | ST_Cong : forall (g : env) (A B : exp), 

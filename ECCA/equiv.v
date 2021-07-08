@@ -77,6 +77,5 @@ Inductive Equiv : env -> exp -> exp -> Prop :=
   | aE_If2 : forall (g : env) (V M : exp), 
       (g ⊢ eIf V M M ≡ M)
 where "g '⊢' A '≡' B"  := (Equiv g A B): ECCA_scope.
-(*TODO: rewrite with notation for legibility*)
 Bind Scope ECCA_scope with Equiv.
 Hint Constructors Equiv.

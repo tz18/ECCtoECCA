@@ -44,7 +44,7 @@ HASNATDYNLINK     := $(COQMF_HASNATDYNLINK)
 OCAMLWARN         := $(COQMF_WARN)
 
 Makefile.conf: _CoqProject
-	C:\OCaml64\home\rrakow\.opam\4.12.0+mingw64\bin\coq_makefile.exe -o Makefile -f _CoqProject
+	C:\OCaml64\home\rrakow\.opam\4.12.0+mingw64\bin\coq_makefile.exe -f _CoqProject -o Makefile
 
 # This file can be created by the user to hook into double colon rules or
 # add any other Makefile code he may need
