@@ -1,4 +1,4 @@
-Require Export typing.
+(* Require Export typing.
 Require Export equiv.
 Require Export continuations.
 Require Export continuations_lemmas.
@@ -202,4 +202,4 @@ Types (append g g') (het_compose_r K M) B.
 Admitted.
 
  
- *)
+ *) *)

@@ -1060,4 +1060,5 @@ Fixpoint append (g g': env) :=
 match g with
 | ctx_empty => g'
 | g'' & x ~ A => ((append g'' g') & x ~ A)
+| ctx_dummy g'' x => ctx_dummy (append g'' g') x
 end.
