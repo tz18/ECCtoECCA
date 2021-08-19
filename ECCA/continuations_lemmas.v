@@ -103,7 +103,7 @@ Proof. intros. apply aE_Trans with (M' := (eIf v (bind M1 B) (bind M2 B))).
   - auto.
  + apply aE_Trans with (M' := (eIf v (bind (eIf v M1 M2) B) (bind (eIf v M1 M2) B))).
   - apply aE_If with (p:="eqIf"); auto.
-    * apply aE_Subst. apply aE_Symm. apply aE_If_EtaTru with (p:=free "eqIf"). auto with contexts.
+    * apply aE_Subst. apply aE_Symm. apply aE_If_EtaTru with (p:=free "eqIf"). unfold assumes. left. names. auto with contexts.
     * apply aE_Subst. apply aE_Symm. apply aE_If_EtaFls with (p:=free "eqIf"). auto with contexts.
   - apply aE_Trans with (M' := bind (eIf v M1 M2) B).
     * apply aE_If2.

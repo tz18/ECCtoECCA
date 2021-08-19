@@ -108,12 +108,39 @@ Import ECCRen.
 
 (* -=ECC Environments=- *)
 
-Inductive ctxmem:=
+Inductive ctxmem :=
 | Assum (A: @exp 0)
-| Def (e: @exp 0) (A: @exp 0)
-.
+| Def (e: @exp 0) (A: @exp 0).
 
-Definition env:= @context (@ctxmem).
+Module envParams <: ContextParams.
+  Definition A:= ctxmem.
+
+  Definition trm:= @exp 0.
+  Definition apply r (t: A) :=
+  match t with
+  | Assum A => Assum ([r] A)
+  | Def e A => Def ([r] e) ([r] A)
+  end.
+  
+  Lemma shift_commutes_total: 
+  forall r (rn: total r) x (b: A), 
+  apply (r,, ^ x)%ren b = apply (^ x)%ren (apply r b).
+  Proof. intros; destruct b; cbn; names; auto. Qed.
+
+  Lemma rw_rename_shift_total:
+  forall r (rn: total r) x y (c: A), 
+  apply (r,, ^ y)%ren c = apply (r,, y <- x)%ren (apply (^ x)%ren c).
+  Proof. intros; destruct c; cbn; names; auto. Qed.
+
+  Lemma id_id:
+  forall a, apply r_id a = a.
+  Proof. intros; destruct a; cbn; names; auto. Qed.
+
+End envParams.
+
+Module env := Context(envParams).
+Import envParams. Import env.
+Definition env:= context.
 
 Definition assumes (g: env) (x: atom) (A: exp) :=
 (has g x (Assum A)) \/ (exists (e: exp), (has g x (Def e A))).
