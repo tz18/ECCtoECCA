@@ -32,7 +32,7 @@ Bind Scope ECCA_scope with Steps.
 (* Congruence Conversion Rules*)
 Reserved Notation "g '⊢' e1 '⊳*' e2" (at level 250, e1 at level 99). (* ⊢ : \vdash , ⊳ : \RightTriangle *) 
 Inductive Reduces : env -> exp -> exp -> Prop :=
-  | R_RedR (g: env) (e e': exp): (* maybe don't need this one? it follows from refl + trans*)
+  | R_RedR (g: env) (e e': exp):
       (Steps g e e') ->
       (g ⊢ e ⊳* e')
   | R_Reflex (g: env) (e: exp):

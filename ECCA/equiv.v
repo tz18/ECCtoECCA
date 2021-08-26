@@ -26,16 +26,11 @@ Inductive Equiv : env -> exp -> exp -> Prop :=
       (g ⊢ A ≡ A') ->
       (g & x ~ Assum A ⊢ open x M ≡ open x M') ->
       (g ⊢ eAbs A M ≡ eAbs A' M')
-  | aE_Eta1 : forall (g : env) (A M M1 M2 M' : exp) (x : name),
-      (g ⊢ M1 ≡ eAbs A M) ->
-      (g ⊢ M2 ≡ M') ->
-      (g & x ~ Assum A ⊢ open x M ≡ eApp M' (eId (free x))) -> 
-      (g ⊢ M1 ≡ M2)
-  | aE_Eta2 : forall (g : env) (A M M1 M2 M' : exp) (x : name),
-      (g ⊢ M1 ≡ M') ->
-      (g ⊢ M2 ≡ eAbs A M) ->
-      (g & x ~ Assum A ⊢ open x M ≡ eApp M' (eId (free x))) -> 
-      (g ⊢ M1 ≡ M2)
+  | aE_Eta (g : env) (A F' F G G' : exp) (x : name): (* I think this is wrong *)
+      (g ⊢ F ≡ eAbs A F') ->
+      (g ⊢ G ≡ G') ->
+      (g & x ~ Assum A ⊢ open x F' ≡ eApp ([^x] G') (eId (free x))) -> 
+      (g ⊢ F ≡ G)
   | aE_App : forall (g : env) (V1 V1' V2 V2' : exp),
       (g ⊢ V1 ≡ V1') -> 
       (g ⊢ V2 ≡ V2') -> 
@@ -65,8 +60,8 @@ Inductive Equiv : env -> exp -> exp -> Prop :=
       (g ⊢ eLet N M ≡ eLet N' M')
   | aE_If : forall (g : env) (V V' M1 M1' M2 M2' : exp) (p : name),
       (g ⊢ V ≡ V') ->
-      (g & p ~ Assum (eEqv V eTru) ⊢ M1 ≡ M1') ->
-      (g & p ~ Assum (eEqv V eFls) ⊢ M2 ≡ M2') -> 
+      (g & p ~ Assum (eEqv V eTru) ⊢ [^p] M1 ≡ [^p] M1') ->
+      (g & p ~ Assum (eEqv V eFls) ⊢ [^p] M2 ≡ [^p] M2') -> 
       (g ⊢ eIf V M1 M2 ≡ eIf V' M1' M2')
   | aE_If_EtaTru : forall (g : env) (V M1 M2 : exp) (p : var),
       assumes g p (eEqv V eTru) -> 

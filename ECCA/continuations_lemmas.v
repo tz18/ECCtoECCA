@@ -103,8 +103,8 @@ Proof. intros. apply aE_Trans with (M' := (eIf v (bind M1 B) (bind M2 B))).
   - auto.
  + apply aE_Trans with (M' := (eIf v (bind (eIf v M1 M2) B) (bind (eIf v M1 M2) B))).
   - apply aE_If with (p:="eqIf"); auto.
-    * apply aE_Subst. apply aE_Symm. apply aE_If_EtaTru with (p:=free "eqIf"). unfold assumes. left. names. auto with contexts.
-    * apply aE_Subst. apply aE_Symm. apply aE_If_EtaFls with (p:=free "eqIf"). auto with contexts.
+    * names. apply aE_Subst. apply aE_Symm. apply aE_If_EtaTru with (p:=free "eqIf"). unfold assumes. left. names. auto with contexts.
+    * names. apply aE_Subst. apply aE_Symm. apply aE_If_EtaFls with (p:=free "eqIf"). auto with contexts.
   - apply aE_Trans with (M' := bind (eIf v M1 M2) B).
     * apply aE_If2.
     * eauto.
@@ -114,8 +114,8 @@ Qed.
 Lemma IH_naturality_if (g: env) (K : cont) (iK: cont_is_ANF K) 
 (v: exp) (iV: isVal v) (m1 m2 : exp) (iM1: isConf m1) (iM2: isConf m2)
 (y: name):
-  (Equiv (g & y ~ Assum (eEqv v eTru)) (het_compose K m1) (fill_hole m1 K)) ->
-  (Equiv (g & y ~ Assum (eEqv v eFls)) (het_compose K m2) (fill_hole m2 K)) -> 
+  (Equiv (g & y ~ Assum (eEqv v eTru)) ([^y] (het_compose K m1)) ([^y] (fill_hole m1 K))) ->
+  (Equiv (g & y ~ Assum (eEqv v eFls)) ([^y] (het_compose K m2)) ([^y] (fill_hole m2 K))) -> 
   (Equiv g (eIf v (het_compose K m1) (het_compose K m2)) (eIf v (fill_hole m1 K) (fill_hole m2 K))).
 Proof.
 intros. eapply aE_If; auto.
@@ -162,7 +162,9 @@ Proof.
      - inversion H0. inversion H1.
   + intros; inversion iM; subst. destruct K.
     - rewrite het_compose_hole. auto.
-    - rewrite het_compose_equation. cbn. rewrite IH_naturality_if with (y:="y"); auto. cbn. apply let_over_branches; auto.
+    - rewrite het_compose_equation. cbn. rewrite IH_naturality_if with (y:="y"); auto.
+      * cbn. apply let_over_branches. auto.
+      * clear IHM3. clear IHM1. names.
     - inversion H. inversion H0.
 Qed.
 Hint Resolve naturality.
