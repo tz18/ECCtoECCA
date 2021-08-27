@@ -164,7 +164,8 @@ Proof.
     - rewrite het_compose_hole. auto.
     - rewrite het_compose_equation. cbn. rewrite IH_naturality_if with (y:="y"); auto.
       * cbn. apply let_over_branches. auto.
-      * clear IHM3. clear IHM1. names.
+      * apply Equiv_cons_shift. apply IHM2; auto.
+      * apply Equiv_cons_shift. apply IHM3; auto.
     - inversion H. inversion H0.
 Qed.
 Hint Resolve naturality.

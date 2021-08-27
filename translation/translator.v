@@ -8,8 +8,6 @@ From Equations Require Import Equations.
 Notation "! k" := (free k) (at level 10, format "! k").
 Open Scope term_scope.
 Open Scope string.
-
-(* The translation from the paper! *)
 Equations translate (e: @ECC.exp 0) (K: cont): (@ECCA.core.exp 0) by wf (@ECC.size 0 e) :=
 translate (ECC.Id x) K := (fill_hole (eId x) K) ;
 translate (ECC.Pi A B) K := (fill_hole (ePi (translate A Hole) (close "k" (translate (ECC.ECCRen.open "k" B) Hole))) K);
@@ -61,9 +59,6 @@ Next Obligation. cbn; lia. Defined.
 Next Obligation. cbn; lia. Defined.
 Next Obligation. cbn; lia. Defined.
 
-
-(* Proof that this translation generates ANF terms! *)
-
 Lemma translate_makes_ANF (e: @ECC.exp 0) (K: cont):
 cont_is_ANF K -> isConf (translate e K).
 Proof.
@@ -95,9 +90,9 @@ Compute translate ex2 Hole.
 (*  *)
 Fixpoint translateEnv (g: ECC.env):=
 match g with
-| ctx_empty => ctx_empty
-| ctx_cons g x (ECC.Assum A)  => ctx_cons (translateEnv g) x (ECCA.core.Assum (translate A ([⋅])))
-| ctx_cons g x (ECC.Def v A) => ctx_cons (translateEnv g) x (ECCA.core.Def (translate v ([⋅])) (translate A ([⋅])))
+| ECC.env.ctx_empty => ctx_empty
+| ECC.env.ctx_cons g x (ECC.Assum A)  => ctx_cons (translateEnv g) x (ECCA.core.Assum (translate A ([⋅])))
+| ECC.env.ctx_cons g x (ECC.Def v A) => ctx_cons (translateEnv g) x (ECCA.core.Def (translate v ([⋅])) (translate A ([⋅])))
 end.
 
 Notation "'[[' e ']]'" := (translate e Hole) (at level 60).
