@@ -1,16 +1,80 @@
 Require Export typing.
+Require Import equiv_lemmas.
 
 Open Scope ECCA_scope.
 
 (* Broken until we fix/extend shifted names *)
 
-(* Theorem weakening {Γ e A}:
-  (Γ ⊢ e : A) ->
+Theorem SubTypes_weakening Γ A B (pT: (Γ ⊢ A ≲ B)):
   forall r Δ,
     Γ =[r]=> Δ ->
-    (Δ ⊢ ([r] e) : A).
+    (Δ ⊢ ([r] A) ≲ [r] B).
 Proof.
-Admitted.
+induction pT; names; eauto; intros.
++ apply ST_Cong. apply Equiv_weakening with (Δ:=Δ) (r:=r) in H; auto.
++ apply ST_Pi with (x:=x). apply Equiv_weakening with (Δ:=Δ) (r:=r) in H; auto.
+  names. specialize IHpT with (r:=(r,,x)%ren). apply IHpT. apply ctx_rename. auto.
++ apply ST_Sig with (x:=x); auto.
+  names. specialize IHpT2 with (r:=(r,,x)%ren). apply IHpT2. apply ctx_rename. auto.
+Qed.
+
+Definition Type_weakening Γ e A (pT: (Γ ⊢ e : A)):=
+  forall r Δ,
+    Γ =[r]=> Δ ->
+    (Δ ⊢ ([r] e) : [r] A).
+
+Definition WellFormed_weakening Γ (pWF: (⊢ Γ)):=
+  forall r Δ,
+    Γ =[r]=> Δ ->
+    (⊢ Δ).
+
+Theorem weakening {Γ e A pT pWF}:
+Type_weakening Γ e A pT /\ WellFormed_weakening Γ pWF.
+Proof.
+induction Types_WellFormed_mutind with (P:=Type_weakening) (P0:=WellFormed_weakening). auto.
+all: try (intros; constructor; eauto; fail); unfold Type_weakening.
++ intros. names. destruct H0 eqn:H3. 
+  rewrite applyt_is_applyv with (rn:=total). names. apply aT_Var.
+   - eauto.
+   - unfold assumes. destruct a. 
+      * apply f in H1. left. names in H1. apply H1.
+      * destruct H1. apply f in H1. right. eauto.
++ intros. names. apply aT_Sig with (x:=x). eauto.
+  names. apply H0 with (Δ:= (Δ & x ~ Assum ([r] A0))) (r:= (r,, x)%ren).
+  apply ctx_rename. auto.
++  intros. names. apply aT_Pair.
+  - auto.
+  - specialize H0 with (r:=r) (Δ:=Δ). names in H0. apply H0. eauto.
++  intros. names. eapply aT_Prod_Prop with (x:=x). eauto.
+  names. apply H0 with (Δ:= (Δ & x ~ Assum ([r] A0))) (r:= (r,, x)%ren).
+  apply ctx_rename. auto.
++  intros. names. eapply aT_Prod_Type with (x:=x). eauto.
+  names. apply H0 with (Δ:= (Δ & x ~ Assum ([r] A0))) (r:= (r,, x)%ren).
+  apply ctx_rename. auto.
++  intros. names. eapply aT_Lam with (x:=x). eauto.
+  names. apply H with (Δ:= (Δ & x ~ Assum ([r] A0))) (r:= (r,, x)%ren).
+  apply ctx_rename. auto.
++  intros. names. eapply aT_Let with (x:=x). eauto.
+  names. apply H0 with (Δ:= (Δ & x ~ Def ([r] n) ([r] A0))) (r:= (r,, x)%ren).
+  apply ctx_rename. auto.
++  intros. names. eapply aT_If with (x:=x). 
+  - names. apply H with (Δ:= (Δ & x ~ Assum eBool)) (r:= (r,, x)%ren).
+    apply ctx_rename. auto.
+  - eauto.
+  - names. specialize H1 with (Δ:= (Δ & p ~ Assum (eEqv ([r] e0) eTru))) (r:= (r,, p)%ren). names in H1. apply H1.
+    apply ctx_rename. auto.
+  - names. specialize H2 with (Δ:= (Δ & p ~ Assum (eEqv ([r] e0) eFls))) (r:= (r,, p)%ren). names in H2. apply H2.
+    apply ctx_rename. auto.
++  intros. apply aT_Conv with (A:=[r]A0)(U:=[r]U); eauto.
+  apply SubTypes_weakening with g; auto.
++  intros. names. apply aT_App with ([r]A').
+  - apply H. auto.
+  - apply H0. auto.
++ intros. names. apply aT_Fst with ([r]B). apply H. auto.
++ intros. names. apply aT_Snd with ([r]A0). apply H. auto.
++ intros. names. apply aT_Refl with ([r]A0). auto.
++ unfold WellFormed_weakening. intros.  
+
 
 Lemma weakening1 (g: env) (A U B: exp) (x: name):
 (g ⊢ A : U) ->

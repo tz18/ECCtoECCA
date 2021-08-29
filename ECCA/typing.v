@@ -78,15 +78,15 @@ Inductive Types: env -> exp -> exp -> Prop :=
 | aT_If (g: env) (B U e1 e2: exp) (e: exp) (x p: name):
   ((g & x ~ Assum eBool) ⊢ (open x B): U) -> 
   (g ⊢ e : eBool) ->
-  ((g & p ~ (Assum (eEqv e eTru))) ⊢ e1 : (bind eTru B)) ->
-  ((g & p ~ (Assum (eEqv e eFls))) ⊢ e2 : (bind eFls B)) -> 
+  ((g & p ~ (Assum (eEqv e eTru))) ⊢ [^p] e1 : (bind eTru ([^p] B))) ->
+  ((g & p ~ (Assum (eEqv e eFls))) ⊢ [^p] e2 : (bind eFls ([^p] B))) -> 
   (g ⊢ (eIf e e1 e2) : (bind e B)) 
 | aT_Conv (g: env) (e A B U: exp) :
   (g ⊢ e : A) ->
   (g ⊢ B : U) ->
   (SubTypes g A B) ->
   (g ⊢ e : B)
-| aT_App (g: env) (x: name) (e e': exp) (A' B: exp) :
+| aT_App (g: env) (e e': exp) (A' B: exp) :
   (g ⊢ e : (ePi A' B)) ->
   (g ⊢ e' : A') ->
   (g ⊢ (eApp e e') : (bind e B))
