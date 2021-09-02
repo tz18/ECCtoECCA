@@ -18,7 +18,8 @@ Inductive SubTypes: env -> exp -> exp -> Prop :=
     (g ⊢ ePi A1 B1 ≲ ePi A2 B2)
   | ST_Trans : forall (g : env) (A A' B : exp),
     (g ⊢ A ≲ A') -> 
-    (g ⊢ A' ≲ B) -> (g ⊢ A ≲ B)
+    (g ⊢ A' ≲ B) -> 
+    (g ⊢ A ≲ B)
   | ST_Prop : forall g : env, 
     (g ⊢ eUni uProp ≲ eUni (uType 0))
   | ST_Sig : forall (g : env) (A1 A2 B1 B2 : exp) (x : name),
@@ -59,6 +60,7 @@ Inductive Types: env -> exp -> exp -> Prop :=
 | aT_Pair (g: env) (v1 v2: exp) (A B: exp) :
   (g ⊢ v1 : A) ->
   (g ⊢ v2 : (bind v1 B)) ->
+(*   (g ⊢ (eSig A B) : U) -> *)
   (g ⊢ (ePair v1 v2 (eSig A B)) : (eSig A B))
 | aT_Prod_Prop (g: env) (x: name) (A B: exp) (i: nat):
   (g ⊢ A : (eUni (uType i))) ->
@@ -68,10 +70,12 @@ Inductive Types: env -> exp -> exp -> Prop :=
   (g ⊢ A : (eUni (uType i))) ->
   (Types (g & x ~ Assum A) (open x B) (eUni (uType i))) ->
   (g ⊢ (ePi A B) : (eUni (uType i)))
-| aT_Lam (g: env) (x: name) (A e B: exp) :
+| aT_Lam (g: env) (x: name) (A e B U: exp) :
+  (g ⊢ A: U) ->
   (Types (g & x ~ Assum A) (open x e) (open x B)) ->
   (g ⊢ (eAbs A e) : (ePi A B))
-| aT_Let (g: env) (n m A B: exp) (x: name):
+| aT_Let (g: env) (n m A B U: exp) (x: name):
+  (g ⊢ A: U) ->
   (g ⊢ n : A) ->
   (Types (g & x ~ Def n A) (open x m) (open x B)) ->
   (g ⊢ (eLet n m) : (bind n B))
@@ -99,9 +103,10 @@ Inductive Types: env -> exp -> exp -> Prop :=
 | aT_Refl (g: env) (e: exp) (A: exp):
   (g ⊢ e: A) ->
   (g ⊢ (eRefl e): (eEqv e e)) 
-| aT_Equiv (g: env) (A A': exp) (i: nat):
-  (g ⊢ A: (eUni (uType i))) ->
-  (g ⊢ A': (eUni (uType i))) ->
+| aT_Equiv (g: env) (A A' B: exp) (i: nat):
+  (g ⊢ A: B) ->
+  (g ⊢ A': B) ->
+  (g ⊢ B : (eUni (uType i))) ->
   (g ⊢ (eEqv A A'): (eUni (uType i)))
 where "g '⊢' a ':' b" := (Types g a b) : ECCA_scope
 with (* ECCA Well-Formed Environments *)
