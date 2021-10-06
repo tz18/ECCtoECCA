@@ -113,22 +113,22 @@ Inductive ctxmem :=
 | Def (e: @exp 0) (A: @exp 0).
 
 Module envParams <: ContextParams.
-  Definition A:= ctxmem.
+  Definition member:= ctxmem.
 
   Definition trm:= @exp 0.
-  Definition apply r (t: A) :=
+  Definition apply r (t: member) :=
   match t with
   | Assum A => Assum ([r] A)
   | Def e A => Def ([r] e) ([r] A)
   end.
   
   Lemma shift_commutes_total: 
-  forall r (rn: total r) x (b: A), 
+  forall r (rn: total r) x (b: member), 
   apply (r,, ^ x)%ren b = apply (^ x)%ren (apply r b).
   Proof. intros; destruct b; cbn; names; auto. Qed.
 
   Lemma rw_rename_shift_total:
-  forall r (rn: total r) x y (c: A), 
+  forall r (rn: total r) x y (c: member), 
   apply (r,, ^ y)%ren c = apply (r,, y <- x)%ren (apply (^ x)%ren c).
   Proof. intros; destruct c; cbn; names; auto. Qed.
 

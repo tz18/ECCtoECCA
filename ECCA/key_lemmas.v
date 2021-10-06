@@ -12,70 +12,138 @@ Proof.
 intros. inversion H ; subst ; cbv.
 - assumption. 
 - cut (@bind N 0 (@wk 0 B) = B); simpl_term_eq. 
-  intros. rewrite <- H1. eapply aT_Let with (n:= N) (m:= M) (A:=A) (B:=(wk B)) (x:=y) (g:=g); assumption.
+  intros. rewrite <- H1. apply Type_well_typed in H5. destruct H5. eapply aT_Let with (n:= N) (m:= M) (A:=A) (B:=(wk B)) (x:=y) (g:=g).
+  eauto. apply H0. auto.
 Qed.
 
-Lemma type_requires_well_formed (g: env) (e A: exp):
-(g ⊢ e : A) ->
-(⊢ g).
+Lemma eq_in_dev_1 g N N' A:
+(g ⊢ N : A) ->
+(g ⊢ N' : A) ->
+(g ⊢ N ≡ N') ->
+forall x x0 A0,
+assumes (g & x ~ Def N A) x0 A0 ->
+assumes (g & x ~ Def N' A) x0 A0.
 Proof.
-induction 1; auto.
-+ inversion IHTypes. auto.
-Qed.
+intros. inversion H2. 
+apply has_inversion in H3. apply get_inversion in H3.
+destruct H3 as [n [H4 [[g' [A' [H5]]] | [g' [y [A' [x' [B [H3 [H5 [H6]]]]]]]]]]].
++ subst. inversion H5. subst. auto with contexts.
++ subst. inversion H3. subst. destruct B. names in H7. inversion H7. subst.
+Admitted. 
+(* 
 
-
-(* Broken until we fix/extend shifted names *)
-
-
-(*
-Lemma weakening (g : env) (x : name) (N A A' : exp):
-  Types g N A ->
-  Types (ctx_cons g x (Assum A')) N A.
+Lemma equivalence_in_context_has_equivalent_def:
+forall g e A,
+Types g e A ->
+forall x x0 e1 A1,
+g & x ~ Def e A ∋ x0 ~ Def e1 A1 ->
+forall e',
+Types g e' A ->
+Equiv g e e' ->
+exists e2, Equiv g e1 e2 /\
+g & x ~ Def e' A ∋ x0 ~ Def e2 A1.
 Proof.
-Admitted.
+intros. apply has_inversion in H0. apply get_inversion in H0.
+destruct H0 as [n [H4 [[g' [A' [H5]]] | [g' [y [A' [x' [B [H3 [H5 [H6]]]]]]]]]]].
++ subst. inversion H5. subst. names in H0. inversion H0. subst. exists ([^n] e').
+  split. .
+(* *)*)
 
-Lemma def_weakening (g : env) (x : name) (N N' A A' : exp):
-  Types g N A ->
-  Types (ctx_cons g x (Def N' A')) N A.
-Admitted.
 
-Lemma append_env_weakening (g g': env) (N A : exp):
-  Types g N A ->
-  Types (append g g') N A.
+
+Lemma equivalence_in_derivation_steps:
+forall (e : exp) (g : env) (N A : exp),
+(g ⊢ N : A) ->
+forall (x : name) (e' : exp),
+(g & x ~ Def N A ⊢ e ⊳ e') ->
+forall N' : exp,
+(g ⊢ N' : A) ->
+(g ⊢ N ≡ N') ->
+exists e'' : exp,
+  (g & x ~ Def N' A ⊢ e' ≡ e'') /\
+  (g & x ~ Def N' A ⊢ e ⊳ e'').
 Proof.
-Admitted.
-
-Lemma append_env_equiv_weakening (g g': env) (e e' : exp):
-  Equiv g e e' ->
-  Equiv (append g g') e e'.
-Proof.
-Admitted. *)
-
-Require Import Coq.Program.Equality.
+intros. remember (g & x ~ Def N A) as g0. induction H0.
++ subst. esplit. Admitted.
 
 
-Lemma equivalence_in_derivation (g: env) (N N' M : exp) (A B : exp) (x : name):
+
+(* Lemma equivalence_in_derivation_reduces:
+forall e g N A,
 Types g N A ->
+forall x e',
+Reduces (ctx_cons g x (Def N A)) e e' ->
+forall N',
 Types g N' A ->
 Equiv g N N' ->
-Types (ctx_cons g x (Def N A)) M B ->
-Types (ctx_cons g x (Def N' A)) M B.
+Reduces (ctx_cons g x (Def N' A)) e e'.
 Proof.
-  intros. dependent induction H2.
-(*   - apply aT_Ax_Prop. apply has_type_wf_g with (x:=x) in H2. auto.
-    inversion H2. auto. 
-  - apply aT_Ax_Type. apply has_type_wf_g with (x:=x) in H0. auto.
-    inversion H2. auto.
-  - shelve.
-  - apply aT_Bool. apply has_type_wf_g with (x:=x) in H0. auto.
-    inversion H2. auto.
-  - apply aT_True. apply has_type_wf_g with (x:=x) in H0. auto.
-    inversion H2. auto.
-  - apply aT_False. apply has_type_wf_g with (x:=x) in H0. auto.
-    inversion H2. auto.
-  - apply aT_Sig with (x:=x0). apply IHTypes1 with (N0:=N); auto.
+intros. remember (g & x ~ Def N A0) as g0. induction H0.
++ subst. apply aE_Step with (e:=e). *)
+
+Lemma equivalence_in_derivation_equiv:
+forall (M : exp) (g : env) (N A : exp),
+(g ⊢ N : A) ->
+forall (x : name) (B : exp),
+(g & x ~ Def N A ⊢ M ≡ B) ->
+forall N' : exp,
+(g ⊢ N' : A) ->
+(g ⊢ N ≡ N') ->
+(g & x ~ Def N' A ⊢ M ≡ B).
+Proof.
+intros. remember (g & x ~ Def N A) as g0. induction H0.
++ subst. apply equivalence_in_derivation_steps with (N':=N') in H0.
+  destruct H0. destruct H0. apply aE_Trans with (M':=x0).
+  - apply aE_Step with (e:=e). apply H3.
+  - auto.
+  - auto.
+  - auto.
+  - auto.
+Admitted.
+ 
+Lemma equivalence_in_derivation_subtypes:
+forall M g N A,
+Types g N A ->
+forall x B,
+SubTypes (ctx_cons g x (Def N A)) M B ->
+forall N',
+Types g N' A ->
+Equiv g N N' ->
+SubTypes (ctx_cons g x (Def N' A)) M B.
+Proof. intros. remember (g & x ~ Def N A) as g0. induction H0.
++ subst. apply ST_Cong.
+Admitted.
+
+
+Lemma equivalence_in_derivation :
+forall M g N A,
+Types g N A ->
+forall x B,
+Types (ctx_cons g x (Def N A)) M B ->
+forall N',
+Types g N' A ->
+Equiv g N N' ->
+Types (ctx_cons g x (Def N' A)) M B.
+Proof. intros. remember (g & x ~ Def N A) as g0. induction H0; eauto; intros.
+  + apply aT_Ax_Prop. apply has_type_wf_g. auto. apply Types_only_if_wellformed with N A; auto.
+  + apply aT_Ax_Type. apply has_type_wf_g. auto. apply Types_only_if_wellformed with N A; auto.
+  + apply aT_Var. subst. inversion H0. subst. apply wf_Def with U; eauto. subst.
+    apply eq_in_dev_1 with N; eauto.
+  + apply aT_Bool. rewrite Heqg0 in H0. inversion H0. subst. apply wf_Def with U; eauto.
+  + apply aT_True. apply has_type_wf_g with (x:=x) in H; eauto.
+    inversion H; eauto.
+  + apply aT_False. apply has_type_wf_g with (x:=x) in H; eauto.
+    inversion H; eauto.
+  + apply aT_Sig with (x:=x0). apply IHTypes1; auto. subst. (* apply IHTypes2. rewrite Heqg0 in H2_. *)
     shelve.
-  - apply aT_Pair. apply IHTypes1 with (N0:=N); auto.
+  + shelve.
+  + shelve.
+  + shelve.
+  + shelve.
+  + shelve.
+  + subst. apply aT_Conv with (A:=A0) (U:=U). eauto. eauto. Admitted.
+
+(*   - apply aT_Pair. apply IHTypes1 with (N0:=N); auto.
     apply IHTypes2 with (N0:=N); auto.
   - apply aT_Prod_Prop with (x:=x0) (i:=i). apply IHTypes1 with (N0:=N); auto. shelve.
   - apply aT_Prod_Type with (x:=x0). apply IHTypes1 with (N0:=N); auto. shelve.
@@ -87,8 +155,8 @@ Proof.
   - eapply aT_App. auto. apply IHTypes1 with (N0:=N); auto.
     apply IHTypes2 with (N0:=N); auto.
   - eapply aT_Fst. apply IHTypes with (N0:=N); auto.
-  - eapply aT_Snd. apply IHTypes with (N0:=N); auto.   *)
-Admitted.
+  - eapply aT_Snd. apply IHTypes with (N0:=N); auto.   
+Admitted. *)
 
 Lemma Cut_modulo_equivalence (g: env) (K : cont) (N N': exp) (A B: exp):
 (Types_cont g K (Cont N A B) ->
@@ -100,7 +168,10 @@ Proof.
 intros. inversion H ; subst ; cbv.
 - assumption. 
 - cut (@bind N' 0 (@wk 0 B) = B); simpl_term_eq.
-  intros. rewrite <- H3. eapply aT_Let with (n:= N') (m:= M) (A:=A) (B:=(wk B)) (x:=y) (g:=g).
+  intros. rewrite <- H3. 
+  apply Type_well_typed in H0 as H10. destruct H10 as [U].
+  apply aT_Let with (n:= N') (m:= M) (A:=A) (B:=(wk B)) (x:=y) (g:=g) (U:=U).
+  *  eauto.
   * assumption.
   * apply equivalence_in_derivation with (N := N); assumption.
 Qed.
@@ -179,12 +250,14 @@ Qed.
 
 Set Printing Implicit.
 
-Lemma Hetereogeneous_Cut (g g': env) (K : cont_r) (M M': conf) (A B: exp):
-Types_cont (append g g') (unrestrict_cont K) (Cont M' A B) ->
+Lemma Hetereogeneous_Cut (g g': env) (K : cont) (pK: cont_is_ANF K) (M M': exp) (pM: isConf M) (pM': isConf M') (A A' B: exp):
+Types_cont (append g g') K (Cont M' A' B) ->
 Types g M A ->
-(@WellBound_conf 0 g M) ->
-Equiv g M M' ->
-Types (append g g') (het_compose_r K M) B.
+Types g M' A' ->
+Equiv (append g g') M M' ->
+Equiv (append g g') A A' ->
+Types (append g g') (het_compose K M) B.
+Proof.
   intros. induction H1.
   - erewrite het_compose_equal_fill_hole. apply Cut_modulo_equivalence with (A := A) (N:=M').
     assumption. inversion H. assumption. assumption. apply append_env_weakening with (g':=g') in H0.

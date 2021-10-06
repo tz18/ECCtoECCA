@@ -5,8 +5,8 @@
 -R translation translation
 shifted-names/src/Morph.v
 shifted-names/src/Var.v
-shifted-names/src/Context.v
 shifted-names/src/Relative.v
+shifted-names/src/Context.v
 common/Atom.v
 ECC/ECC.v
 ECCA/core.v

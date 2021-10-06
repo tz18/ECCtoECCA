@@ -84,6 +84,11 @@ Compute example.
 
 Definition ex2 := @ECC.App 0 example example2.
 
+Definition needs_join_point_optimization:=
+(@ECC.Let 0 (ECC.If (ECC.If (ECC.If ECC.Tru ECC.Tru ECC.Fls) ECC.Tru ECC.Fls) ECC.Tru ECC.Fls) (ECC.Id (free "LARGE"))).
+
+Compute needs_join_point_optimization.
+Compute translate needs_join_point_optimization Hole.
 Compute ex2.
 Compute translate ex2 Hole.
 

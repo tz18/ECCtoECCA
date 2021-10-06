@@ -4,3 +4,4 @@
 *.vos
 *.aux
 *.lia.cache
+*.crashcoqide

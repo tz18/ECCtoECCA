@@ -3,10 +3,9 @@ Require Export reduction.
 
 Reserved Notation "g '⊢' A '≡' B"  (at level 250, A at level 99). (*⊢ : \vdash , ≡ : \equiv *) 
 Inductive Equiv : env -> exp -> exp -> Prop :=
-  | aE_Step (g : env) (e e1 e2 : exp):
-      (g ⊢ e1 ⊳* e) -> 
-      (g ⊢ e2 ⊳* e) -> 
-      (g ⊢ e1 ≡ e2)
+  | aE_Step (g : env) (e e' : exp):
+      (g ⊢ e ⊳ e') ->  
+      (g ⊢ e ≡ e')
   | aE_Reflect : forall (g : env) (e1 e2 : exp) (x : var),
       assumes g x (eEqv e1 e2) -> 
       (g ⊢ e1 ≡ e2)

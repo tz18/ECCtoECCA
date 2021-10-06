@@ -6,7 +6,7 @@ Lemma Steps_cons_shift:
 forall (Γ : context) (e1 e2: exp) (A: ctxmem) (x: name),
 (Γ ⊢ e1 ⊳ e2) -> ((Γ & x ~ A) ⊢ ([^x] e1) ⊳ ([^x] e2)). 
 Proof. intros. induction H; cbn; auto.
-+ apply st_ID with (A:= [^x] A1). names. apply has_rest. exists (Def e' A1). names. auto.
++ apply st_ID with (A:= [^x] A0). names. apply has_rest. exists (Def e' A0). names. auto.
 + names. auto.
 + names. auto.
 Qed.
@@ -20,7 +20,7 @@ forall (Δ: context) (r: ren),
 Proof.
 induction 1; cbn; auto.
 + intros. destruct H0. apply H0 in H. names in H. rewrite applyt_is_applyv with (rn:=total). names. 
-  apply st_ID with (A:= [s] A0). auto.
+  apply st_ID with (A:= [s] A). auto.
 + intros. names. auto.
 + intros. names. auto.
 Qed.
@@ -36,13 +36,13 @@ forall (Δ: context) (r: ren),
 Proof. induction 1; cbn; auto.
 + intros. apply R_RedR. apply Steps_weakening with (Γ := g). auto. auto.
 + intros. apply R_Trans with (e':= [r] e'); auto.
-+ intros. apply R_CongLet with (A:= [r] A0) (x:= x). auto. names. apply IHReduces2.
++ intros. apply R_CongLet with (A:= [r] A) (x:= x). auto. names. apply IHReduces2.
   apply ctx_rename. auto.
-+ intros. apply R_CongLam1 with (A:= [r] A0) (x:= x). auto. names. apply IHReduces2.
++ intros. apply R_CongLam1 with (A:= [r] A) (x:= x). auto. names. apply IHReduces2.
   apply ctx_rename. auto.
-+ intros. apply R_CongPi with (A:= [r] A0) (x:= x). auto. names. apply IHReduces2.
++ intros. apply R_CongPi with (A:= [r] A) (x:= x). auto. names. apply IHReduces2.
   apply ctx_rename. auto.
-+ intros. apply R_CongSig with (A:= [r] A0) (x:= x). auto. names. apply IHReduces2.
++ intros. apply R_CongSig with (A:= [r] A) (x:= x). auto. names. apply IHReduces2.
   apply ctx_rename. auto.
 Qed.
 Hint Resolve Reduces_weakening.

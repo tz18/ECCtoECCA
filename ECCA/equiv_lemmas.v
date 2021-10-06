@@ -18,8 +18,8 @@ Proof. induction 1; cbn; auto.
 + intros. apply aE_Trans with (M':=[r]M'); auto.
 + intros. apply aE_Lam with (x:= x). auto. names. apply IHEquiv2.
   auto. apply ctx_rename. auto.
-+ intros. apply aE_Eta with (x:= x) (A:=[r] A0) (F':= [r] F') (F:=[r] F) (G:= [r] G) (G':=[r] G'). eauto using IHEquiv1. 
-  eauto using IHEquiv2. specialize IHEquiv3 with (Δ:= (Δ & x ~ Assum ([r] A0))) (r:= (r,, x)%ren).
++ intros. apply aE_Eta with (x:= x) (A:=[r] A) (F':= [r] F') (F:=[r] F) (G:= [r] G) (G':=[r] G'). eauto using IHEquiv1. 
+  eauto using IHEquiv2. specialize IHEquiv3 with (Δ:= (Δ & x ~ Assum ([r] A))) (r:= (r,, x)%ren).
   names in IHEquiv3. names. cut ((@open x 0 (applyv r (closev x (free x)))) = (eId (free x))). 
   - intro. rewrite H3 in IHEquiv3. apply IHEquiv3. apply ctx_rename. auto.
   - names. auto.
@@ -27,7 +27,7 @@ Proof. induction 1; cbn; auto.
   auto. apply ctx_rename. auto.
 + intros. apply aE_Sig with (x:= x). auto. names. apply IHEquiv2.
   auto. apply ctx_rename. auto.
-+ intros. apply aE_Let with (x:= x) (A:= [r] A0). auto. names. apply IHEquiv2.
++ intros. apply aE_Let with (x:= x) (A:= [r] A). auto. names. apply IHEquiv2.
   auto. apply ctx_rename. auto.
 + intros. apply aE_If with (p:=p). auto.
   - specialize IHEquiv2 with (Δ:= (Δ & p ~ Assum (eEqv ([r] V) eTru))) (r:=(r,, p)%ren). names. names in IHEquiv2. apply IHEquiv2.
