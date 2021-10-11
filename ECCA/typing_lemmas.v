@@ -433,7 +433,7 @@ Proof. intros. destruct b.
 + names in H. left. subst. auto.
 + names in H. left. subst. auto.  *)
 
-(* Lemma substitution_definition:
+(*Lemma substitution_definition:
 forall g v A B U, 
 (g ⊢ bind v B : eUni U) ->
 (g ⊢ v : A) ->
@@ -445,16 +445,60 @@ has g' (free x) (Def v A) ->
 Proof. intros. induction H.
 + subst.
  *)
+(* Lemma substitution_definition:
+forall (B: @exp 1) g v A U U' C, 
+(g ⊢ bind v B : C) ->
+(g ⊢ v : A) ->
+(g ⊢ A : eUni U') ->
+(g ⊢ C : eUni U) ->
+forall x, exists A', ((g & x ~ Def v A') ⊢ open x B: [^x] C).
+Proof. induction B using term_ind_V; intros.
++ names in H. destruct v.
+  ++ names in H. names.
+    cut ((@eId 0 (@free 0 (shift_name x name))) = ([^x] @eId 0 (@free 0 name))).
+    - intros. rewrite H3.
+      exists A. eapply cons_weakening_def. auto. eauto. auto.
+    - names. auto.
+  ++ destruct l.
+    - names. names in H. exists C. apply aT_Var. 
+      apply Types_only_if_wellformed in H0 as H3. 
+      eapply wf_Def. auto. apply H2. 
+      apply H.
+      unfold assumes. right. exists ([^x] v0).
+      apply ctx_has.
+    - names. names in H. exists A. 
+    cut (eId (bound s) = ([^x] eId (bound s))); auto.
+     * intros. simpl (0 + 0) in H2. rewrite H3.
+       eapply cons_weakening_def.
+       auto. apply H1. apply H0.
++ exists A. names. names in H. 
+  rewrite <- shift_uni_id with (x:=x).
+  apply cons_weakening_def with U'; auto.
++ names. names in H. 
+  cut ((@eTru 0) = ([^x] @eTru 0)); auto. intro. 
+  exists A. rewrite H3.
+  apply cons_weakening_def with U'; auto.
++ names. names in H. 
+  cut ((@eFls 0) = ([^x] @eFls 0)); auto. intro. 
+  exists A. rewrite H3.
+  apply cons_weakening_def with U'; auto.
++ names. names in H. 
+  cut ((@eBool 0) = ([^x] @eBool 0)); auto. intro. 
+  exists A. rewrite H3.
+  apply cons_weakening_def with U'; auto.
++ names. names in H0. inversion H0. subst.
+  exists A. apply aT_Lam.
+ 
 
-(* I need an induction principle for V=1, not just V=0 *)
+(*Need to generalize from eUni U to C*)
 Lemma substitution_definition:
-forall g v A B U U', 
+forall g v A (B: @exp 1) U U', 
 (g ⊢ bind v B : eUni U) ->
 (g ⊢ v : A) ->
 (g ⊢ A : eUni U') ->
 forall x, exists A', ((g & x ~ Def v A') ⊢ open x B: eUni U).
-Proof. intros. destruct B.
-+ names in H. destruct x0.
+Proof. intros. induction B using term_ind_V.
++ names in H. destruct v0.
   ++ names in H. names.
     cut ((@eId 0 (@free 0 (shift_name x name))) = ([^x] @eId 0 (@free 0 name))).
     - intros. rewrite H2. rewrite <- shift_uni_id with (x:=x).
@@ -477,18 +521,72 @@ Proof. intros. destruct B.
 + exists A. names. names in H.
  rewrite <- (shift_uni_id x U). 
  rewrite <- shift_uni_id with (x:=x).
-    Check cons_weakening_def. 
     apply cons_weakening_def with U'; auto.
-+ names. names in H.
++ names. names in H. 
+  rewrite <- shift_uni_id with (x:=x).
+  cut ((@eTru 0) = ([^x] @eTru 0)); auto. intro. 
+  exists A. rewrite H2.
+  apply cons_weakening_def with U'; auto.
++ names. names in H. 
+  rewrite <- shift_uni_id with (x:=x).
+  cut ((@eFls 0) = ([^x] @eFls 0)); auto. intro. 
+  exists A. rewrite H2.
+  apply cons_weakening_def with U'; auto.
++ names. names in H. 
+  rewrite <- shift_uni_id with (x:=x).
+  cut ((@eBool 0) = ([^x] @eBool 0)); auto. intro. 
+  exists A. rewrite H2.
+  apply cons_weakening_def with U'; auto.
++ names. names in H. inversion H. subst.  *)
 
+
+
+
+(* Admitted. *)
 
 Lemma substitution_assumption:
-forall g v A B U, 
+forall g v A B U U' , 
 (g ⊢ v : A) ->
+(g ⊢ A : eUni U') ->
 (g ⊢ bind v B : eUni U) ->
 forall x, ((g & x ~ Assum A) ⊢ open x B: eUni U).
-Proof. intros. inversion H0.
-+ subst.
+Proof. induction B using term_ind_V; intros.
++ names in H1. destruct v0.
+  ++ names in H1. names.
+    cut ((@eId 0 (@free 0 (shift_name x name))) = ([^x] @eId 0 (@free 0 name))).
+    - intros. rewrite H2. rewrite <- shift_uni_id with (x:=x).
+      apply cons_weakening_assum with (U:=U'). auto. eauto.
+    - names. auto.
+  ++ destruct l.
+    - names. names in H1. apply aT_Var. 
+      apply Types_only_if_wellformed in H0 as H3. 
+      apply wf_Assum with (U:=U'). auto. apply H0. 
+      unfold assumes. left. rewrite <- shift_uni_id with (x:=x).
+      cut ((Assum ([^ x] eUni U)) = (apply (^x)%ren (Assum (eUni U)))).
+      intro. simpl (0+0) in H2. rewrite H2.
+      apply ctx_has.
+    - names. names in H. exists A. 
+    cut (eId (bound s) = ([^x] eId (bound s))); auto.
+     * intros. simpl (0 + 0) in H2. rewrite H3.
+       eapply cons_weakening_def.
+       auto. apply H1. apply H0.
++ exists A. names. names in H. 
+  rewrite <- shift_uni_id with (x:=x).
+  apply cons_weakening_def with U'; auto.
++ names. names in H. 
+  cut ((@eTru 0) = ([^x] @eTru 0)); auto. intro. 
+  exists A. rewrite H3.
+  apply cons_weakening_def with U'; auto.
++ names. names in H. 
+  cut ((@eFls 0) = ([^x] @eFls 0)); auto. intro. 
+  exists A. rewrite H3.
+  apply cons_weakening_def with U'; auto.
++ names. names in H. 
+  cut ((@eBool 0) = ([^x] @eBool 0)); auto. intro. 
+  exists A. rewrite H3.
+  apply cons_weakening_def with U'; auto.
++ names. names in H0. inversion H0. subst.
+  exists A. apply aT_Lam.
   
 
 Lemma assumption_substitution:

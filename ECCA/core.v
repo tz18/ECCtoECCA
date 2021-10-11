@@ -377,6 +377,65 @@ Definition term_ind
        (fun e1 e2 _ E1 _ E2 => EQV e1 e2 E1 E2)
        tm (always_Vclosedk tm).
 
+Section term_ind_V.
+Variable Vi: nat.
+Variable P : @exp Vi -> Prop.
+Let IDDt := forall (v : atom), P (eId v).
+Let UNIt := forall (U : universe), P (eUni U).
+Let TRUt := P (eTru).
+Let FLSt := P (eFls).
+Let BOOt := P (eBool).
+Let ABSt := forall (A B : exp),
+                 P (A) ->
+                 (forall (n : name), P (open n B)) ->
+                 P (eAbs A B).
+Let PIEt := forall (A B : exp),
+                 P (A) ->
+                 (forall (n : name), P (open n B)) ->
+                 P (ePi A B).
+Let SIGt := forall (A B : exp),
+                 P (A) ->
+                 (forall (n : name), P (open n B)) ->
+                 P (eSig A B).
+Let LETt := forall (A B : exp),
+                 P (A) ->
+                 (forall (n : name), P (open n B)) ->
+                 P (eLet A B).
+Let APPt := forall (f e : exp), P f -> P e -> P (eApp f e).
+Let PAIt := forall (v1 v2 A : exp), P v1 -> P v2 -> P A -> P (ePair v1 v2 A).
+Let IFFt := forall (v e1 e2 : exp), P v -> P e1 -> P e2 -> P (eIf v e1 e2).
+Let FSTt := forall (v : exp), P v -> P (eFst v).
+Let SNDt := forall (v : exp), P v -> P (eSnd v).
+Let RFLt := forall (v : exp), P v -> P (eRefl v).
+Let EQVt := forall (e1 e2 : exp), P e1 -> P e2 -> P (eEqv e1 e2).
+Variable (IDD: IDDt) (UNI: UNIt) (TRU: TRUt) (FLS: FLSt) (BOO: BOOt) (ABS: ABSt) (PIE: PIEt) (SIG: SIGt) (LET: LETt)
+(APP: APPt) (PAI: PAIt) (IFF: IFFt) (FST: FSTt) (SND: SNDt) (RFL: RFLt) (EQV: EQVt).
+Program Fixpoint term_ind_V
+             (tm : exp) {measure (esize tm)}: P tm :=
+match tm with
+  | eId x => IDD x
+  | eUni U => UNI U
+  | ePi A B => (PIE A B (term_ind_V A) (fun x => (term_ind_V (open x B))))
+  | eAbs A B => (ABS A B (term_ind_V A) (fun x => (term_ind_V (open x B))))
+  | eSig A B => (SIG A B (term_ind_V A) (fun x => (term_ind_V (open x B))))
+  | ePair v1 v2 A => (PAI v1 v2 A (term_ind_V v1) (term_ind_V v2) (term_ind_V A))
+  | eTru => TRU
+  | eFls => FLS
+  | eBool => BOO
+  | eLet A B => (LET _ _ (term_ind_V A) (fun x => (term_ind_V (open x B)))) 
+  | eIf v e1 e2 => (IFF _ _ _ (term_ind_V v) (term_ind_V e1) (term_ind_V e2)) 
+  | eApp v1 v2 => (APP _ _ (term_ind_V v1) (term_ind_V v2)) 
+  | eFst v => FST _ (term_ind_V v)
+  | eSnd v => SND _ (term_ind_V v)
+  | eRefl v => RFL _ (term_ind_V v)
+  | eEqv v1 v2 => EQV _ _ (term_ind_V v1) (term_ind_V v2)
+end.
+Solve All Obligations with (Tactics.program_simpl; try rewrite esize_open_id; cbn; lia).
+End term_ind_V.
+
+Check term_ind_V.
+
+ 
 (*
 ============================================================
 =======--ANF Syntactic Restriction--========================
