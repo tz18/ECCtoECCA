@@ -34,75 +34,95 @@ Hint Constructors SubTypes.
 Reserved Notation "g '⊢' a ':' b" (at level 250, a at level 99).
 Reserved Notation "'⊢' g" (at level 250).
 Inductive Types: env -> exp -> exp -> Prop :=
+
 | aT_Ax_Prop (g: env) :
   WellFormed g ->
   (g ⊢ (eUni uProp) : (eUni (uType 0)))
+
 | aT_Ax_Type (g: env) (i: nat) :
   WellFormed g ->
   (g ⊢ (eUni (uType i)) : (eUni (uType (S i))))
+
 | aT_Var (g: env) (x: atom) (A: exp) :
   (⊢ g) -> 
   (assumes g x A) -> (* this needs adjustment *)
   (g ⊢ (eId x) : A)
+
 | aT_Bool (g: env):
   WellFormed g ->
   (g ⊢ (eBool) : (eUni (uType 0)))
+
 | aT_True (g: env):
   WellFormed g ->
   (g ⊢ (eTru) : (eBool))
+
 | aT_False (g: env):
   WellFormed g ->
   (g ⊢ (eFls) : (eBool)) 
+
 | aT_Sig (g: env) (x: name) (A B: exp) (i: nat) :
   (g ⊢ A : (eUni (uType i))) ->
   ((g & x ~ Assum A) ⊢ (open x B): (eUni (uType i))) ->
   (g ⊢ (eSig A B) : (eUni (uType i)))
-| aT_Pair (g: env) (v1 v2: exp) (A B: exp) :
+
+| aT_Pair (g: env) (v1 v2: exp) (A B: exp) (x: name) (Ua Ub: universe):
   (g ⊢ v1 : A) ->
   (g ⊢ v2 : (bind v1 B)) ->
-(*   (g ⊢ (eSig A B) : U) -> *)
+  (g ⊢ A: eUni Ua) ->
+  ((g & x ~ Assum A) ⊢ (open x B) : eUni Ub) ->
   (g ⊢ (ePair v1 v2 (eSig A B)) : (eSig A B))
+
 | aT_Prod_Prop (g: env) (x: name) (A B: exp) (i: nat):
   (g ⊢ A : (eUni (uType i))) ->
   (Types (g & x ~ Assum A) (open x B) (eUni (uProp))) ->
   (g ⊢ (ePi A B) : (eUni (uProp)))
+
 | aT_Prod_Type (g: env) (x: name) (A B: exp) (i: nat):
   (g ⊢ A : (eUni (uType i))) ->
   (Types (g & x ~ Assum A) (open x B) (eUni (uType i))) ->
   (g ⊢ (ePi A B) : (eUni (uType i)))
+
 | aT_Lam (g: env) (x: name) (A e B: exp) i :
   (g ⊢ A: eUni (uType i)) ->
   (Types (g & x ~ Assum A) (open x e) (open x B)) ->
   (g ⊢ (eAbs A e) : (ePi A B))
+
 | aT_Let (g: env) (n m A B: exp) (U: universe) (x: name):
   (g ⊢ A: eUni U) ->
   (g ⊢ n : A) ->
   (Types (g & x ~ Def n A) (open x m) (open x B)) ->
   (g ⊢ (eLet n m) : (bind n B))
+
 | aT_If (g: env) (B e1 e2: exp) (e: exp) (U: universe) (x p: name):
   ((g & x ~ Assum eBool) ⊢ (open x B): eUni U) -> 
   (g ⊢ e : eBool) ->
   ((g & p ~ (Assum (eEqv e eTru))) ⊢ [^p] e1 : (bind eTru ([^p] B))) ->
   ((g & p ~ (Assum (eEqv e eFls))) ⊢ [^p] e2 : (bind eFls ([^p] B))) -> 
   (g ⊢ (eIf e e1 e2) : (bind e B)) 
+
 | aT_Conv (g: env) (e A B: exp) (U: universe) :
   (g ⊢ e : A) ->
   (g ⊢ B : eUni U) ->
   (SubTypes g A B) ->
   (g ⊢ e : B)
+
 | aT_App (g: env) (e e': exp) (A' B: exp) :
   (g ⊢ e : (ePi A' B)) ->
   (g ⊢ e' : A') ->
-  (g ⊢ (eApp e e') : (bind e B))
+  (g ⊢ (eApp e e') : (bind e' B))
+
 | aT_Fst (g: env) (e: exp) (A B: exp) :
   (g ⊢ e: (eSig A B)) ->
   (g ⊢ (eFst e): A)
+
 | aT_Snd (g: env) (e: exp) (A B: exp) :
   (g ⊢ e: (eSig A B)) ->
   (g ⊢ (eSnd e): (bind (eFst e) B)) 
+
 | aT_Refl (g: env) (e: exp) (A: exp):
   (g ⊢ e: A) ->
   (g ⊢ (eRefl e): (eEqv e e)) 
+
 | aT_Equiv (g: env) (A A' B: exp) (i: nat):
   (g ⊢ A: B) ->
   (g ⊢ A': B) ->
@@ -113,11 +133,11 @@ with (* ECCA Well-Formed Environments *)
 WellFormed: env -> Prop :=
   | wf_Empty : 
     (⊢ ctx_empty)
-  | wf_Assum : forall (g : env) (x : name) (A: exp) (U: universe),
+  | wf_Assum (g : env) (x : name) (A: exp) (U: universe):
     (⊢ g) -> 
     (g ⊢ A : eUni U) -> 
     (⊢ g & x ~ Assum A)
-  | wf_Def : forall (g : env) (x : name) (e A: exp) (U: universe),
+  | wf_Def (g : env) (x : name) (e A: exp) (U: universe):
     (⊢ g) -> 
     (g ⊢ A : eUni U) -> 
     (g ⊢ e : A) -> 

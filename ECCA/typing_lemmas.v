@@ -50,9 +50,14 @@ all: try (intros; constructor; eauto; fail).
 + intros. names. apply aT_Sig with (x:=x). eauto.
   names. apply IHpT2 with (Δ:= (Δ & x ~ Assum ([r] A))) (r:= (r,, x)%ren).
   apply ctx_rename; eauto. apply wf_Assum with (uType i); eauto.
-+  intros. names. apply aT_Pair.
++  intros. names. apply aT_Pair with (x:=x) (Ua:=Ua) (Ub:= Ub).
   - auto.
   - specialize IHpT2 with (r:=r) (Δ:=Δ). names in IHpT2. apply IHpT2; eauto.
+  - specialize IHpT3 with (r:=r) (Δ:=Δ). names in IHpT3. apply IHpT3; eauto.
+  - names in IHpT4. names. specialize IHpT4 with (r:=(r ,, x)%ren) (Δ:=Δ & x ~ Assum ([r] A)). apply IHpT4.
+    apply ctx_rename. auto. 
+    apply Types_only_if_wellformed in pT3.
+    apply wf_Assum with Ua; auto. apply IHpT3; eauto.
 (*   - specialize IHpT3 with (r:=r) (Δ:=Δ). names in IHpT3. apply IHpT3; eauto. *)
 +  intros. names. eapply aT_Prod_Prop with (x:=x). eauto.
   names. apply IHpT2 with (Δ:= (Δ & x ~ Assum ([r] A))) (r:= (r,, x)%ren).
@@ -171,6 +176,21 @@ Qed. *)
 Lemma shift_uni_id:
 forall x U {V},
 ([^x] (@eUni V U)) = (@eUni V U).
+Proof. auto. Qed.
+
+Lemma rename_uni_id:
+forall r U {V},
+([r] (@eUni V U)) = (@eUni V U).
+Proof. auto. Qed.
+
+Lemma open_uni_id:
+forall x U {V},
+(open x (@eUni (S V) U)) = (@eUni V U).
+Proof. auto. Qed.
+
+Lemma bind_uni_id: 
+forall n U {V},
+(bind n (@eUni (S V) U) = (@eUni V U)).
 Proof. auto. Qed.
 
 Lemma WellFormed_implies_well_typed_assum (g: env):
@@ -540,53 +560,75 @@ Proof. intros. induction B using term_ind_V.
 + names. names in H. inversion H. subst.  *)
 
 
+Lemma diamond_property_of_subtypes g e A B:
+(g ⊢ e: A) ->
+(g ⊢ e: B) ->
+exists C, 
+(g ⊢ C ≲ A) /\ (g ⊢ C ≲ B) /\ (g ⊢ e : C).
+Proof.
+intros. induction e using term_ind.
++ inversion H. 
+  - subst. inversion H0.
+    *  subst. Admitted.
 
 
-(* Admitted. *)
+(*(* 
+Lemma :
+ (g ⊢ eUni U ≲ A) ->
+ (g ⊢ A: eUni U') ->
+ (g ⊢ e: A) ->
+ (g ⊢ e: eUni U'). *)
 
 Lemma substitution_assumption:
 forall g v A B U U' , 
 (g ⊢ v : A) ->
 (g ⊢ A : eUni U') ->
-(g ⊢ bind v B : eUni U) ->
-forall x, ((g & x ~ Assum A) ⊢ open x B: eUni U).
+(g ⊢ bind v B : bind v C) ->
+forall x, exists U'', ((g & x ~ Assum A) ⊢ open x B: open x C).
 Proof. induction B using term_ind_V; intros.
 + names in H1. destruct v0.
   ++ names in H1. names.
     cut ((@eId 0 (@free 0 (shift_name x name))) = ([^x] @eId 0 (@free 0 name))).
-    - intros. rewrite H2. rewrite <- shift_uni_id with (x:=x).
+    - intros. rewrite H2. exists U.  rewrite <- shift_uni_id with (x:=x).
       apply cons_weakening_assum with (U:=U'). auto. eauto.
     - names. auto.
   ++ destruct l.
-    - names. names in H1. apply aT_Var. 
-      apply Types_only_if_wellformed in H0 as H3. 
-      apply wf_Assum with (U:=U'). auto. apply H0. 
-      unfold assumes. left. rewrite <- shift_uni_id with (x:=x).
-      cut ((Assum ([^ x] eUni U)) = (apply (^x)%ren (Assum (eUni U)))).
-      intro. simpl (0+0) in H2. rewrite H2.
-      apply ctx_has.
-    - names. names in H. exists A. 
+    - names. names in H1. apply exp_types_must_subtype with (e:=v) (A:=A) in H1; auto.
+      cut (⊢ g & x ~ Assum A); eauto; intros.
+      destruct universe_common_parent with (U:=U) (U':=U) (g:=(g & x ~ Assum A)); auto.
+      destruct H1.
+        * exists U. eapply aT_Conv with (A:=[^x] A).
+          -- apply aT_Var; auto. 
+             left. apply ctx_has.
+          -- destruct H3. apply t.
+          -- rewrite <- shift_uni_id with (x:=x). apply SubTypes_weakening with (Γ:=g). auto. auto with contexts.
+        * admit.
+     - names. names in H. exists U. 
     cut (eId (bound s) = ([^x] eId (bound s))); auto.
-     * intros. simpl (0 + 0) in H2. rewrite H3.
-       eapply cons_weakening_def.
-       auto. apply H1. apply H0.
-+ exists A. names. names in H. 
+     * intros. simpl (0 + 0) in H2. rewrite H2. rewrite <- shift_uni_id with (x:=x).
+       eapply cons_weakening_assum.
+       auto. apply H0.
++ exists U0. names. names in H. 
+  rewrite <- shift_uni_id with (x:=x). rewrite <- shift_uni_id with (x:=x) (U:= U0).
+  apply cons_weakening_assum with (U:=U'); auto.
++ exists U. names. names in H. 
   rewrite <- shift_uni_id with (x:=x).
-  apply cons_weakening_def with U'; auto.
-+ names. names in H. 
-  cut ((@eTru 0) = ([^x] @eTru 0)); auto. intro. 
-  exists A. rewrite H3.
-  apply cons_weakening_def with U'; auto.
-+ names. names in H. 
-  cut ((@eFls 0) = ([^x] @eFls 0)); auto. intro. 
-  exists A. rewrite H3.
-  apply cons_weakening_def with U'; auto.
-+ names. names in H. 
-  cut ((@eBool 0) = ([^x] @eBool 0)); auto. intro. 
-  exists A. rewrite H3.
-  apply cons_weakening_def with U'; auto.
-+ names. names in H0. inversion H0. subst.
-  exists A. apply aT_Lam.
+  cut ((@eTru 0) = ([^x] @eTru 0)); auto; intro.
+  rewrite H2.
+  apply cons_weakening_assum with (U:=U'); auto.
++ exists U. names. names in H. 
+  rewrite <- shift_uni_id with (x:=x).
+  cut ((@eFls 0) = ([^x] @eFls 0)); auto; intro.
+  rewrite H2.
+  apply cons_weakening_assum with (U:=U'); auto.
++ exists U. names. names in H. 
+  rewrite <- shift_uni_id with (x:=x).
+  cut ((@eBool 0) = ([^x] @eBool 0)); auto; intro.
+  rewrite H2.
+  apply cons_weakening_assum with (U:=U'); auto.
++ names. names in H2. inversion H2. subst.
+  exists U. (* apply aT_Conv. *)
+  Admitted.
   
 
 Lemma assumption_substitution:
@@ -596,6 +638,50 @@ forall x, ((g & x ~ Assum A) ⊢ open x B: eUni U) ->
 (g ⊢ bind v B : eUni U).
 Proof. Admitted.
 
+(* Lemma substitution_assumption:
+forall g v A B U U' , 
+(g ⊢ v : A) ->
+(g ⊢ bind v B : eUni U) ->
+exists A, forall x,
+(g ⊢ A : eUni U') ->
+(g ⊢ v : A) ->
+((g & x ~ Assum A) ⊢ open x B: eUni U).
+Proof. Admitted. *) *)
+
+Compute 1 + 1. (* Phew *)
+
+Lemma luo_cut_assum g x N P A M:
+(g & x ~ Assum N ⊢ (open x P) : (open x A)) ->
+(g ⊢ M : N) ->
+(g ⊢ bind M P : (bind M A)).
+Proof.
+intros. Admitted.
+
+(* Lemma luo_cut_assum_wrong x f M:
+(((ctx_empty & f ~ (Assum (ePi eBool (eEqv eBool (ePi eBool eBool))))) & x ~ (Assum (eEqv eBool (ePi eBool eBool)))) ⊢ (open x eTru) : (open x (ePi eBool eBool))) ->
+((ctx_empty & f ~ (Assum (ePi eBool (eEqv eBool (ePi eBool eBool))))) ⊢ (eApp (eId (free f)) eTru) : (eEqv eBool (ePi eBool eBool))) ->
+((ctx_empty & f ~ (Assum (ePi eBool (eEqv eBool (ePi eBool eBool))))) ⊢ bind M (eTru) : (bind M (ePi eBool eBool))).
+Proof. *)
+
+Lemma luo_cut_def g x N P A M:
+(g & x ~ Def M N ⊢ open x P : open x A) ->
+(g ⊢ bind M P : (bind M A)).
+Proof.
+intros.
+Admitted. 
+
+Require Import Coq.Program.Equality.
+Lemma well_typed_app g A' B e' x:
+(g ⊢ ePi A' B : eUni x) ->
+(g ⊢ e' : A') ->
+exists U : universe, (g ⊢ bind e' B : eUni U).
+Proof. intro. dependent induction H; try discriminate.
++ exists uProp. rewrite <- bind_uni_id with (n:=e').
+  apply luo_cut_assum with (x:=x0) (N:=A'); auto.
++ exists (uType i). rewrite <- bind_uni_id with (n:=e').
+  apply luo_cut_assum with (x:=x0) (N:=A'); auto.
++ intros. apply IHTypes1 with (A'0:=A') (x:=x). Admitted. 
+
 Lemma Type_well_typed (g: env) (N: exp) (A: exp) :
   (g ⊢ N : A) ->
   exists U , Types g A (eUni U).
@@ -604,20 +690,43 @@ Proof.
   - intros. destruct H0.
     + apply WellFormed_implies_well_typed_assum with (v:=x); auto.
     + destruct H0 as [e]. apply WellFormed_implies_well_typed_def with (v:=x) (e:=e); auto.
-  - destruct IHTypes1, IHTypes2. cut (exists i, (g ⊢ (eUni x): (eUni (uType i))) /\ (g ⊢ (eUni x0): (eUni (uType i)))).
-    + intro. destruct H3. exists (uType x1). apply aT_Sig with (x:="sigx").
-      * eapply aT_Conv. eauto. eauto. destruct H3. apply universe_type_if. auto.
-      * destruct H3. Check cons_weakening_assum. cut (g & "sigx" ~ Assum A ⊢ eUni x0 : eUni (uType x1)). 
-        -- intro. apply substitution_assumption with (v:=v1). auto. 
-            eapply aT_Conv. eauto. eauto. apply universe_type_if. auto.
-        -- Check cons_weakening_assum. apply cons_weakening_assum with (B:=A) (U:=x) (A:=eUni x0) (A':=eUni (uType x1)) (x:="sigx"). auto. auto. 
+  - destruct IHTypes1, IHTypes2, IHTypes3, IHTypes4. 
+    (* apply substitution_assumption with (A:=A) (U':= x) (x:="sigx") in H2 as H9; auto.
+    destruct H9.*)
+    cut (exists i, (g ⊢ (eUni Ua): 
+          (eUni (uType i))) /\ (g ⊢ (eUni Ub): (eUni (uType i)))); intros.
+    + destruct H7. exists (uType x4). apply aT_Sig with (x:=x).
+      * eapply aT_Conv. apply H1. eauto. destruct H7. apply universe_type_if. auto.
+      * destruct H7. cut (g & x ~ Assum A ⊢ eUni Ub : eUni (uType x4)); intros.
+        -- eapply aT_Conv. eauto. eauto. apply universe_type_if. auto.  
+        -- Check  cons_weakening_assum. 
+           apply cons_weakening_assum with (B:=A) (U:=Ua) (A:=eUni Ub) (A':=eUni (uType x4)) (x:=x). 
+           auto. auto. 
     + apply universe_common_parent_type. eauto.
   - destruct IHTypes1. destruct IHTypes2. destruct x1.
     + exists uProp. eapply aT_Prod_Prop. eauto. eauto.
     + pose universe_common_parent_type. specialize e0 with (U:=uType i) (U':=uType i0) (g:=g). destruct e0. eauto. destruct H3.
       exists (uType x1). eapply aT_Prod_Type with (x:=x).
         * eapply aT_Conv. eauto. eauto. apply universe_type_if. auto.
-        * eapply cons_weakening_assum with (B:=A) (x:=x) in H4. names in H4. eapply aT_Conv; eauto. apply universe_type_if. auto. eauto.
+        * eapply cons_weakening_assum with (B:=A) (x:=x) in H4. names in H4. 
+          eapply aT_Conv; eauto; apply universe_type_if; auto; eauto. eauto.
+  - destruct IHTypes1. destruct IHTypes2. destruct IHTypes3. exists x2.
+    rewrite <- bind_uni_id with (n:=n).
+    apply luo_cut_def with (x:=x) (N:=A).
+    rewrite open_uni_id.
+    auto.
+  - destruct IHTypes1. destruct IHTypes2. destruct IHTypes3. destruct IHTypes4.
+    exists U. rewrite <- bind_uni_id with (n:=e).
+    apply luo_cut_assum with (x:=x) (N:= eBool). auto. auto.
+  - destruct IHTypes1. inversion H1; subst.
+    + exists uProp. rewrite <- bind_uni_id with (n:=e').
+      apply luo_cut_assum with (x:=x0) (N:=A'); auto.
+    + exists (uType i). rewrite <- bind_uni_id with (n:=e').
+      apply luo_cut_assum with (x:=x0) (N:=A'); auto.
+    + 
+
+
+
   -  Admitted. (*  apply WellFormed_implies. intros. induction H0.
     + subst. destruct H; destruct h. 
     + subst. destruct H. cbn in h. destruct (bindv (closev x0 x)).
@@ -637,6 +746,8 @@ Proof.
   - shelve.
   - shelve. 
 Admitted.  *)
+
+
 
 Lemma has_type_wf_g (g: env) (N: exp) (A: exp) (x : name):
   Types g N A ->
