@@ -605,3 +605,7 @@ Definition term_ind
        tm (always_Vclosedk tm).
 
 Check Vclosed_ind.
+
+Definition example:=
+(@ECC.Abs 0 ECC.Tru (ECC.ECCRen.close "x1" (ECC.Id (free "x1")))).
+Compute example.

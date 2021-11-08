@@ -7,7 +7,7 @@ Inductive Equiv : env -> exp -> exp -> Prop :=
       (g ⊢ e ⊳ e') ->  
       (g ⊢ e ≡ e')
   | aE_Reflect : forall (g : env) (e1 e2 : exp) (x : var),
-      assumes g x (eEqv e1 e2) -> 
+      has g x (Eqv e1 e2) -> 
       (g ⊢ e1 ≡ e2)
   | aE_Subst : forall (g : env) (M M1 M2 : exp),
       (g ⊢ M1 ≡ M2) -> 
@@ -59,14 +59,14 @@ Inductive Equiv : env -> exp -> exp -> Prop :=
       (g ⊢ eLet N M ≡ eLet N' M')
   | aE_If : forall (g : env) (V V' M1 M1' M2 M2' : exp) (p : name),
       (g ⊢ V ≡ V') ->
-      (g & p ~ Assum (eEqv V eTru) ⊢ [^p] M1 ≡ [^p] M1') ->
-      (g & p ~ Assum (eEqv V eFls) ⊢ [^p] M2 ≡ [^p] M2') -> 
+      (g & p ~ (Eqv V eTru) ⊢ [^p] M1 ≡ [^p] M1') ->
+      (g & p ~ (Eqv V eFls) ⊢ [^p] M2 ≡ [^p] M2') -> 
       (g ⊢ eIf V M1 M2 ≡ eIf V' M1' M2')
   | aE_If_EtaTru : forall (g : env) (V M1 M2 : exp) (p : var),
-      assumes g p (eEqv V eTru) -> 
+      has g p (Eqv V eTru) -> 
       (g ⊢ eIf V M1 M2 ≡ M1)
   | aE_If_EtaFls : forall (g : env) (V M1 M2 : exp) (p : var),
-      assumes g p (eEqv V eFls) -> 
+      has g p (Eqv V eFls) -> 
       (g ⊢ eIf V M1 M2 ≡ M2)
   | aE_If2 : forall (g : env) (V M : exp), 
       (g ⊢ eIf V M M ≡ M)

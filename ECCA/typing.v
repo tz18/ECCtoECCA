@@ -96,8 +96,8 @@ Inductive Types: env -> exp -> exp -> Prop :=
 | aT_If (g: env) (B e1 e2: exp) (e: exp) (U: universe) (x p: name):
   ((g & x ~ Assum eBool) ⊢ (open x B): eUni U) -> 
   (g ⊢ e : eBool) ->
-  ((g & p ~ (Assum (eEqv e eTru))) ⊢ [^p] e1 : (bind eTru ([^p] B))) ->
-  ((g & p ~ (Assum (eEqv e eFls))) ⊢ [^p] e2 : (bind eFls ([^p] B))) -> 
+  ((g & p ~ (Eqv e eTru)) ⊢ [^p] e1 : (bind eTru ([^p] B))) ->
+  ((g & p ~ (Eqv e eFls)) ⊢ [^p] e2 : (bind eFls ([^p] B))) -> 
   (g ⊢ (eIf e e1 e2) : (bind e B)) 
 
 | aT_Conv (g: env) (e A B: exp) (U: universe) :
@@ -118,16 +118,6 @@ Inductive Types: env -> exp -> exp -> Prop :=
 | aT_Snd (g: env) (e: exp) (A B: exp) :
   (g ⊢ e: (eSig A B)) ->
   (g ⊢ (eSnd e): (bind (eFst e) B)) 
-
-| aT_Refl (g: env) (e: exp) (A: exp):
-  (g ⊢ e: A) ->
-  (g ⊢ (eRefl e): (eEqv e e)) 
-
-| aT_Equiv (g: env) (A A' B: exp) (i: nat):
-  (g ⊢ A: B) ->
-  (g ⊢ A': B) ->
-  (g ⊢ B : (eUni (uType i))) ->
-  (g ⊢ (eEqv A A'): (eUni (uType i)))
 where "g '⊢' a ':' b" := (Types g a b) : ECCA_scope
 with (* ECCA Well-Formed Environments *)
 WellFormed: env -> Prop :=
@@ -142,6 +132,12 @@ WellFormed: env -> Prop :=
     (g ⊢ A : eUni U) -> 
     (g ⊢ e : A) -> 
     (⊢ g & x ~ Def e A)
+  | wf_Eqv (g: env) (x: name) (A A' B: exp) (i: nat):
+    (⊢ g) -> 
+    (g ⊢ A: B) ->
+    (g ⊢ A': B) ->
+    (g ⊢ B : (eUni (uType i))) ->
+    (⊢ g & x ~ (Eqv A A'))
 where "'⊢' g" := (WellFormed g) : ECCA_scope.
 Hint Constructors Types.
 Hint Constructors WellFormed.

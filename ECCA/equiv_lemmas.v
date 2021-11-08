@@ -11,9 +11,8 @@ forall (Δ: context) (r: ren),
 Proof. induction 1; cbn; auto.
 + intros. apply aE_Step with (e:=[r]e); eauto using Reduces_weakening.
 + intros.
-  names. destruct H0. eapply aE_Reflect with (x:= applyt s _ x). unfold assumes in *. destruct H.
-  - left. apply H0 in h. names in h. apply h.
-  - right. destruct e. exists ([s] x0). apply H0 in H. names in H. apply H.
+  names. destruct H0. eapply aE_Reflect with (x:= applyt s _ x).
+  apply H0 in H. names in H. apply H.
 + intros; names; auto.
 + intros. apply aE_Trans with (M':=[r]M'); auto.
 + intros. apply aE_Lam with (x:= x). auto. names. apply IHEquiv2.
@@ -30,16 +29,14 @@ Proof. induction 1; cbn; auto.
 + intros. apply aE_Let with (x:= x) (A:= [r] A). auto. names. apply IHEquiv2.
   auto. apply ctx_rename. auto.
 + intros. apply aE_If with (p:=p). auto.
-  - specialize IHEquiv2 with (Δ:= (Δ & p ~ Assum (eEqv ([r] V) eTru))) (r:=(r,, p)%ren). names. names in IHEquiv2. apply IHEquiv2.
+  - specialize IHEquiv2 with (Δ:= (Δ & p ~ (Eqv ([r] V) eTru))) (r:=(r,, p)%ren). names. names in IHEquiv2. apply IHEquiv2.
     apply ctx_rename. auto.
-  - specialize IHEquiv3 with (Δ:= (Δ & p ~ Assum (eEqv ([r] V) eFls))) (r:=(r,, p)%ren). names. names in IHEquiv3. apply IHEquiv3.
+  - specialize IHEquiv3 with (Δ:= (Δ & p ~ (Eqv ([r] V) eFls))) (r:=(r,, p)%ren). names. names in IHEquiv3. apply IHEquiv3.
     apply ctx_rename. auto.
-+ intros. destruct H0. apply aE_If_EtaTru with (p:=applyt s total p). unfold assumes in *. destruct H.
-  - left. apply H0 in H. names in H. apply H.
-  - right. destruct H. exists ([s] x). apply H0 in H. names in H. apply H.
-+ intros. destruct H0. apply aE_If_EtaFls with (p:=applyt s total p). unfold assumes in *. destruct H.
-  - left. apply H0 in H. names in H. apply H.
-  - right. destruct H. exists ([s] x). apply H0 in H. names in H. apply H.
++ intros. destruct H0. apply aE_If_EtaTru with (p:=applyt s total p).
+  apply H0 in H. names in H. apply H.
++ intros. destruct H0. apply aE_If_EtaFls with (p:=applyt s total p).
+  apply H0 in H. names in H. apply H.
 Qed.
  
 Lemma Equiv_cons_shift:
