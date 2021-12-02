@@ -753,18 +753,126 @@ destruct x0.
   inversion H. subst. auto.
 Qed.
 
-Lemma luo_cut_assum g x N P A M:
-(g & x ~ Assum N ⊢ (open x P) : (open x A)) ->
-(g ⊢ M : N) ->
-(g ⊢ bind M P : (bind M A)).
+Require Import Coq.Program.Equality.
+
+Lemma luo_cut_assum_2 g P A:
+(g ⊢ P : A) ->
+forall x N,
+(g ⊢ eId (free x) : N) ->
+forall M,
+((g ⊢ M : N) ->
+(g ⊢ [M // x] P :[M // x] A)).
 Proof.
-intros. remember (g & x ~ Assum N) as g0. remember (open x P) as P0.
- remember (open x A) as A0. induction H.
+intros. induction H; names; eauto.
+
+Lemma luo_cut_assum g x N P A:
+(g & x ~ Assum N ⊢ P : A) ->
+forall M,
+((g ⊢ M : N) ->
+(g ⊢ [M // x] P :[M // x] A)).
+Proof.
+intro. dependent induction H. 
++ eauto.
++ intros. names. eauto.
++ shelve. (* intros. subst. destruct (compare_vars x x0).
+  - names. destruct H0.
+    -- apply has_first in H0. names in H0. inversion H0. names. auto.
+    -- destruct H0. apply has_first in H0. discriminate.
+  - names. destruct H0. 
+    -- apply has_rest in H0. destruct H0. destruct H0. destruct x0; try discriminate. names in H0. inversion H0. names.
+       eauto.
+    -- destruct H0. apply has_rest in H0. destruct H0. destruct H0. destruct x1; try discriminate.
+       names in H0. inversion H0. names. apply aT_Var. eauto. eauto.
+ *)+ eauto.
++ eauto.
++ eauto.
++ intros. 
+  names.
+  apply aT_Sig with (x:=x0). 
+  - (* apply IHTypes1; auto. *) shelve.
+  - apply IHTypes2 with (x1:=x) in H1.  
+
+
+with (g0:=g & x ~ Assum N). names.  
+    (g0:=(g & x ~ Assum N)) (P:=B) (A:=eUni (uType i)). names.
+  forall r Δ,
+    Γ =[r]=> Δ ->
+    (⊢ Δ) ->
+    (Δ ⊢ ([r] e) : [r] A). 
++ Admitted.
+(* 
+  apply aT_Sig with (x:=x0). 
+  - apply IHTypes1 with (N0:=N); auto.
+  - specialize IHTypes2 with (x1:= x0) (N0:=A).
+    specialize IHTypes2 with (g0:=g & x ~ Assum N). names.  
+    (g0:=(g & x ~ Assum N)) (P:=B) (A:=eUni (uType i)). names.
+  forall r Δ,
+    Γ =[r]=> Δ ->
+    (⊢ Δ) ->
+    (Δ ⊢ ([r] e) : [r] A). 
+
+Lemma luo_cut_assum g x N P A:
+(g & x ~ Assum N ⊢ (open x P) : (open x A)) ->
+forall M,
+((g ⊢ M : N) ->
+(g ⊢ bind M P : (bind M A))).
+Proof.
+intro. dependent induction H.
++ subst. rename x1 into HeqP0. rename x into HeqA0. apply unopen_ni in HeqP0; auto. apply unopen_ni in HeqA0; auto. rewrite HeqP0. rewrite HeqA0. names.
+  eauto.
++ subst. rename x1 into HeqP0. rename x into HeqA0. apply unopen_ni in HeqP0; auto. apply unopen_ni in HeqA0; auto. rewrite HeqP0. rewrite HeqA0. names.
+  eauto.
++ rename H0 into H1. intros. subst. rename x into HeqP0. apply unopen_id in HeqP0. destruct x0.
+  - destruct HeqP0.
+    ++ destruct H2. destruct H2. subst. names.
+    apply aT_Var. apply well_typed_cons in H; auto. rewrite rw_shiftv_shift_name in H1. destruct H1. 
+      * apply has_rest in H1. destruct H1. destruct H1. destruct x0; try discriminate. names in H1.
+        inversion H1. apply (f_equal (close x1)) in H4. names in H4. rewrite H4. names. auto.
+      * destruct H1. apply has_rest in H1. destruct H1. destruct H1. destruct x2; try discriminate.
+        names in H1. unfold assumes. right. exists e. inversion H1. apply (f_equal (close x1)) in H5.
+        names in H5. rewrite H5. names. auto.
+    ++ destruct H2. subst. rewrite H3 in H1. destruct H1.
+       -- apply has_first in H1. names. names in H1. inversion H1. 
+          apply (f_equal (close x1)) in H4. names in H4. rewrite H4. names. auto.
+       -- destruct H1. remember (Def x (open x1 A)) as B. apply has_first in H1. subst. discriminate. 
+  - destruct HeqP0. subst. names. destruct H1.
+    ++ apply has_inversion in H1. apply get_inversion in H1. destruct H1. destruct H1. discriminate.
+    ++ destruct H1. apply has_inversion in H1. apply get_inversion in H1. destruct H1. destruct H1. discriminate.
++ subst. rename x1 into HeqP0. rename x into HeqA0. apply unopen_ni in HeqP0; auto. apply unopen_ni in HeqA0; auto. rewrite HeqP0. rewrite HeqA0. names.
+  eauto.
++ subst. rename x1 into HeqP0. rename x into HeqA0. apply unopen_ni in HeqP0; auto. apply unopen_ni in HeqA0; auto. rewrite HeqP0. rewrite HeqA0. names.
+  eauto.
++ subst. rename x1 into HeqP0. rename x into HeqA0. apply unopen_ni in HeqP0; auto. apply unopen_ni in HeqA0; auto. rewrite HeqP0. rewrite HeqA0. names.
+  eauto.
++ subst. intros. rename x2 into HeqP0. rename x into HeqA0.
+  rename x1 into x. apply (f_equal (close x)) in HeqP0.
+  names in HeqP0. apply unopen_ni in HeqA0.
+  subst. names in IHTypes2. names in IHTypes1. cbn.
+  apply aT_Sig with (x:=x). 
+  - apply IHTypes1 with (P:=(close x A0)) (x0:=x) (A:= eUni (uType i)) (g0:=g) (N0:=N);
+    names; eauto. 
+  - specialize IHTypes2 with (x1:= x0) (N0:=A0) 
+    (g0:=(g & x ~ Assum N)) (P:=B) (A:=eUni (uType i)). names.
+  
+apply IHTypes1.
+
+Admitted.
+
+ *)
+(* 
+Lemma luo_cut_assum g x N P A:
+(g & x ~ Assum N ⊢ (open x P) : (open x A)) ->
+forall M,
+((g ⊢ M : N) ->
+(g ⊢ bind M P : (bind M A))).
+Proof.
+intro. remember (g & x ~ Assum N) as g0 in H. remember (open x P) as P0 in H.
+ remember (open x A) as A0 in H. induction H.
 + subst. apply unopen_ni in HeqP0; auto. apply unopen_ni in HeqA0; auto. rewrite HeqP0. rewrite HeqA0. names.
   eauto.
 + subst. apply unopen_ni in HeqP0; auto. apply unopen_ni in HeqA0; auto. rewrite HeqP0. rewrite HeqA0. names.
   eauto.
-+ subst. apply unopen_id in HeqP0. destruct x0.
++ rename H0 into H1. intros. subst. apply unopen_id in HeqP0. destruct x0.
   - destruct HeqP0.
     ++ destruct H2. destruct H2. subst. names.
     apply aT_Var. apply well_typed_cons in H; auto. rewrite rw_shiftv_shift_name in H1. destruct H1. 
@@ -774,13 +882,23 @@ intros. remember (g & x ~ Assum N) as g0. remember (open x P) as P0.
         names in H1. unfold assumes. right. exists e. inversion H1. apply (f_equal (close x)) in H5.
         names in H5. rewrite H5. names. auto.
     ++ destruct H2. subst. rewrite H3 in H1. destruct H1.
-       -- apply has_first in H1. names. names in H1. inversion H1. apply (f_equal (close x)) in H4. names in H4. rewrite H4. names. auto.
+       -- apply has_first in H1. names. names in H1. inversion H1. 
+          apply (f_equal (close x)) in H4. names in H4. rewrite H4. names. auto.
        -- destruct H1. remember (Def x0 (open x A)) as B. apply has_first in H1. subst. discriminate. 
   - destruct HeqP0. subst. names. destruct H1.
     ++ apply has_inversion in H1. apply get_inversion in H1. destruct H1. destruct H1. discriminate.
     ++ destruct H1. apply has_inversion in H1. apply get_inversion in H1. destruct H1. destruct H1. discriminate.
-+ Admitted.
-
++ subst. apply unopen_ni in HeqP0; auto. apply unopen_ni in HeqA0; auto. rewrite HeqP0. rewrite HeqA0. names.
+  eauto.
++ subst. apply unopen_ni in HeqP0; auto. apply unopen_ni in HeqA0; auto. rewrite HeqP0. rewrite HeqA0. names.
+  eauto.
++ subst. apply unopen_ni in HeqP0; auto. apply unopen_ni in HeqA0; auto. rewrite HeqP0. rewrite HeqA0. names.
+  eauto.
++ subst. intros. apply (f_equal (close x)) in HeqP0. names in HeqP0. apply unopen_ni in HeqA0. subst. names. names in IHTypes2. names in IHTypes1.
+  apply aT_Sig with (x:=x). 
+ 
+Admitted.
+*)
 (* Lemma luo_cut_assum_wrong x f M:
 (((ctx_empty & f ~ (Assum (ePi eBool (eEqv eBool (ePi eBool eBool))))) & x ~ (Assum (eEqv eBool (ePi eBool eBool)))) ⊢ (open x eTru) : (open x (ePi eBool eBool))) ->
 ((ctx_empty & f ~ (Assum (ePi eBool (eEqv eBool (ePi eBool eBool))))) ⊢ (eApp (eId (free f)) eTru) : (eEqv eBool (ePi eBool eBool))) ->
@@ -794,6 +912,22 @@ Proof.
 intros.
 Admitted. 
 
+Corollary luo_cut_assum_opened g x N P A:
+(g & x ~ Assum N ⊢ (open x P) : (open x A)) ->
+forall M,
+((g ⊢ M : N) ->
+(g ⊢ bind M P : (bind M A))).
+Proof.
+intros. 
+remember (open x P) as B1.
+apply (f_equal (close x)) in HeqB1. 
+remember (open x A) as C1.
+apply (f_equal (close x)) in HeqC1.
+names in HeqB1. names in HeqC1.
+rewrite <- HeqB1. rewrite <- HeqC1.
+names. apply luo_cut_assum with (N:=N); eauto.
+Qed.
+
 Require Import Coq.Program.Equality.
 Lemma well_typed_app g A' B e' x:
 (g ⊢ ePi A' B : eUni x) ->
@@ -801,9 +935,10 @@ Lemma well_typed_app g A' B e' x:
 exists U : universe, (g ⊢ bind e' B : eUni U).
 Proof. intro. dependent induction H; try discriminate.
 + exists uProp. rewrite <- bind_uni_id with (n:=e').
-  apply luo_cut_assum with (x:=x0) (N:=A'); auto.
+  apply luo_cut_assum_opened with x0 A'; eauto.
+
 + exists (uType i). rewrite <- bind_uni_id with (n:=e').
-  apply luo_cut_assum with (x:=x0) (N:=A'); auto.
+  apply luo_cut_assum_opened with x0 A'; eauto.
 + intros. apply IHTypes1 with (A'0:=A') (x:=x). Admitted. 
 
 Lemma Type_well_typed (g: env) (N: exp) (A: exp) :
@@ -841,12 +976,12 @@ Proof.
     auto.
   - destruct IHTypes1. destruct IHTypes2. destruct IHTypes3. destruct IHTypes4.
     exists U. rewrite <- bind_uni_id with (n:=e).
-    apply luo_cut_assum with (x:=x) (N:= eBool). auto. auto.
+    apply luo_cut_assum_opened with (x:=x) (N:= eBool). auto. auto.
   - destruct IHTypes1. inversion H1; subst.
     + exists uProp. rewrite <- bind_uni_id with (n:=e').
-      apply luo_cut_assum with (x:=x0) (N:=A'); auto.
+      apply luo_cut_assum_opened with (x:=x0) (N:=A'); auto.
     + exists (uType i). rewrite <- bind_uni_id with (n:=e').
-      apply luo_cut_assum with (x:=x0) (N:=A'); auto.
+      apply luo_cut_assum_opened with (x:=x0) (N:=A'); auto.
     + Admitted. (*  apply WellFormed_implies. intros. induction H0.
     + subst. destruct H; destruct h. 
     + subst. destruct H. cbn in h. destruct (bindv (closev x0 x)).
